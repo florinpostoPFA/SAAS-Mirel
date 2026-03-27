@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Assistant Settings</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f6fa;
+      padding: 20px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 420px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .save {
+      background: #2ecc71;
+      color: white;
+    }
+
+    .test {
+      background: #3498db;
+      color: white;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: green;
+    }
+
+    .response {
+      margin-top: 15px;
+      background: #fafafa;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<h2>⚙️ AI Assistant Settings</h2>
+
+<div class="card">
+
+  <label>Ton:</label>
+  <select id="tone">
+    <option value="friendly">Friendly</option>
+    <option value="professional">Professional</option>
+  </select>
+
+  <label>Număr produse recomandate:</label>
+  <select id="max_products">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+  </select>
+
+  <label>Call To Action (CTA):</label>
+  <input id="cta" placeholder="Vezi produsul" />
+
+  <label>Strategie:</label>
+  <select id="strategy">
+    <option value="basic">Basic</option>
+    <option value="upsell">Upsell</option>
+  </select>
+
+<label>Întârzie recomandarea (consultativ):</label>
+<select id="delay_recommendation">
+  <option value="true">Da (întrebări înainte)</option>
+  <option value="false">Nu (direct)</option>
+</select>
+
+  <label>Provider AI:</label>
+  <select id="provider">
+    <option value="auto">Auto</option>
+    <option value="openai">OpenAI</option>
+    <option value="claude">Claude</option>
+  </select>
+
+  <button class="save" onclick="save()">💾 Salvează</button>
+  <button class="test" onclick="test()">🧪 Testează AI</button>
+
+  <div class="status" id="status"></div>
+  <div class="response" id="response"></div>
+
+</div>
+
+<script>
+const apiKey = "abc123"; // pentru MVP
+
+async function load() {
+  try {
+    const res = await fetch(`/settings?api_key=${apiKey}`);
+    const data = await res.json();
+
+    document.getElementById("tone").value = data.tone;
+    document.getElementById("max_products").value = data.max_products;
+    document.getElementById("cta").value = data.cta;
+    document.getElementById("strategy").value = data.strategy;
+    document.getElementById("provider").value = data.provider;
+    document.getElementById("delay_recommendation").value = data.delay_recommendation;
+  
+} catch (e) {
+    console.error(e);
+  }
+}
+
+async function save() {
+  const settings = {
+    tone: document.getElementById("tone").value,
+    max_products: Number(document.getElementById("max_products").value),
+    cta: document.getElementById("cta").value,
+    strategy: document.getElementById("strategy").value,
+    provider: document.getElementById("provider").value,
+    delay_recommendation: document.getElementById("delay_recommendation").value === "true"  
+};
+
+  await fetch('/settings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      api_key: apiKey,
+      settings
+    })
+  });
+
+  document.getElementById("status").innerText = "✅ Setările au fost salvate!";
+}
+
+async function test() {
+  const resBox = document.getElementById("response");
+  resBox.innerText = "⏳ Se procesează...";
+
+  const res = await fetch('/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      api_key: apiKey,
+      message: "vreau luciu pentru masina neagra"
+    })
+  });
+
+  const data = await res.json();
+
+  resBox.innerHTML = `
+    <b>Răspuns AI:</b><br><br>
+    ${data.reply}
+    <hr>
+    <b>Produse recomandate:</b><br>
+    ${data.products.map(p => `🛒 ${p.name} (${p.price} lei)`).join("<br>")}
+  `;
+}
+
+load();
+</script>
+
+</body>
+</html>

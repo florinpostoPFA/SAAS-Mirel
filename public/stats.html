@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Sales Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f4f6;
+      padding: 30px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .value {
+      font-size: 26px;
+      font-weight: bold;
+    }
+
+    canvas {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>📊 AI Sales Dashboard</h1>
+
+<div class="grid">
+  <div class="card">
+    <h3>💬 Conversații</h3>
+    <div id="conversations" class="value"></div>
+  </div>
+
+  <div class="card">
+    <h3>🖱 Click-uri</h3>
+    <div id="clicks" class="value"></div>
+  </div>
+
+  <div class="card">
+    <h3>💰 Conversii</h3>
+    <div id="conversions" class="value"></div>
+  </div>
+
+  <div class="card">
+    <h3>💸 Revenue</h3>
+    <div id="revenue" class="value"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>📈 Conversații în timp</h3>
+  <canvas id="timelineChart"></canvas>
+</div>
+
+<div class="card">
+  <h3>🛒 Top produse</h3>
+  <canvas id="productsChart"></canvas>
+</div>
+
+<div class="card">
+  <button onclick="fakeSale()">💰 Simulează vânzare</button>
+</div>
+
+<script>
+let timelineChart;
+let productsChart;
+
+async function load() {
+  const res = await fetch('/stats');
+  const data = await res.json();
+
+  document.getElementById("conversations").innerText = data.conversations;
+  document.getElementById("clicks").innerText = data.clicks;
+  document.getElementById("conversions").innerText = data.conversions;
+  document.getElementById("revenue").innerText = data.revenue + " lei";
+
+  renderTimeline(data.timeline);
+  renderProducts(data.products);
+}
+
+function renderTimeline(timeline) {
+  const labels = timeline.map(t => new Date(t.time).toLocaleTimeString());
+  const values = timeline.map((_, i) => i + 1);
+
+  if (timelineChart) timelineChart.destroy();
+
+  timelineChart = new Chart(document.getElementById('timelineChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Conversații',
+        data: values,
+        borderWidth: 2
+      }]
+    }
+  });
+}
+
+function renderProducts(products) {
+  const entries = Object.entries(products || {})
+    .sort((a,b) => b[1] - a[1]);
+
+  const labels = entries.map(p => p[0]);
+  const values = entries.map(p => p[1]);
+
+  if (productsChart) productsChart.destroy();
+
+  productsChart = new Chart(document.getElementById('productsChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Recomandări',
+        data: values
+      }]
+    }
+  });
+}
+
+async function fakeSale() {
+  await fetch('/track-conversion', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      session_id: "demo",
+      value: 150
+    })
+  });
+
+  load();
+}
+
+load();
+</script>
+
+</body>
+</html>
