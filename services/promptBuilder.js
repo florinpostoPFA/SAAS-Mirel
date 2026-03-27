@@ -1,38 +1,84 @@
+const config = require("../config");
+
+/**
+ * Build system role section
+ */
+function buildSystemRoleSection() {
+  return config.prompt.systemRole;
+}
+
+/**
+ * Build strategy section based on delay_recommendation setting
+ */
+function buildStrategySection(settings) {
+  if (settings.delay_recommendation) {
+    return config.prompt.delayRecommendationTemplate;
+  }
+  return config.prompt.immediateRecommendationTemplate;
+}
+
+/**
+ * Build rules section with dynamic settings
+ */
+function buildRulesSection(settings) {
+  const staticRules = config.prompt.rules
+    .map(rule => `- ${rule}`)
+    .join("\n");
+
+  const dynamicRules = [
+    `- Recomandă maxim ${settings.max_products} produse`,
+    `- Include CTA: "${settings.cta}"`
+  ].join("\n");
+
+  return `${staticRules}\n${dynamicRules}`;
+}
+
+/**
+ * Build client request section
+ */
+function buildClientRequestSection(message) {
+  return `"${message}"`;
+}
+
+/**
+ * Build products section
+ */
+function buildProductsSection(products) {
+  return JSON.stringify(products, null, 2);
+}
+
+/**
+ * Main prompt builder
+ * Orchestrates all sections into a cohesive prompt
+ */
 function buildPrompt({ message, products, settings }) {
-
-  const delayLogic = settings.delay_recommendation
-    ? `
-IMPORTANT:
-NU recomanda produse imediat.
-
-Flux corect:
-1. Înțelege nevoia clientului
-2. Pune 1-2 întrebări relevante dacă informația nu este suficientă
-3. Abia apoi recomandă produse
-`
-    : `
-IMPORTANT:
-Poți recomanda produse direct dacă cererea este clară.
-`;
+  const systemRole = buildSystemRoleSection();
+  const strategy = buildStrategySection(settings);
+  const rules = buildRulesSection(settings);
+  const clientRequest = buildClientRequestSection(message);
+  const productsData = buildProductsSection(products);
 
   return `
-Ești un consultant profesionist de detailing auto.
+${systemRole}
 
-${delayLogic}
+${strategy}
 
 Reguli:
-- Fii consultativ, nu agresiv
-- Vorbește natural, ca un expert
-- Recomandă maxim ${settings.max_products} produse
-- Include CTA: "${settings.cta}"
-- Folosește DOAR produsele din listă
+${rules}
 
 Client:
-"${message}"
+${clientRequest}
 
 Produse disponibile:
-${JSON.stringify(products)}
+${productsData}
 `;
 }
 
-module.exports = { buildPrompt };
+module.exports = {
+  buildPrompt,
+  buildSystemRoleSection,
+  buildStrategySection,
+  buildRulesSection,
+  buildClientRequestSection,
+  buildProductsSection
+};

@@ -1,14 +1,7 @@
-let settingsDB = {
-  client1: {
-    tone: "friendly",
-    max_products: 2,
-    cta: "Vezi produsul",
-    strategy: "upsell",
-    provider: "openai",
+const config = require("../config");
 
-    // 🔥 nou
-    delay_recommendation: true
-  }
+let settingsDB = {
+  client1: config.defaultSettings
 };
 
 function getSettings(clientId) {

@@ -3,10 +3,23 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 
-const { searchProducts } = require("./services/search");
-const { buildPrompt } = require("./services/promptBuilder");
+const config = require("./config");
+const { handleChat } = require("./services/chatService");
 const { getSettings, saveSettings } = require("./services/settingsService");
-const { askLLM } = require("./services/llm");
+const {
+  incrementConversation,
+  trackKeywords,
+  trackProducts,
+  getStats
+} = require("./services/statsService");
+const {
+  trackClick,
+  trackConversion,
+  trackTimeline,
+  getClicks,
+  getConversions,
+  getTimeline
+} = require("./services/trackingService");
 
 const app = express();
 app.use(cors());
@@ -16,63 +29,28 @@ app.use(express.static("public"));
 const products = JSON.parse(fs.readFileSync("./data/products.json"));
 
 function getClient(api_key) {
-  return { id: "client1" };
+  return { id: config.server.defaultClientId };
 }
-
-// 📊 DATA
-let stats = {
-  conversations: 0,
-  keywords: {},
-  products: {}
-};
-
-let clicks = [];
-let conversions = [];
-let timeline = [];
 
 // 💬 CHAT
 app.post("/chat", async (req, res) => {
   try {
     const { message, api_key } = req.body;
 
-    stats.conversations++;
-
-    // timeline tracking
-    timeline.push({
-      time: Date.now()
-    });
-
-    // keywords
-    const words = message.toLowerCase().split(" ");
-    words.forEach(w => {
-      if (!stats.keywords[w]) stats.keywords[w] = 0;
-      stats.keywords[w]++;
-    });
-
     const client = getClient(api_key);
-    const settings = getSettings(client.id);
 
-    let found = searchProducts(message, products);
+    // Track conversation
+    incrementConversation();
+    trackTimeline();
+    trackKeywords(message);
 
-    if (found.length === 0) {
-      found = products.slice(0, 2);
-    }
+    // Handle chat
+    const { reply, products } = await handleChat(message, client.id, products);
 
-    found.forEach(p => {
-      if (!stats.products[p.name]) stats.products[p.name] = 0;
-      stats.products[p.name]++;
-    });
+    // Track products mentioned
+    trackProducts(products);
 
-    const prompt = buildPrompt({
-      message,
-      products: found,
-      settings
-    });
-
-    const reply = await askLLM(prompt);
-
-    res.json({ reply, products: found });
-
+    res.json({ reply, products });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -82,45 +60,20 @@ app.post("/chat", async (req, res) => {
 // 🖱 CLICK
 app.post("/track-click", (req, res) => {
   const { product, session_id } = req.body;
-
-  clicks.push({
-    product,
-    session_id,
-    time: Date.now()
-  });
-
+  trackClick(product, session_id);
   res.sendStatus(200);
 });
 
 // 💰 CONVERSION
 app.post("/track-conversion", (req, res) => {
   const { session_id, value } = req.body;
-
-  conversions.push({
-    session_id,
-    value,
-    time: Date.now()
-  });
-
+  trackConversion(session_id, value);
   res.sendStatus(200);
 });
 
-// 💸 revenue calc
-function calculateRevenue() {
-  return conversions.reduce((sum, c) => sum + c.value, 0);
-}
-
 // 📊 stats
 app.get("/stats", (req, res) => {
-  res.json({
-    conversations: stats.conversations,
-    keywords: stats.keywords,
-    products: stats.products,
-    clicks: clicks.length,
-    conversions: conversions.length,
-    revenue: calculateRevenue(),
-    timeline
-  });
+  res.json(getStats(getClicks(), getConversions(), getTimeline()));
 });
 
 // ⚙️ settings
@@ -143,6 +96,6 @@ app.get("/health", (req, res) => {
   res.send("OK");
 });
 
-app.listen(process.env.PORT, () => {
-  console.log("🚀 running on http://localhost:" + process.env.PORT);
+app.listen(config.server.port, () => {
+  console.log("🚀 running on http://localhost:" + config.server.port);
 });
