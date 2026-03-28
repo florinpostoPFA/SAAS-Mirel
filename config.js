@@ -28,29 +28,27 @@ const config = {
 
   // Prompt building configuration
   prompt: {
-    systemRole: "Ești un consultant profesionist de detailing auto.",
+    systemRole: "Ești un consultant profesionist de detailing auto cu 10+ ani de experiență.",
     tone: {
       friendly:
-        "Fii consultativ, nu agresiv. Vorbește natural, ca un expert.",
-      formal: "Fii profesionist și formal. Prezintă informații precise."
+        "Fii natural și prietenos, ca un expert care dorește să ajute. Vorbește cum vorbești cu un prieten, nu ca un roboț.",
+      formal: "Fii profesionist și precis. Sunt detalii tehnice, prezintă-le clar și concis."
     },
     delayRecommendationTemplate: `
-IMPORTANT:
-NU recomanda produse imediat.
-
-Flux corect:
-1. Înțelege nevoia clientului
-2. Pune 1-2 întrebări relevante dacă informația nu este suficientă
-3. Abia apoi recomandă produse
+Cererea clientului este vagă sau poate avea mai mulți parametri.
+Pune 1-2 întrebări inteligente pentru a clarifica.
+Abia după ce ai informații suficiente, recomandă produse cu o explicație clară.
 `,
     immediateRecommendationTemplate: `
-IMPORTANT:
-Poți recomanda produse direct dacă cererea este clară.
+Cererea este clară. Client știe exact ce caută.
+Recomandă produsele direct cu o explicație a DE CE se potrivesc.
 `,
     rules: [
-      "Fii consultativ, nu agresiv",
-      "Vorbește natural, ca un expert",
-      "Folosește DOAR produsele din listă"
+      "Nu suna robotic - sună ca un expert real care cunoaște produsele",
+      "Explică DE CE sunt aceste produse potrivite pentru nevoile lor",
+      "Fii scurt și la punct - respectă timp clientului",
+      "Folosește DOAR produsele din lista furnizată",
+      "Dacă nu ești sigur de ceva, nu inventa - cere clarificare"
     ],
     // Prompt section labels
     sections: {
@@ -58,6 +56,7 @@ Poți recomanda produse direct dacă cererea este clară.
       strategy: "Strategy",
       rules: "Rules",
       clientRequest: "Client Request",
+      recommendationJustification: "Why These Products",
       availableProducts: "Available Products"
     }
   },
@@ -69,7 +68,30 @@ Poți recomanda produse direct dacă cererea este clară.
     cta: "Vezi produsul",
     strategy: "upsell",
     provider: "openai",
-    delay_recommendation: true
+    delay_recommendation: true,
+    conversation_rules: {
+      greeting: {
+        enabled: true,
+        response: "Salut! Cu ce te pot ajuta?",
+        show_products: false
+      }
+    },
+    // Tag rules for intent detection
+    // Format: [{phrases: ["user says this"], tags: ["product_tag"]}, ...]
+    tag_rules: [
+      {
+        phrases: ["luciu", "shine", "wax", "ceara", "lustru"],
+        tags: ["polish", "wax"]
+      },
+      {
+        phrases: ["zgarieturi", "zgârieturi", "scratch", "polish"],
+        tags: ["polish"]
+      },
+      {
+        phrases: ["interior", "interior cleaner", "curatare interior"],
+        tags: ["interior_cleaner"]
+      }
+    ]
   }
 };
 

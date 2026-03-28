@@ -1,0 +1,99 @@
+/**
+ * stats.css
+ * Dashboard page specific styles
+ * Imports shared components via HTML link tag
+ */
+
+/* Page layout */
+body {
+  background: #f3f4f6;
+  padding: 30px;
+}
+
+/* Grid layout for metrics */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+/* Card in grid */
+.grid .card {
+  margin-bottom: 0;
+  padding: 25px 20px;
+  text-align: center;
+}
+
+/* Value display */
+.value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #2c3e50;
+  margin: 15px 0 0 0;
+  line-height: 1.2;
+}
+
+/* Chart container */
+canvas {
+  margin-top: 15px;
+  max-height: 300px;
+}
+
+/* Dashboard button */
+button {
+  background: #3498db;
+  color: white;
+  width: auto;
+  padding: 10px 20px;
+}
+
+button:hover {
+  background: #2980b9;
+}
+
+/* Responsive grid */
+@media (max-width: 1400px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  body {
+    padding: 15px;
+  }
+
+  h1 {
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  .card {
+    margin-bottom: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 15px;
+    border-radius: 8px;
+  }
+
+  .value {
+    font-size: 22px;
+  }
+
+  button {
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+}

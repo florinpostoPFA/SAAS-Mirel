@@ -1,197 +1,207 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI Assistant Settings</title>
-
+  <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/settings.css" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f6fa;
-      padding: 20px;
-    }
-
-    h2 {
-      margin-bottom: 20px;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 420px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    label {
-      display: block;
-      margin-top: 12px;
-      font-weight: bold;
-    }
-
-    select, input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-    }
-
-    button {
-      margin-top: 15px;
-      padding: 10px;
-      width: 100%;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .save {
-      background: #2ecc71;
-      color: white;
-    }
-
-    .test {
-      background: #3498db;
-      color: white;
-    }
-
-    .status {
-      margin-top: 10px;
-      font-size: 14px;
-      color: green;
-    }
-
-    .response {
-      margin-top: 15px;
-      background: #fafafa;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 14px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
+    .row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+    .col { flex: 1; min-width: 220px; }
+    .card { border-radius: 10px; padding: 1rem; margin: 1rem 0; background: #fff; box-shadow: 0 2px 7px rgba(0,0,0,.08); }
+    .card h3 { margin-top: 0; }
+    .field { display: flex; flex-direction: column; margin-bottom: 0.8rem; }
+    .field label { margin-bottom: 0.2rem; font-weight: 600; }
+    .hint { font-size: 0.85rem; color: #777; margin-top: 0.2rem; }
+    textarea { resize: vertical; min-height: 120px; }
+    .action-row { margin-top: 1rem; display: flex; gap: 0.8rem; flex-wrap: wrap; }
+    .status { margin-top: 0.8rem; font-weight: 600; }
   </style>
 </head>
 <body>
 
 <h2>⚙️ AI Assistant Settings</h2>
 
-<div class="card">
+<div class="card" aria-label="Conversation settings">
+  <h3>1. Conversation</h3>
+  <div class="field">
+    <label for="greeting_response">Greeting response</label>
+    <input id="greeting_response" type="text" placeholder="Salut! Cu ce te pot ajuta?" />
+    <div class="hint">Răspuns automat când detectăm salutul.</div>
+  </div>
 
-  <label>Ton:</label>
-  <select id="tone">
-    <option value="friendly">Friendly</option>
-    <option value="professional">Professional</option>
-  </select>
-
-  <label>Număr produse recomandate:</label>
-  <select id="max_products">
-    <option value="1">1</option>
-    <option value="2">2</option>
-    <option value="3">3</option>
-  </select>
-
-  <label>Call To Action (CTA):</label>
-  <input id="cta" placeholder="Vezi produsul" />
-
-  <label>Strategie:</label>
-  <select id="strategy">
-    <option value="basic">Basic</option>
-    <option value="upsell">Upsell</option>
-  </select>
-
-<label>Întârzie recomandarea (consultativ):</label>
-<select id="delay_recommendation">
-  <option value="true">Da (întrebări înainte)</option>
-  <option value="false">Nu (direct)</option>
-</select>
-
-  <label>Provider AI:</label>
-  <select id="provider">
-    <option value="auto">Auto</option>
-    <option value="openai">OpenAI</option>
-    <option value="claude">Claude</option>
-  </select>
-
-  <button class="save" onclick="save()">💾 Salvează</button>
-  <button class="test" onclick="test()">🧪 Testează AI</button>
-
-  <div class="status" id="status"></div>
-  <div class="response" id="response"></div>
-
+  <div class="row">
+    <div class="col field">
+      <label for="greeting_show_products">Show products on greeting</label>
+      <input id="greeting_show_products" type="checkbox" />
+      <div class="hint">Dacă e bifat, afişăm produse de fallback după salut.</div>
+    </div>
+    <div class="col field">
+      <label for="delay_recommendation">Delay recommendation</label>
+      <input id="delay_recommendation" type="checkbox" />
+      <div class="hint">Când activat, solicităm clarificări înainte de recomandare.</div>
+    </div>
+    <div class="col field">
+      <label for="max_questions">Max questions</label>
+      <input id="max_questions" type="number" min="0" value="2" />
+      <div class="hint">Număr maxim de întrebări de clarificare înainte de recomandare.</div>
+    </div>
+  </div>
 </div>
 
+<div class="card" aria-label="Product settings">
+  <h3>2. Products</h3>
+  <div class="field">
+    <label for="max_products">Max products to recommend</label>
+    <input id="max_products" type="number" min="1" max="10" value="2" />
+    <div class="hint">Câți itemi afișăm în recomandare.</div>
+  </div>
+</div>
+
+<div class="card" aria-label="Sales behavior settings">
+  <h3>3. Sales Behavior</h3>
+  <div class="row">
+    <div class="col field">
+      <label for="sales_mode">Sales mode</label>
+      <select id="sales_mode">
+        <option value="soft">Soft</option>
+        <option value="aggressive">Aggressive</option>
+      </select>
+      <div class="hint">Alege tonul general de vânzare.</div>
+    </div>
+    <div class="col field">
+      <label for="tone">Tone</label>
+      <select id="tone">
+        <option value="friendly">Friendly</option>
+        <option value="expert">Expert</option>
+      </select>
+      <div class="hint">Setează limbajul conversației.</div>
+    </div>
+    <div class="col field">
+      <label for="response_style">Response style</label>
+      <select id="response_style">
+        <option value="short">Short</option>
+        <option value="detailed">Detailed</option>
+        <option value="persuasive">Persuasive</option>
+      </select>
+      <div class="hint">Cum să formuleze răspunsurile.</div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="cta">CTA text</label>
+    <input id="cta" type="text" placeholder="Vezi produsul" />
+    <div class="hint">Textul butonului/îndemnului din recomandare.</div>
+  </div>
+</div>
+
+<div class="card" aria-label="Tag rules">
+  <h3>4. Tags (advanced)</h3>
+  <div class="field">
+    <label for="tag_rules">Tag rules JSON</label>
+    <textarea id="tag_rules" placeholder='[{"phrases":["luciu"],"tags":["polish"]}]'></textarea>
+    <div class="hint">Reguli pentru detectarea intențiilor. Păstrează format JSON.</div>
+  </div>
+</div>
+
+<div class="action-row">
+  <button onclick="save()">💾 Save settings</button>
+  <button onclick="test()">🧪 Test flow</button>
+  <span id="status" class="status"></span>
+</div>
+
+<div id="response" class="status"></div>
+
 <script>
-const apiKey = "abc123"; // pentru MVP
+const apiKey = "abc123";
+
+function check(value, fallback) {
+  return value === undefined || value === null ? fallback : value;
+}
 
 async function load() {
   try {
     const res = await fetch(`/settings?api_key=${apiKey}`);
     const data = await res.json();
 
-    document.getElementById("tone").value = data.tone;
-    document.getElementById("max_products").value = data.max_products;
-    document.getElementById("cta").value = data.cta;
-    document.getElementById("strategy").value = data.strategy;
-    document.getElementById("provider").value = data.provider;
-    document.getElementById("delay_recommendation").value = data.delay_recommendation;
-  
-} catch (e) {
+    const conversation = check(data.conversation_rules, {});
+    const greeting = check(conversation.greeting, {});
+
+    document.getElementById("greeting_response").value = check(greeting.response, "Salut! Cu ce te pot ajuta?");
+    document.getElementById("greeting_show_products").checked = check(greeting.show_products, false);
+    document.getElementById("delay_recommendation").checked = check(data.delay_recommendation, true);
+    document.getElementById("max_questions").value = check(data.max_questions, 2);
+
+    document.getElementById("max_products").value = check(data.max_products, 2);
+    document.getElementById("sales_mode").value = check(data.sales_mode, "soft");
+    document.getElementById("tone").value = check(data.tone, "friendly");
+    document.getElementById("response_style").value = check(data.response_style, "short");
+    document.getElementById("cta").value = check(data.cta, "Vezi produsul");
+
+    const tagRules = check(data.tag_rules, []);
+    document.getElementById("tag_rules").value = JSON.stringify(tagRules, null, 2);
+
+    document.getElementById("status").innerText = "✅ Setările au fost încărcate.";
+  } catch (e) {
     console.error(e);
+    document.getElementById("status").innerText = "⚠️ Nu s-au putut încărca setările.";
   }
 }
 
 async function save() {
-  const settings = {
-    tone: document.getElementById("tone").value,
-    max_products: Number(document.getElementById("max_products").value),
-    cta: document.getElementById("cta").value,
-    strategy: document.getElementById("strategy").value,
-    provider: document.getElementById("provider").value,
-    delay_recommendation: document.getElementById("delay_recommendation").value === "true"  
-};
+  const greeting = {
+    response: document.getElementById("greeting_response").value || "Salut! Cu ce te pot ajuta?",
+    show_products: document.getElementById("greeting_show_products").checked,
+    enabled: true
+  };
 
-  await fetch('/settings', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
+  let tagRules;
+  try {
+    tagRules = JSON.parse(document.getElementById("tag_rules").value || "[]");
+  } catch (err) {
+    document.getElementById("status").innerText = "⚠️ Tag rules JSON invalid.";
+    return;
+  }
+
+  const settings = {
+    max_products: Number(document.getElementById("max_products").value) || 2,
+    delay_recommendation: document.getElementById("delay_recommendation").checked,
+    sales_mode: document.getElementById("sales_mode").value || "soft",
+    max_questions: Number(document.getElementById("max_questions").value) || 2,
+    tone: document.getElementById("tone").value || "friendly",
+    response_style: document.getElementById("response_style").value || "short",
+    cta: document.getElementById("cta").value || "Vezi produsul",
+    conversation_rules: {
+      greeting
     },
-    body: JSON.stringify({
-      api_key: apiKey,
-      settings
-    })
+    tag_rules: tagRules
+  };
+
+  await fetch("/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: apiKey, settings })
   });
 
   document.getElementById("status").innerText = "✅ Setările au fost salvate!";
 }
 
 async function test() {
-  const resBox = document.getElementById("response");
-  resBox.innerText = "⏳ Se procesează...";
+  const responseArea = document.getElementById("response");
+  responseArea.innerText = "⏳ Test in progress...";
 
-  const res = await fetch('/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      api_key: apiKey,
-      message: "vreau luciu pentru masina neagra"
-    })
+  const res = await fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: apiKey, message: "salut" })
   });
 
   const data = await res.json();
-
-  resBox.innerHTML = `
-    <b>Răspuns AI:</b><br><br>
-    ${data.reply}
-    <hr>
-    <b>Produse recomandate:</b><br>
-    ${data.products.map(p => `🛒 ${p.name} (${p.price} lei)`).join("<br>")}
-  `;
+  responseArea.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
 }
 
 load();
 </script>
-
 </body>
 </html>

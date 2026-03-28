@@ -26,7 +26,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-const products = JSON.parse(fs.readFileSync("./data/products.json"));
+const productsCatalog = JSON.parse(fs.readFileSync("./data/products.json"));
 
 function getClient(api_key) {
   return { id: config.server.defaultClientId };
@@ -37,6 +37,10 @@ app.post("/chat", async (req, res) => {
   try {
     const { message, api_key } = req.body;
 
+    if (!message) {
+      return res.status(400).json({ error: "Message cannot be empty" });
+    }
+
     const client = getClient(api_key);
 
     // Track conversation
@@ -44,16 +48,20 @@ app.post("/chat", async (req, res) => {
     trackTimeline();
     trackKeywords(message);
 
-    // Handle chat
-    const { reply, products } = await handleChat(message, client.id, products);
+    // Handle chat - pass catalog as products
+    const { reply, products: recommendedProducts } = await handleChat(message, client.id, productsCatalog);
 
     // Track products mentioned
-    trackProducts(products);
+    trackProducts(recommendedProducts);
 
-    res.json({ reply, products });
+    res.json({ reply, products: recommendedProducts });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Chat error:", err);
+    const errorMessage = err.message || "Server error";
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === "development" ? err.stack : undefined
+    });
   }
 });
 

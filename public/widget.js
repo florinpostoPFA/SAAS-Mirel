@@ -57,32 +57,49 @@
     messages.innerHTML += `<div><b>Tu:</b> ${text}</div>`;
     input.value = "";
 
-    const res = await fetch("http://192.168.0.160:3000/chat", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        api_key: apiKey,
-        message: text,
-        session_id: sessionId
-      })
-    });
-
-    const data = await res.json();
-
-    messages.innerHTML += `<div><b>AI:</b><br>${data.reply}</div>`;
-
-    if (data.products) {
-      data.products.forEach(p => {
-        const link = `${p.url}?source=ai&session_id=${sessionId}`;
-
-        messages.innerHTML += `
-          <div>
-            🛒 <a href="${link}" target="_blank" onclick="trackClick('${p.name}')">
-              ${p.name}
-            </a> - ${p.price} lei
-          </div>
-        `;
+    try {
+      const res = await fetch("http://192.168.0.160:3000/chat", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          api_key: apiKey,
+          message: text,
+          session_id: sessionId
+        })
       });
+
+      const data = await res.json();
+
+      // Check for error response
+      if (!res.ok || data.error) {
+        const errorMsg = data.error || "An error occurred";
+        messages.innerHTML += `<div style="color: red;"><b>AI Error:</b><br>${errorMsg}</div>`;
+        return;
+      }
+
+      // Check if reply exists and is not undefined/null
+      if (!data.reply) {
+        messages.innerHTML += `<div style="color: red;"><b>AI Error:</b><br>No response from AI</div>`;
+        return;
+      }
+
+      messages.innerHTML += `<div><b>AI:</b><br>${data.reply}</div>`;
+
+      if (data.products && Array.isArray(data.products)) {
+        data.products.forEach(p => {
+          const link = `${p.url}?source=ai&session_id=${sessionId}`;
+
+          messages.innerHTML += `
+            <div>
+              🛒 <a href="${link}" target="_blank" onclick="trackClick('${p.name}')">
+                ${p.name}
+              </a> - ${p.price} lei
+            </div>
+          `;
+        });
+      }
+    } catch (err) {
+      messages.innerHTML += `<div style="color: red;"><b>AI Error:</b><br>Network error: ${err.message}</div>`;
     }
   }
 

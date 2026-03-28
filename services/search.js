@@ -49,10 +49,28 @@ function scoreByDescription(product, tags) {
 }
 
 /**
+ * Score a product based on product tags
+ * Direct tag matching gets highest weight
+ * Pure function - uses config for weight
+ */
+function scoreByProductTags(product, tags) {
+  if (!product.tags || !Array.isArray(product.tags)) {
+    return 0;
+  }
+  const productTagsLower = product.tags.map(t => t.toLowerCase());
+  return tags.reduce((score, tag) => {
+    return productTagsLower.includes(tag.toLowerCase())
+      ? score + (config.search.scoring.nameMatchWeight * 1.5) // Higher weight for direct tag match
+      : score;
+  }, 0);
+}
+
+/**
  * Define extensible scoring rules
  * Each rule is a pure function: (product, tags) => score
  */
 const scoringRules = [
+  { name: "product_tags_match", scorer: scoreByProductTags },
   { name: "name_match", scorer: scoreByName },
   { name: "description_match", scorer: scoreByDescription }
 ];
@@ -68,7 +86,7 @@ function calculateScore(product, tags) {
 }
 
 /**
- * Main search function
+ * Main search function (legacy, kept for compatibility)
  * Separates concerns: tag detection → scoring → sorting → limiting
  * Uses config for result limits
  */
@@ -85,11 +103,36 @@ function searchProducts(query, products) {
     .slice(0, config.search.resultLimit);
 }
 
+/**
+ * Tag-based product search
+ * Scores products based on tag matches
+ * @param {array} tags - Detected tags
+ * @param {array} products - Product catalog
+ * @param {number} maxResults - Max results to return
+ * @returns {array} Matched products sorted by relevance
+ */
+function searchProductsByTags(tags, products, maxResults = 3) {
+  if (!tags || tags.length === 0) {
+    return [];
+  }
+
+  return products
+    .map(product => ({
+      ...product,
+      score: calculateScore(product, tags)
+    }))
+    .filter(p => p.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResults);
+}
+
 module.exports = {
   searchProducts,
+  searchProductsByTags,
   detectTags,
   scoreByName,
   scoreByDescription,
+  scoreByProductTags,
   scoringRules,
   calculateScore
 };

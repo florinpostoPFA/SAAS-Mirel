@@ -1,0 +1,81 @@
+/**
+ * settings.css
+ * Settings page specific styles
+ * Imports shared components via HTML link tag
+ */
+
+/* Page layout */
+body {
+  background: #f5f6fa;
+  padding: 20px;
+}
+
+/* Settings card */
+.card {
+  width: 420px;
+}
+
+/* Button variants */
+.save {
+  background: #27ae60;
+  color: white;
+  width: 100%;
+}
+
+.save:hover {
+  background: #229954;
+}
+
+.test {
+  background: #3498db;
+  color: white;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.test:hover {
+  background: #2980b9;
+}
+
+/* Status message */
+.status {
+  margin-top: 10px;
+  font-size: 14px;
+  min-height: 20px;
+  color: #27ae60;
+}
+
+.status.error {
+  color: #e74c3c;
+}
+
+/* Response display */
+.response {
+  margin-top: 15px;
+  background: #fafafa;
+  padding: 15px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  display: none;
+}
+
+.response.active {
+  display: block;
+}
+
+.response b {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.response hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 10px 0;
+}
