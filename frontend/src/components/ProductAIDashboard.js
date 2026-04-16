@@ -1,150 +1,86 @@
-import { useState } from "react";
-
-const CHAT_ENDPOINT = "http://192.168.0.160:3001/chat";
+import React, { useState } from "react";
 
 export default function ProductAIDashboard() {
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState("");
-
-  const sendMessage = async () => {
-    const userInput = message.trim();
-
-    if (!userInput || isSending) {
-      return;
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content: "Hi, I’m Turbo. How can I help you today?"
     }
+  ]);
 
-    const userMessage = {
-      id: `${Date.now()}_user`,
-      role: "user",
-      content: userInput,
+  const [input, setInput] = useState("");
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: "user", content: input };
+
+    // 🔹 Temporary mock response (we'll connect backend next)
+    const assistantMessage = {
+      role: "assistant",
+      content: "Got it — I can help with that. Tell me more."
     };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setMessage("");
-    setError("");
-    setIsSending(true);
-
-    try {
-      const response = await fetch(CHAT_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: userInput,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error || "Failed to get AI response.");
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}_ai`,
-          role: "ai",
-          content: data.reply || "No response from AI.",
-        },
-      ]);
-    } catch (requestError) {
-      const errorMessage = requestError.message || "Network error.";
-      setError(errorMessage);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}_error`,
-          role: "ai",
-          content: `Error: ${errorMessage}`,
-        },
-      ]);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const handleKeyDown = async (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      await sendMessage();
-    }
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setInput("");
   };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "900px", margin: "0 auto", fontFamily: "Arial, sans-serif" }}>
-      <h1>Chat Testing</h1>
-      <p>Send a message to the backend chat endpoint and review the AI response.</p>
+    <div className="min-h-screen bg-black text-white flex flex-col items-center py-10 px-4">
 
-      <div
-        style={{
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          minHeight: "320px",
-          padding: "16px",
-          marginBottom: "16px",
-          backgroundColor: "#fafafa",
-        }}
-      >
-        {messages.length === 0 ? (
-          <p style={{ margin: 0, color: "#666" }}>No messages yet.</p>
-        ) : (
-          messages.map((entry) => (
+      {/* Header */}
+      <div className="w-full max-w-2xl mb-6">
+        <h2 className="text-xl font-semibold">Turbo</h2>
+        <p className="text-sm text-gray-400">
+          AI assistant for Carhub
+        </p>
+      </div>
+
+      {/* Chat Container */}
+      <div className="w-full max-w-2xl bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl flex flex-col h-[520px]">
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-1">
+
+          {messages.map((msg, index) => (
             <div
-              key={entry.id}
-              style={{
-                marginBottom: "12px",
-                padding: "12px",
-                borderRadius: "6px",
-                backgroundColor: entry.role === "user" ? "#e8f0fe" : "#ffffff",
-                border: "1px solid #ddd",
-              }}
+              key={index}
+              className={`flex ${
+                msg.role === "user" ? "justify-end" : "justify-start"
+              }`}
             >
-              <strong>{entry.role === "user" ? "You" : "AI"}</strong>
-              <div style={{ marginTop: "6px", whiteSpace: "pre-wrap" }}>{entry.content}</div>
+              <div
+                className={`max-w-[75%] px-4 py-2 rounded-xl text-sm leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white/10 text-gray-200"
+                }`}
+              >
+                {msg.content}
+              </div>
             </div>
-          ))
-        )}
+          ))}
+
+        </div>
+
+        {/* Input Area */}
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 px-4 py-2 rounded-lg bg-black border border-white/10 text-white placeholder-gray-500 focus:outline-none"
+          />
+
+          <button
+            onClick={sendMessage}
+            className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:opacity-90 transition"
+          >
+            Send
+          </button>
+        </div>
+
       </div>
-
-      <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-        <textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          rows={4}
-          style={{
-            flex: 1,
-            padding: "12px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            resize: "vertical",
-            fontFamily: "inherit",
-          }}
-        />
-
-        <button
-          type="button"
-          onClick={sendMessage}
-          disabled={isSending || !message.trim()}
-          style={{
-            padding: "12px 20px",
-            borderRadius: "6px",
-            border: "1px solid #333",
-            backgroundColor: isSending ? "#ccc" : "#333",
-            color: "#fff",
-            cursor: isSending ? "not-allowed" : "pointer",
-          }}
-        >
-          {isSending ? "Sending..." : "Send"}
-        </button>
-      </div>
-
-      {error && <p style={{ color: "#b00020", marginTop: "12px" }}>{error}</p>}
     </div>
   );
 }
