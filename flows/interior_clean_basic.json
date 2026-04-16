@@ -1,0 +1,29 @@
+{
+  "flowId": "interior_clean_basic",
+  "type": "micro",
+  "triggers": {
+    "intents": ["product_guidance"],
+    "contexts": ["interior"]
+  },
+  "title": "Curatare interior masina (ghid rapid)",
+  "steps": [
+    {
+      "id": "vacuum",
+      "title": "Aspirare",
+      "roles": ["interior_tool"],
+      "knowledgeIds": ["interior_vacuum"]
+    },
+    {
+      "id": "general_clean",
+      "title": "Curatare suprafete",
+      "roles": ["interior_cleaner"],
+      "knowledgeIds": ["interior_apc"]
+    },
+    {
+      "id": "finishing",
+      "title": "Finisare",
+      "roles": ["interior_protection"],
+      "knowledgeIds": ["interior_protect"]
+    }
+  ]
+}

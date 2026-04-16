@@ -1,0 +1,30 @@
+{
+  "flowId": "exterior_wash_beginner",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["exterior"]
+  },
+  "steps": [
+    {
+      "id": "prewash",
+      "title": "Pre-spălare",
+      "goal": "Îndepărtează murdăria grosieră fără contact pentru a reduce riscul de zgârieturi.",
+      "knowledgeIds": ["prewash_importanta"],
+      "roles": ["prewash_cleaner"]
+    },
+    {
+      "id": "contact_wash",
+      "title": "Spălare manuală",
+      "goal": "Curăță suprafața în siguranță folosind lubrifiere și mișcări blânde.",
+      "knowledgeIds": ["sampon_neutru_rol"],
+      "roles": ["contact_cleaner", "wash_tool"]
+    },
+    {
+      "id": "drying",
+      "title": "Uscare",
+      "goal": "Elimină apa pentru a preveni petele și urmele.",
+      "knowledgeIds": ["laveta_uscare_auto"],
+      "roles": ["drying_tool"]
+    }
+  ]
+}

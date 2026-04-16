@@ -9,7 +9,9 @@
  */
 
 const { askLLM } = require("./llm");
-const { info, debug } = require("./logger");
+const { debug } = require("./logger");
+const tagDictionary = require("./tagDictionary");
+const normalize = require("../utils/normalize");
 
 const SOURCE = "TagService";
 
@@ -19,26 +21,58 @@ const SOURCE = "TagService";
  * Returns matched tags or empty array
  */
 function detectTagsByRules(message, tagRules) {
-  const messageLower = message.toLowerCase();
-  const detectedTags = [];
+  const normalizedMessage = normalize(message)
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const detectedTags = new Set();
 
-  if (!tagRules || tagRules.length === 0) {
-    debug(SOURCE, "No tag rules configured, skipping rule-based detection");
-    return [];
+  if (Array.isArray(tagRules) && tagRules.length > 0) {
+    tagRules.forEach(rule => {
+      if (Array.isArray(rule.phrases)) {
+        rule.phrases.forEach(phrase => {
+          const normalizedPhrase = normalize(phrase)
+            .replace(/[^a-z0-9\s]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+          if (normalizedPhrase && normalizedMessage.includes(normalizedPhrase)) {
+            (rule.tags || []).forEach(tag => detectedTags.add(tag));
+          }
+        });
+      }
+    });
   }
 
-  tagRules.forEach(rule => {
-    // Check if any intent phrase matches the message
-    if (Array.isArray(rule.phrases)) {
-      rule.phrases.forEach(phrase => {
-        if (messageLower.includes(phrase.toLowerCase())) {
-          detectedTags.push(...rule.tags);
-        }
-      });
+  Object.entries(tagDictionary).forEach(([tag, keywords]) => {
+    if (Array.isArray(keywords) && keywords.some(keyword => normalizedMessage.includes(normalize(keyword)))) {
+      detectedTags.add(tag);
     }
   });
 
-  return [...new Set(detectedTags)]; // Remove duplicates
+  // Context rules (tag expansion/prioritization via presence)
+  if (detectedTags.has("interior") && detectedTags.has("cleaning")) {
+    detectedTags.add("interior");
+    detectedTags.add("cleaning");
+  }
+
+  if (detectedTags.has("leather")) {
+    detectedTags.add("interior");
+  }
+
+  if (detectedTags.has("textile") || detectedTags.has("alcantara")) {
+    detectedTags.add("interior");
+  }
+
+  if (detectedTags.has("glass")) {
+    detectedTags.add("cleaning");
+  }
+
+  if (detectedTags.has("plastic")) {
+    detectedTags.add("interior");
+  }
+
+  return Array.from(detectedTags);
 }
 
 /**
@@ -47,8 +81,6 @@ function detectTagsByRules(message, tagRules) {
  * Only called if rule-based detection finds nothing
  */
 async function detectTagsByAI(message, availableTags) {
-  info(SOURCE, "Rule-based detection failed, using AI fallback");
-
   const availableTagsList = availableTags.join(", ");
 
   const prompt = `You are a product tag detector.
@@ -88,13 +120,10 @@ If no tags match, respond: "none"
  * @returns {array} Detected tags (max 3)
  */
 async function detectTags(message, tagRules, availableTags) {
-  info(SOURCE, `Detecting tags for message: "${message}"`);
-
   // Step 1: Try rule-based detection
   let detectedTags = detectTagsByRules(message, tagRules);
 
   if (detectedTags.length > 0) {
-    info(SOURCE, `Rule-based detection matched`, detectedTags);
     return detectedTags.slice(0, 3); // Max 3 tags
   }
 
@@ -102,12 +131,10 @@ async function detectTags(message, tagRules, availableTags) {
   detectedTags = await detectTagsByAI(message, availableTags);
 
   if (detectedTags.length > 0) {
-    info(SOURCE, `AI fallback succeeded`, detectedTags);
     return detectedTags.slice(0, 3);
   }
 
   // Step 3: No tags detected
-  info(SOURCE, "No tags detected (rules nor AI)");
   return [];
 }
 

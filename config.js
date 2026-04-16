@@ -6,7 +6,7 @@
 const config = {
   // Server configuration
   server: {
-    port: process.env.PORT || 3000,
+    port: process.env.BACKEND_PORT || 3001,
     defaultClientId: "client1"
   },
 
@@ -92,6 +92,19 @@ Recomandă produsele direct cu o explicație a DE CE se potrivesc.
         tags: ["interior_cleaner"]
       }
     ]
+  },
+
+  // Magento API configuration
+  magento: {
+    baseUrl: "",
+    token: "",
+    timeout: 5000
+  },
+
+  // Predefined deterministic flows
+  flows: {
+    exterior_wash_beginner: require("./flows/exteriorWash.json"),
+    interior_clean_basic: require("./flows/interior_clean_basic.json")
   }
 };
 

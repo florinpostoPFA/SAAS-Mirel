@@ -1,0 +1,57 @@
+[
+  {
+    "id": "prewash_importanta",
+    "title": "De ce este importanta prespalarea",
+    "content": "Prespalarea indeparteaza murdaria grosiera si filmul rutier inainte de contact. Reduce riscul de zgariere in timpul spalarii manuale."
+  },
+  {
+    "id": "sampon_neutru_rol",
+    "title": "Ce face samponul cu pH neutru",
+    "content": "Samponul cu pH neutru curata murdaria usoara si ofera lubrifiere pentru spalare sigura. Este ideal pentru intretinerea regulata a masinii."
+  },
+  {
+    "id": "laveta_uscare_auto",
+    "title": "Cum alegi prosopul de uscare auto",
+    "content": "Prosoapele din microfibra au absorbtie mare si previn zgarieturile. Se aleg modele dense pentru eficienta maxima."
+  },
+  {
+    "id": "clay_bar_usage",
+    "title": "Cum alegi argila pentru decontaminare",
+    "content": "Foloseste argila pentru decontaminare pe o suprafata bine lubrifiata si lucreaza usor pana cand contaminarea este indepartata. Sterge apoi reziduurile cu o laveta curata din microfibra."
+  },
+  {
+    "id": "protective_shampoo_usage",
+    "title": "Cum alegi samponul cu efect de protectie",
+    "content": "Spala masina cu samponul cu efect de protectie folosind miscari blande si clateste complet suprafata. Dupa spalare, lasa protectia ramasa sa sustina luciul si efectul hidrofob."
+  },
+  {
+    "id": "leather_conditioner_usage",
+    "title": "Cum alegi hidratarea pielii auto",
+    "content": "Aplica produsul de hidratare pe pielea curata in strat uniform si lasa-l sa actioneze cateva minute. Sterge excesul cu o laveta moale pentru un finisaj curat si protejat."
+  },
+  {
+    "id": "interior_vacuum",
+    "title": "De ce este importanta aspirarea",
+    "content": "Aspirarea indeparteaza praful si murdaria uscata inainte de curatarea umeda. Astfel eviti formarea de noroi si pete."
+  },
+  {
+    "id": "interior_apc",
+    "title": "Cum cureti suprafetele interioare",
+    "content": "Foloseste un APC sau solutie dedicata pentru interior si aplica pe o laveta sau perie. Curata usor fara sa imbibi excesiv materialul."
+  },
+  {
+    "id": "interior_protect",
+    "title": "De ce aplici protectie",
+    "content": "Produsele de protectie ajuta la prevenirea decolorarii si pastreaza aspectul curat mai mult timp."
+  },
+  {
+    "id": "textile_cleaning",
+    "title": "Cum cureti textilele",
+    "content": "Pentru mocheta, foloseste o solutie dedicata textilelor si o perie. Lucreaza pe zone mici si evita imbibarea excesiva. Daca este foarte murdara, poti folosi un aspirator injectie-extractie."
+  },
+  {
+    "id": "leather_cleaning",
+    "title": "Cum cureti suprafetele din piele",
+    "content": "Foloseste o solutie dedicata pentru piele si o laveta moale sau o perie foarte fina. Curata usor fara presiune excesiva, apoi sterge reziduurile si aplica un produs de hidratare pentru a mentine pielea moale si protejata."
+  }
+]

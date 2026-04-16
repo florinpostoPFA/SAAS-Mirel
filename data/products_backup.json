@@ -1,0 +1,2776 @@
+[
+  {
+    "id": 1,
+    "name": "Carpro Signature Trim Dressing",
+    "category": "polish",
+    "price": 242,
+    "tags": [
+      "hidrofob",
+      "luciu",
+      "durabilitate"
+    ],
+    "description": "Pol fin pentru corectarea hidrofobitate și vopsea netedă.",
+    "url": "/product/carpro-signature-trim-dressing"
+  },
+  {
+    "id": 2,
+    "name": "Autoglym Classic Tire Dressing",
+    "category": "polish",
+    "price": 154,
+    "tags": [
+      "eficient",
+      "hidrofob",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Pol fin pentru corectarea vopsea netedă și vopsea netedă.",
+    "url": "/product/autoglym-classic-tire-dressing"
+  },
+  {
+    "id": 3,
+    "name": "Swissvax Ultimate Coating",
+    "category": "polish",
+    "price": 116,
+    "tags": [
+      "universal",
+      "luciu",
+      "durabilitate",
+      "zgârieturi"
+    ],
+    "description": "Pol fin pentru corectarea ușor de aplicat și ușor de aplicat.",
+    "url": "/product/swissvax-ultimate-coating"
+  },
+  {
+    "id": 4,
+    "name": "Poorboy's Pro Plus Trim Dressing",
+    "category": "polish",
+    "price": 62,
+    "tags": [
+      "rapid",
+      "ușor",
+      "luciu",
+      "zgârieturi"
+    ],
+    "description": "Pol fin pentru corectarea vopsea netedă și protecție UV.",
+    "url": "/product/poorboys-pro-plus-trim-dressing"
+  },
+  {
+    "id": 5,
+    "name": "Meguiars Ultimate Trim Dressing",
+    "category": "polish",
+    "price": 210,
+    "tags": [
+      "durabilitate",
+      "interior",
+      "rapid",
+      "exterior"
+    ],
+    "description": "Pol fin pentru corectarea protecție durabilă și ștergere ușoară.",
+    "url": "/product/meguiars-ultimate-trim-dressing"
+  },
+  {
+    "id": 6,
+    "name": "Gtechniq Gold Coating",
+    "category": "polish",
+    "price": 92,
+    "tags": [
+      "interior",
+      "exterior",
+      "protecție"
+    ],
+    "description": "Pol fin pentru corectarea rezultate rapide și ușor de aplicat.",
+    "url": "/product/gtechniq-gold-coating"
+  },
+  {
+    "id": 7,
+    "name": "Soft99 Gold Glass Cleaner",
+    "category": "polish",
+    "price": 200,
+    "tags": [
+      "premium",
+      "buget",
+      "zgârieturi",
+      "luciu"
+    ],
+    "description": "Pol fin pentru corectarea hidrofobitate și hidrofobitate.",
+    "url": "/product/soft99-gold-glass-cleaner"
+  },
+  {
+    "id": 8,
+    "name": "Chemical Guys Max Cleaner",
+    "category": "polish",
+    "price": 296,
+    "tags": [
+      "ușor",
+      "zgârieturi",
+      "rapid",
+      "luciu"
+    ],
+    "description": "Pol fin pentru corectarea luciu intens și protecție UV.",
+    "url": "/product/chemical-guys-max-cleaner"
+  },
+  {
+    "id": 9,
+    "name": "Carpro Ultimate Tire Dressing",
+    "category": "polish",
+    "price": 113,
+    "tags": [
+      "rapid",
+      "premium",
+      "natural",
+      "eficient"
+    ],
+    "description": "Pol fin pentru corectarea ușor de aplicat și protecție durabilă.",
+    "url": "/product/carpro-ultimate-tire-dressing"
+  },
+  {
+    "id": 10,
+    "name": "Gyeon Quantum Coating",
+    "category": "polish",
+    "price": 279,
+    "tags": [
+      "protecție",
+      "zgârieturi",
+      "eficient",
+      "luciu"
+    ],
+    "description": "Pol fin pentru corectarea luciu intens și luciu intens.",
+    "url": "/product/gyeon-quantum-coating"
+  },
+  {
+    "id": 11,
+    "name": "Poorboy's Platinum Trim Dressing",
+    "category": "polish",
+    "price": 271,
+    "tags": [
+      "zgârieturi",
+      "premium",
+      "durabilitate",
+      "luciu"
+    ],
+    "description": "Pol fin pentru corectarea luciu intens și hidrofobitate.",
+    "url": "/product/poorboys-platinum-trim-dressing"
+  },
+  {
+    "id": 12,
+    "name": "Adam's Professional Cleaner",
+    "category": "polish",
+    "price": 142,
+    "tags": [
+      "durabilitate",
+      "luciu",
+      "interior",
+      "protecție"
+    ],
+    "description": "Pol fin pentru corectarea rezultate rapide și vopsea netedă.",
+    "url": "/product/adams-professional-cleaner"
+  },
+  {
+    "id": 13,
+    "name": "Adam's Extreme Shampoo",
+    "category": "polish",
+    "price": 182,
+    "tags": [
+      "zgârieturi",
+      "universal",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Pol fin pentru corectarea hidrofobitate și protecție durabilă.",
+    "url": "/product/adams-extreme-shampoo"
+  },
+  {
+    "id": 14,
+    "name": "Turtle Wax Pro Classic Protectant",
+    "category": "polish",
+    "price": 68,
+    "tags": [
+      "rapid",
+      "ușor",
+      "luciu",
+      "zgârieturi"
+    ],
+    "description": "Pol fin pentru corectarea rezultate rapide și vopsea netedă.",
+    "url": "/product/turtle-wax-pro-classic-protectant"
+  },
+  {
+    "id": 15,
+    "name": "Armor All Fusion Cleaner",
+    "category": "polish",
+    "price": 105,
+    "tags": [
+      "ușor",
+      "rapid",
+      "premium",
+      "exterior"
+    ],
+    "description": "Pol fin pentru corectarea vopsea netedă și ștergere ușoară.",
+    "url": "/product/armor-all-fusion-cleaner"
+  },
+  {
+    "id": 16,
+    "name": "Soft99 Pure Protectant",
+    "category": "polish",
+    "price": 102,
+    "tags": [
+      "universal",
+      "luciu"
+    ],
+    "description": "Pol fin pentru corectarea ușor de aplicat și luciu intens.",
+    "url": "/product/soft99-pure-protectant"
+  },
+  {
+    "id": 17,
+    "name": "Meguiars Professional Wax",
+    "category": "polish",
+    "price": 235,
+    "tags": [
+      "interior",
+      "hidrofob",
+      "luciu"
+    ],
+    "description": "Pol fin pentru corectarea protecție durabilă și luciu intens.",
+    "url": "/product/meguiars-professional-wax"
+  },
+  {
+    "id": 18,
+    "name": "Carpro Fusion Coating",
+    "category": "polish",
+    "price": 104,
+    "tags": [
+      "zgârieturi",
+      "universal",
+      "interior",
+      "protecție"
+    ],
+    "description": "Pol fin pentru corectarea luciu intens și protecție UV.",
+    "url": "/product/carpro-fusion-coating"
+  },
+  {
+    "id": 19,
+    "name": "Sonax Diamond Wax",
+    "category": "polish",
+    "price": 216,
+    "tags": [
+      "interior",
+      "zgârieturi",
+      "natural",
+      "buget"
+    ],
+    "description": "Pol fin pentru corectarea hidrofobitate și ușor de aplicat.",
+    "url": "/product/sonax-diamond-wax"
+  },
+  {
+    "id": 20,
+    "name": "Gtechniq Classic Trim Dressing",
+    "category": "polish",
+    "price": 160,
+    "tags": [
+      "buget",
+      "luciu",
+      "zgârieturi",
+      "protecție"
+    ],
+    "description": "Pol fin pentru corectarea ștergere ușoară și ușor de aplicat.",
+    "url": "/product/gtechniq-classic-trim-dressing"
+  },
+  {
+    "id": 21,
+    "name": "Autoglym Professional Sealant",
+    "category": "wax",
+    "price": 214,
+    "tags": [
+      "eficient",
+      "interior",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Ceară de calitate profesională cu hidrofobitate pe termen mediu.",
+    "url": "/product/autoglym-professional-sealant"
+  },
+  {
+    "id": 22,
+    "name": "Gyeon Classic Tire Dressing",
+    "category": "wax",
+    "price": 133,
+    "tags": [
+      "exterior",
+      "universal",
+      "protecție"
+    ],
+    "description": "Ceară de calitate înaltă cu ștergere ușoară pe termen mediu.",
+    "url": "/product/gyeon-classic-tire-dressing"
+  },
+  {
+    "id": 23,
+    "name": "Turtle Wax Pro Mirror Protectant",
+    "category": "wax",
+    "price": 153,
+    "tags": [
+      "interior",
+      "buget",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Ceară de calitate premium cu rezultate rapide pe termen mediu.",
+    "url": "/product/turtle-wax-pro-mirror-protectant"
+  },
+  {
+    "id": 24,
+    "name": "Poorboy's Elite Sealant",
+    "category": "wax",
+    "price": 222,
+    "tags": [
+      "natural",
+      "interior",
+      "eficient",
+      "luciu"
+    ],
+    "description": "Ceară de calitate înaltă cu rezultate rapide pe termen scurt.",
+    "url": "/product/poorboys-elite-sealant"
+  },
+  {
+    "id": 25,
+    "name": "Carpro Mirror Coating",
+    "category": "wax",
+    "price": 207,
+    "tags": [
+      "hidrofob",
+      "ușor",
+      "interior",
+      "luciu"
+    ],
+    "description": "Ceară de calitate profesională cu protecție UV pe termen scurt.",
+    "url": "/product/carpro-mirror-coating"
+  },
+  {
+    "id": 26,
+    "name": "Turtle Wax Diamond Cleaner",
+    "category": "wax",
+    "price": 241,
+    "tags": [
+      "exterior",
+      "protecție",
+      "premium",
+      "hidrofob"
+    ],
+    "description": "Ceară de calitate profesională cu luciu intens pe termen scurt.",
+    "url": "/product/turtle-wax-diamond-cleaner"
+  },
+  {
+    "id": 27,
+    "name": "Chemical Guys Max Sealant",
+    "category": "wax",
+    "price": 300,
+    "tags": [
+      "hidrofob",
+      "interior",
+      "zgârieturi",
+      "luciu"
+    ],
+    "description": "Ceară de calitate economică cu hidrofobitate pe termen lung.",
+    "url": "/product/chemical-guys-max-sealant"
+  },
+  {
+    "id": 28,
+    "name": "Botny Fusion Cleaner",
+    "category": "wax",
+    "price": 65,
+    "tags": [
+      "premium",
+      "protecție",
+      "hidrofob",
+      "luciu"
+    ],
+    "description": "Ceară de calitate premium cu ștergere ușoară pe termen mediu.",
+    "url": "/product/botny-fusion-cleaner"
+  },
+  {
+    "id": 29,
+    "name": "Swissvax Gold Sealant",
+    "category": "wax",
+    "price": 264,
+    "tags": [
+      "protecție",
+      "eficient",
+      "exterior",
+      "luciu"
+    ],
+    "description": "Ceară de calitate premium cu ușor de aplicat pe termen lung.",
+    "url": "/product/swissvax-gold-sealant"
+  },
+  {
+    "id": 30,
+    "name": "Sonax Mirror Shampoo",
+    "category": "wax",
+    "price": 230,
+    "tags": [
+      "zgârieturi",
+      "protecție",
+      "luciu",
+      "hidrofob"
+    ],
+    "description": "Ceară de calitate economică cu protecție durabilă pe termen scurt.",
+    "url": "/product/sonax-mirror-shampoo"
+  },
+  {
+    "id": 31,
+    "name": "Zymol Max Protectant",
+    "category": "wax",
+    "price": 85,
+    "tags": [
+      "hidrofob",
+      "ușor",
+      "interior",
+      "luciu"
+    ],
+    "description": "Ceară de calitate premium cu hidrofobitate pe termen scurt.",
+    "url": "/product/zymol-max-protectant"
+  },
+  {
+    "id": 32,
+    "name": "Mothers Ultimate Wax",
+    "category": "wax",
+    "price": 168,
+    "tags": [
+      "natural",
+      "universal",
+      "zgârieturi",
+      "interior"
+    ],
+    "description": "Ceară de calitate economică cu ușor de aplicat pe termen mediu.",
+    "url": "/product/mothers-ultimate-wax"
+  },
+  {
+    "id": 33,
+    "name": "Armor All Diamond Cleaner",
+    "category": "wax",
+    "price": 283,
+    "tags": [
+      "natural",
+      "rapid",
+      "universal",
+      "eficient"
+    ],
+    "description": "Ceară de calitate profesională cu protecție UV pe termen mediu.",
+    "url": "/product/armor-all-diamond-cleaner"
+  },
+  {
+    "id": 34,
+    "name": "Mothers Supreme Wax",
+    "category": "wax",
+    "price": 177,
+    "tags": [
+      "durabilitate",
+      "exterior",
+      "luciu",
+      "hidrofob"
+    ],
+    "description": "Ceară de calitate premium cu protecție durabilă pe termen lung.",
+    "url": "/product/mothers-supreme-wax"
+  },
+  {
+    "id": 35,
+    "name": "Gyeon Pro Plus Sealant",
+    "category": "wax",
+    "price": 62,
+    "tags": [
+      "ușor",
+      "universal",
+      "protecție",
+      "hidrofob"
+    ],
+    "description": "Ceară de calitate profesională cu protecție durabilă pe termen scurt.",
+    "url": "/product/gyeon-pro-plus-sealant"
+  },
+  {
+    "id": 36,
+    "name": "Armor All Signature Trim Dressing",
+    "category": "wax",
+    "price": 93,
+    "tags": [
+      "exterior",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Ceară de calitate premium cu luciu intens pe termen lung.",
+    "url": "/product/armor-all-signature-trim-dressing"
+  },
+  {
+    "id": 37,
+    "name": "Gyeon Premium Sealant",
+    "category": "wax",
+    "price": 191,
+    "tags": [
+      "luciu",
+      "exterior",
+      "protecție"
+    ],
+    "description": "Ceară de calitate profesională cu hidrofobitate pe termen mediu.",
+    "url": "/product/gyeon-premium-sealant"
+  },
+  {
+    "id": 38,
+    "name": "Carpro Ceramic Protectant",
+    "category": "wax",
+    "price": 226,
+    "tags": [
+      "zgârieturi",
+      "durabilitate",
+      "protecție",
+      "universal"
+    ],
+    "description": "Ceară de calitate înaltă cu luciu intens pe termen lung.",
+    "url": "/product/carpro-ceramic-protectant"
+  },
+  {
+    "id": 39,
+    "name": "Turtle Wax Pro Diamond Polish",
+    "category": "wax",
+    "price": 169,
+    "tags": [
+      "eficient",
+      "buget",
+      "protecție",
+      "hidrofob"
+    ],
+    "description": "Ceară de calitate economică cu rezultate rapide pe termen scurt.",
+    "url": "/product/turtle-wax-pro-diamond-polish"
+  },
+  {
+    "id": 40,
+    "name": "Poorboy's Royal Shampoo",
+    "category": "wax",
+    "price": 211,
+    "tags": [
+      "buget",
+      "natural",
+      "luciu",
+      "zgârieturi"
+    ],
+    "description": "Ceară de calitate profesională cu vopsea netedă pe termen lung.",
+    "url": "/product/poorboys-royal-shampoo"
+  },
+  {
+    "id": 41,
+    "name": "Collinite Max Polish",
+    "category": "sealant",
+    "price": 152,
+    "tags": [
+      "durabilitate",
+      "rapid",
+      "hidrofob"
+    ],
+    "description": "Sigilant sintetic pentru protecție UV și protecție UV.",
+    "url": "/product/collinite-max-polish"
+  },
+  {
+    "id": 42,
+    "name": "Sonax Elite Protectant",
+    "category": "sealant",
+    "price": 293,
+    "tags": [
+      "eficient",
+      "protecție",
+      "ușor",
+      "luciu"
+    ],
+    "description": "Sigilant sintetic pentru hidrofobitate și rezultate rapide.",
+    "url": "/product/sonax-elite-protectant"
+  },
+  {
+    "id": 43,
+    "name": "Sonax Gold Cleaner",
+    "category": "sealant",
+    "price": 189,
+    "tags": [
+      "luciu",
+      "interior",
+      "durabilitate",
+      "protecție"
+    ],
+    "description": "Sigilant sintetic pentru ștergere ușoară și rezultate rapide.",
+    "url": "/product/sonax-gold-cleaner"
+  },
+  {
+    "id": 44,
+    "name": "Adam's Classic Coating",
+    "category": "sealant",
+    "price": 158,
+    "tags": [
+      "durabilitate",
+      "protecție",
+      "interior",
+      "hidrofob"
+    ],
+    "description": "Sigilant sintetic pentru luciu intens și ușor de aplicat.",
+    "url": "/product/adams-classic-coating"
+  },
+  {
+    "id": 45,
+    "name": "Meguiars Pearl Polish",
+    "category": "sealant",
+    "price": 200,
+    "tags": [
+      "premium",
+      "zgârieturi",
+      "universal",
+      "exterior"
+    ],
+    "description": "Sigilant sintetic pentru ștergere ușoară și ușor de aplicat.",
+    "url": "/product/meguiars-pearl-polish"
+  },
+  {
+    "id": 46,
+    "name": "Gtechniq Royal Wax",
+    "category": "sealant",
+    "price": 287,
+    "tags": [
+      "natural",
+      "hidrofob",
+      "zgârieturi",
+      "universal"
+    ],
+    "description": "Sigilant sintetic pentru hidrofobitate și rezultate rapide.",
+    "url": "/product/gtechniq-royal-wax"
+  },
+  {
+    "id": 47,
+    "name": "Gyeon Quantum Cleaner",
+    "category": "sealant",
+    "price": 299,
+    "tags": [
+      "protecție",
+      "eficient",
+      "zgârieturi",
+      "ușor"
+    ],
+    "description": "Sigilant sintetic pentru protecție durabilă și vopsea netedă.",
+    "url": "/product/gyeon-quantum-cleaner"
+  },
+  {
+    "id": 48,
+    "name": "Autoglym Fusion Protectant",
+    "category": "sealant",
+    "price": 102,
+    "tags": [
+      "premium",
+      "eficient",
+      "buget",
+      "exterior"
+    ],
+    "description": "Sigilant sintetic pentru vopsea netedă și rezultate rapide.",
+    "url": "/product/autoglym-fusion-protectant"
+  },
+  {
+    "id": 49,
+    "name": "Poorboy's Supreme Protectant",
+    "category": "sealant",
+    "price": 255,
+    "tags": [
+      "durabilitate",
+      "hidrofob",
+      "premium",
+      "protecție"
+    ],
+    "description": "Sigilant sintetic pentru ușor de aplicat și protecție UV.",
+    "url": "/product/poorboys-supreme-protectant"
+  },
+  {
+    "id": 50,
+    "name": "Gtechniq Professional Tire Dressing",
+    "category": "sealant",
+    "price": 220,
+    "tags": [
+      "premium",
+      "interior",
+      "durabilitate"
+    ],
+    "description": "Sigilant sintetic pentru ușor de aplicat și ușor de aplicat.",
+    "url": "/product/gtechniq-professional-tire-dressing"
+  },
+  {
+    "id": 51,
+    "name": "Sonax Professional Cleaner",
+    "category": "sealant",
+    "price": 101,
+    "tags": [
+      "hidrofob",
+      "ușor",
+      "protecție",
+      "durabilitate"
+    ],
+    "description": "Sigilant sintetic pentru luciu intens și vopsea netedă.",
+    "url": "/product/sonax-professional-cleaner"
+  },
+  {
+    "id": 52,
+    "name": "3M Platinum Trim Dressing",
+    "category": "sealant",
+    "price": 123,
+    "tags": [
+      "buget",
+      "universal",
+      "natural",
+      "hidrofob"
+    ],
+    "description": "Sigilant sintetic pentru luciu intens și ștergere ușoară.",
+    "url": "/product/3m-platinum-trim-dressing"
+  },
+  {
+    "id": 53,
+    "name": "Turtle Wax Pro Ultimate Coating",
+    "category": "sealant",
+    "price": 58,
+    "tags": [
+      "universal",
+      "interior",
+      "exterior",
+      "protecție"
+    ],
+    "description": "Sigilant sintetic pentru ștergere ușoară și protecție durabilă.",
+    "url": "/product/turtle-wax-pro-ultimate-coating"
+  },
+  {
+    "id": 54,
+    "name": "Armor All Ultra Sealant",
+    "category": "sealant",
+    "price": 203,
+    "tags": [
+      "exterior",
+      "hidrofob",
+      "protecție",
+      "premium"
+    ],
+    "description": "Sigilant sintetic pentru ușor de aplicat și ștergere ușoară.",
+    "url": "/product/armor-all-ultra-sealant"
+  },
+  {
+    "id": 55,
+    "name": "Autoglym Fusion Shampoo",
+    "category": "sealant",
+    "price": 187,
+    "tags": [
+      "luciu",
+      "hidrofob",
+      "natural",
+      "protecție"
+    ],
+    "description": "Sigilant sintetic pentru ușor de aplicat și ușor de aplicat.",
+    "url": "/product/autoglym-fusion-shampoo"
+  },
+  {
+    "id": 56,
+    "name": "Gyeon Pearl Polish",
+    "category": "sealant",
+    "price": 194,
+    "tags": [
+      "universal",
+      "interior",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Sigilant sintetic pentru hidrofobitate și luciu intens.",
+    "url": "/product/gyeon-pearl-polish"
+  },
+  {
+    "id": 57,
+    "name": "3M Quantum Sealant",
+    "category": "sealant",
+    "price": 288,
+    "tags": [
+      "rapid",
+      "exterior",
+      "protecție",
+      "durabilitate"
+    ],
+    "description": "Sigilant sintetic pentru hidrofobitate și luciu intens.",
+    "url": "/product/3m-quantum-sealant"
+  },
+  {
+    "id": 58,
+    "name": "Swissvax Gold Tire Dressing",
+    "category": "sealant",
+    "price": 42,
+    "tags": [
+      "premium",
+      "eficient",
+      "rapid",
+      "protecție"
+    ],
+    "description": "Sigilant sintetic pentru protecție durabilă și protecție UV.",
+    "url": "/product/swissvax-gold-tire-dressing"
+  },
+  {
+    "id": 59,
+    "name": "Autoglym Supreme Wax",
+    "category": "sealant",
+    "price": 220,
+    "tags": [
+      "exterior",
+      "rapid",
+      "durabilitate"
+    ],
+    "description": "Sigilant sintetic pentru vopsea netedă și protecție UV.",
+    "url": "/product/autoglym-supreme-wax"
+  },
+  {
+    "id": 60,
+    "name": "Mothers Advanced Shampoo",
+    "category": "sealant",
+    "price": 31,
+    "tags": [
+      "interior",
+      "premium",
+      "durabilitate"
+    ],
+    "description": "Sigilant sintetic pentru luciu intens și protecție durabilă.",
+    "url": "/product/mothers-advanced-shampoo"
+  },
+  {
+    "id": 61,
+    "name": "Swissvax Max Sealant",
+    "category": "ceramic_coating",
+    "price": 282,
+    "tags": [
+      "exterior",
+      "rapid",
+      "eficient",
+      "durabilitate"
+    ],
+    "description": "Acoperire ceramică cu vopsea netedă și lung durabilitate.",
+    "url": "/product/swissvax-max-sealant"
+  },
+  {
+    "id": 62,
+    "name": "Chemical Guys Hydro Polish",
+    "category": "ceramic_coating",
+    "price": 88,
+    "tags": [
+      "protecție",
+      "hidrofob",
+      "universal"
+    ],
+    "description": "Acoperire ceramică cu hidrofobitate și mediu durabilitate.",
+    "url": "/product/chemical-guys-hydro-polish"
+  },
+  {
+    "id": 63,
+    "name": "Armor All Diamond Cleaner",
+    "category": "ceramic_coating",
+    "price": 290,
+    "tags": [
+      "luciu",
+      "eficient",
+      "universal",
+      "hidrofob"
+    ],
+    "description": "Acoperire ceramică cu ștergere ușoară și lung durabilitate.",
+    "url": "/product/armor-all-diamond-cleaner"
+  },
+  {
+    "id": 64,
+    "name": "Turtle Wax Premium Shampoo",
+    "category": "ceramic_coating",
+    "price": 88,
+    "tags": [
+      "hidrofob",
+      "exterior",
+      "protecție",
+      "durabilitate"
+    ],
+    "description": "Acoperire ceramică cu protecție UV și mediu durabilitate.",
+    "url": "/product/turtle-wax-premium-shampoo"
+  },
+  {
+    "id": 65,
+    "name": "Autoglym Classic Protectant",
+    "category": "ceramic_coating",
+    "price": 101,
+    "tags": [
+      "ușor",
+      "buget",
+      "protecție",
+      "hidrofob"
+    ],
+    "description": "Acoperire ceramică cu protecție durabilă și mediu durabilitate.",
+    "url": "/product/autoglym-classic-protectant"
+  },
+  {
+    "id": 66,
+    "name": "Gyeon Fusion Tire Dressing",
+    "category": "ceramic_coating",
+    "price": 298,
+    "tags": [
+      "hidrofob",
+      "protecție",
+      "eficient",
+      "interior"
+    ],
+    "description": "Acoperire ceramică cu ușor de aplicat și mediu durabilitate.",
+    "url": "/product/gyeon-fusion-tire-dressing"
+  },
+  {
+    "id": 67,
+    "name": "Autoglym Deluxe Cleaner",
+    "category": "ceramic_coating",
+    "price": 117,
+    "tags": [
+      "interior",
+      "natural",
+      "durabilitate"
+    ],
+    "description": "Acoperire ceramică cu protecție durabilă și lung durabilitate.",
+    "url": "/product/autoglym-deluxe-cleaner"
+  },
+  {
+    "id": 68,
+    "name": "Autoglym Ultra Cleaner",
+    "category": "ceramic_coating",
+    "price": 53,
+    "tags": [
+      "interior",
+      "hidrofob",
+      "protecție"
+    ],
+    "description": "Acoperire ceramică cu hidrofobitate și scurt durabilitate.",
+    "url": "/product/autoglym-ultra-cleaner"
+  },
+  {
+    "id": 69,
+    "name": "Mothers Hydro Glass Cleaner",
+    "category": "ceramic_coating",
+    "price": 289,
+    "tags": [
+      "rapid",
+      "premium",
+      "universal",
+      "buget"
+    ],
+    "description": "Acoperire ceramică cu luciu intens și mediu durabilitate.",
+    "url": "/product/mothers-hydro-glass-cleaner"
+  },
+  {
+    "id": 70,
+    "name": "Gtechniq Hydro Polish",
+    "category": "ceramic_coating",
+    "price": 121,
+    "tags": [
+      "premium",
+      "eficient",
+      "interior",
+      "protecție"
+    ],
+    "description": "Acoperire ceramică cu protecție durabilă și scurt durabilitate.",
+    "url": "/product/gtechniq-hydro-polish"
+  },
+  {
+    "id": 71,
+    "name": "3M Mirror Polish",
+    "category": "ceramic_coating",
+    "price": 36,
+    "tags": [
+      "exterior",
+      "natural",
+      "rapid",
+      "buget"
+    ],
+    "description": "Acoperire ceramică cu ștergere ușoară și mediu durabilitate.",
+    "url": "/product/3m-mirror-polish"
+  },
+  {
+    "id": 72,
+    "name": "Armor All Fusion Coating",
+    "category": "ceramic_coating",
+    "price": 120,
+    "tags": [
+      "hidrofob",
+      "eficient",
+      "zgârieturi",
+      "rapid"
+    ],
+    "description": "Acoperire ceramică cu ștergere ușoară și scurt durabilitate.",
+    "url": "/product/armor-all-fusion-coating"
+  },
+  {
+    "id": 73,
+    "name": "Mothers Deluxe Tire Dressing",
+    "category": "ceramic_coating",
+    "price": 160,
+    "tags": [
+      "natural",
+      "interior",
+      "hidrofob",
+      "durabilitate"
+    ],
+    "description": "Acoperire ceramică cu ștergere ușoară și mediu durabilitate.",
+    "url": "/product/mothers-deluxe-tire-dressing"
+  },
+  {
+    "id": 74,
+    "name": "Gyeon Extreme Shampoo",
+    "category": "ceramic_coating",
+    "price": 141,
+    "tags": [
+      "durabilitate",
+      "universal",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Acoperire ceramică cu hidrofobitate și lung durabilitate.",
+    "url": "/product/gyeon-extreme-shampoo"
+  },
+  {
+    "id": 75,
+    "name": "Armor All Hydro Shampoo",
+    "category": "ceramic_coating",
+    "price": 66,
+    "tags": [
+      "zgârieturi",
+      "luciu",
+      "natural",
+      "protecție"
+    ],
+    "description": "Acoperire ceramică cu ștergere ușoară și lung durabilitate.",
+    "url": "/product/armor-all-hydro-shampoo"
+  },
+  {
+    "id": 76,
+    "name": "Zymol Hydro Coating",
+    "category": "ceramic_coating",
+    "price": 281,
+    "tags": [
+      "hidrofob",
+      "natural",
+      "interior",
+      "luciu"
+    ],
+    "description": "Acoperire ceramică cu ușor de aplicat și mediu durabilitate.",
+    "url": "/product/zymol-hydro-coating"
+  },
+  {
+    "id": 77,
+    "name": "Collinite Mirror Coating",
+    "category": "ceramic_coating",
+    "price": 177,
+    "tags": [
+      "universal",
+      "interior",
+      "protecție",
+      "hidrofob"
+    ],
+    "description": "Acoperire ceramică cu vopsea netedă și mediu durabilitate.",
+    "url": "/product/collinite-mirror-coating"
+  },
+  {
+    "id": 78,
+    "name": "Poorboy's Supreme Protectant",
+    "category": "ceramic_coating",
+    "price": 237,
+    "tags": [
+      "rapid",
+      "buget",
+      "hidrofob",
+      "durabilitate"
+    ],
+    "description": "Acoperire ceramică cu protecție UV și lung durabilitate.",
+    "url": "/product/poorboys-supreme-protectant"
+  },
+  {
+    "id": 79,
+    "name": "Autoglym Extreme Sealant",
+    "category": "ceramic_coating",
+    "price": 132,
+    "tags": [
+      "luciu",
+      "ușor",
+      "buget",
+      "protecție"
+    ],
+    "description": "Acoperire ceramică cu protecție UV și lung durabilitate.",
+    "url": "/product/autoglym-extreme-sealant"
+  },
+  {
+    "id": 80,
+    "name": "Autoglym Elite Coating",
+    "category": "ceramic_coating",
+    "price": 201,
+    "tags": [
+      "durabilitate",
+      "eficient",
+      "protecție",
+      "hidrofob"
+    ],
+    "description": "Acoperire ceramică cu protecție durabilă și mediu durabilitate.",
+    "url": "/product/autoglym-elite-coating"
+  },
+  {
+    "id": 81,
+    "name": "Meguiars Premium Coating",
+    "category": "interior_cleaner",
+    "price": 80,
+    "tags": [
+      "durabilitate",
+      "universal",
+      "buget",
+      "premium"
+    ],
+    "description": "Detergent interior pentru luciu intens și rezultate rapide.",
+    "url": "/product/meguiars-premium-coating"
+  },
+  {
+    "id": 82,
+    "name": "Swissvax Max Polish",
+    "category": "interior_cleaner",
+    "price": 134,
+    "tags": [
+      "rapid",
+      "luciu",
+      "ușor",
+      "interior"
+    ],
+    "description": "Detergent interior pentru ștergere ușoară și ușor de aplicat.",
+    "url": "/product/swissvax-max-polish"
+  },
+  {
+    "id": 83,
+    "name": "Chemical Guys Advanced Cleaner",
+    "category": "interior_cleaner",
+    "price": 117,
+    "tags": [
+      "premium",
+      "eficient",
+      "buget",
+      "zgârieturi"
+    ],
+    "description": "Detergent interior pentru hidrofobitate și hidrofobitate.",
+    "url": "/product/chemical-guys-advanced-cleaner"
+  },
+  {
+    "id": 84,
+    "name": "Poorboy's Diamond Tire Dressing",
+    "category": "interior_cleaner",
+    "price": 279,
+    "tags": [
+      "luciu",
+      "natural",
+      "ușor",
+      "curățare"
+    ],
+    "description": "Detergent interior pentru protecție UV și rezultate rapide.",
+    "url": "/product/poorboys-diamond-tire-dressing"
+  },
+  {
+    "id": 85,
+    "name": "Gyeon Premium Protectant",
+    "category": "interior_cleaner",
+    "price": 267,
+    "tags": [
+      "rapid",
+      "hidrofob",
+      "interior",
+      "curățare"
+    ],
+    "description": "Detergent interior pentru vopsea netedă și protecție UV.",
+    "url": "/product/gyeon-premium-protectant"
+  },
+  {
+    "id": 86,
+    "name": "Adam's Pro Plus Protectant",
+    "category": "interior_cleaner",
+    "price": 125,
+    "tags": [
+      "hidrofob",
+      "interior",
+      "durabilitate",
+      "curățare"
+    ],
+    "description": "Detergent interior pentru hidrofobitate și vopsea netedă.",
+    "url": "/product/adams-pro-plus-protectant"
+  },
+  {
+    "id": 87,
+    "name": "Botny Signature Cleaner",
+    "category": "interior_cleaner",
+    "price": 259,
+    "tags": [
+      "natural",
+      "eficient",
+      "durabilitate",
+      "interior"
+    ],
+    "description": "Detergent interior pentru protecție UV și hidrofobitate.",
+    "url": "/product/botny-signature-cleaner"
+  },
+  {
+    "id": 88,
+    "name": "Autoglym Fusion Shampoo",
+    "category": "interior_cleaner",
+    "price": 144,
+    "tags": [
+      "zgârieturi",
+      "durabilitate",
+      "buget",
+      "eficient"
+    ],
+    "description": "Detergent interior pentru protecție UV și protecție UV.",
+    "url": "/product/autoglym-fusion-shampoo"
+  },
+  {
+    "id": 89,
+    "name": "Armor All Ultimate Glass Cleaner",
+    "category": "interior_cleaner",
+    "price": 75,
+    "tags": [
+      "natural",
+      "ușor",
+      "interior"
+    ],
+    "description": "Detergent interior pentru luciu intens și rezultate rapide.",
+    "url": "/product/armor-all-ultimate-glass-cleaner"
+  },
+  {
+    "id": 90,
+    "name": "Turtle Wax Pro Ultra Trim Dressing",
+    "category": "interior_cleaner",
+    "price": 177,
+    "tags": [
+      "durabilitate",
+      "natural",
+      "premium",
+      "universal"
+    ],
+    "description": "Detergent interior pentru ștergere ușoară și protecție UV.",
+    "url": "/product/turtle-wax-pro-ultra-trim-dressing"
+  },
+  {
+    "id": 91,
+    "name": "Mothers Classic Cleaner",
+    "category": "interior_cleaner",
+    "price": 230,
+    "tags": [
+      "luciu",
+      "durabilitate",
+      "universal",
+      "natural"
+    ],
+    "description": "Detergent interior pentru protecție durabilă și vopsea netedă.",
+    "url": "/product/mothers-classic-cleaner"
+  },
+  {
+    "id": 92,
+    "name": "Chemical Guys Ultimate Coating",
+    "category": "interior_cleaner",
+    "price": 162,
+    "tags": [
+      "rapid",
+      "universal",
+      "interior",
+      "curățare"
+    ],
+    "description": "Detergent interior pentru protecție UV și protecție UV.",
+    "url": "/product/chemical-guys-ultimate-coating"
+  },
+  {
+    "id": 93,
+    "name": "Sonax Pearl Sealant",
+    "category": "interior_cleaner",
+    "price": 127,
+    "tags": [
+      "premium",
+      "rapid",
+      "curățare",
+      "natural"
+    ],
+    "description": "Detergent interior pentru rezultate rapide și luciu intens.",
+    "url": "/product/sonax-pearl-sealant"
+  },
+  {
+    "id": 94,
+    "name": "Carpro Ultra Cleaner",
+    "category": "interior_cleaner",
+    "price": 257,
+    "tags": [
+      "natural",
+      "durabilitate",
+      "zgârieturi",
+      "interior"
+    ],
+    "description": "Detergent interior pentru luciu intens și protecție UV.",
+    "url": "/product/carpro-ultra-cleaner"
+  },
+  {
+    "id": 95,
+    "name": "Zymol Professional Tire Dressing",
+    "category": "interior_cleaner",
+    "price": 172,
+    "tags": [
+      "universal",
+      "premium",
+      "hidrofob",
+      "interior"
+    ],
+    "description": "Detergent interior pentru ușor de aplicat și protecție UV.",
+    "url": "/product/zymol-professional-tire-dressing"
+  },
+  {
+    "id": 96,
+    "name": "Sonax Diamond Protectant",
+    "category": "interior_cleaner",
+    "price": 248,
+    "tags": [
+      "rapid",
+      "buget",
+      "exterior",
+      "interior"
+    ],
+    "description": "Detergent interior pentru rezultate rapide și hidrofobitate.",
+    "url": "/product/sonax-diamond-protectant"
+  },
+  {
+    "id": 97,
+    "name": "Turtle Wax Pro Supreme Polish",
+    "category": "interior_cleaner",
+    "price": 281,
+    "tags": [
+      "universal",
+      "natural",
+      "durabilitate",
+      "ușor"
+    ],
+    "description": "Detergent interior pentru ștergere ușoară și protecție UV.",
+    "url": "/product/turtle-wax-pro-supreme-polish"
+  },
+  {
+    "id": 98,
+    "name": "Carpro Pearl Protectant",
+    "category": "interior_cleaner",
+    "price": 73,
+    "tags": [
+      "interior",
+      "hidrofob",
+      "buget"
+    ],
+    "description": "Detergent interior pentru hidrofobitate și vopsea netedă.",
+    "url": "/product/carpro-pearl-protectant"
+  },
+  {
+    "id": 99,
+    "name": "Turtle Wax Pro Premium Shampoo",
+    "category": "interior_cleaner",
+    "price": 185,
+    "tags": [
+      "luciu",
+      "rapid",
+      "curățare",
+      "interior"
+    ],
+    "description": "Detergent interior pentru ștergere ușoară și luciu intens.",
+    "url": "/product/turtle-wax-pro-premium-shampoo"
+  },
+  {
+    "id": 100,
+    "name": "Poorboy's Professional Glass Cleaner",
+    "category": "interior_cleaner",
+    "price": 272,
+    "tags": [
+      "buget",
+      "rapid",
+      "zgârieturi",
+      "interior"
+    ],
+    "description": "Detergent interior pentru hidrofobitate și hidrofobitate.",
+    "url": "/product/poorboys-professional-glass-cleaner"
+  },
+  {
+    "id": 101,
+    "name": "3M Royal Glass Cleaner",
+    "category": "glass_cleaner",
+    "price": 116,
+    "tags": [
+      "luciu",
+      "natural",
+      "rapid",
+      "hidrofob"
+    ],
+    "description": "Produs pentru geamuri cu vopsea netedă și luciu intens.",
+    "url": "/product/3m-royal-glass-cleaner"
+  },
+  {
+    "id": 102,
+    "name": "Poorboy's Pure Protectant",
+    "category": "glass_cleaner",
+    "price": 223,
+    "tags": [
+      "luciu",
+      "hidrofob",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu protecție UV și rezultate rapide.",
+    "url": "/product/poorboys-pure-protectant"
+  },
+  {
+    "id": 103,
+    "name": "3M Classic Protectant",
+    "category": "glass_cleaner",
+    "price": 235,
+    "tags": [
+      "durabilitate",
+      "exterior",
+      "buget",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu protecție durabilă și ștergere ușoară.",
+    "url": "/product/3m-classic-protectant"
+  },
+  {
+    "id": 104,
+    "name": "Koch Chemie Diamond Trim Dressing",
+    "category": "glass_cleaner",
+    "price": 262,
+    "tags": [
+      "interior",
+      "luciu",
+      "protecție",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu protecție durabilă și vopsea netedă.",
+    "url": "/product/koch-chemie-diamond-trim-dressing"
+  },
+  {
+    "id": 105,
+    "name": "Turtle Wax Premium Shampoo",
+    "category": "glass_cleaner",
+    "price": 149,
+    "tags": [
+      "zgârieturi",
+      "exterior",
+      "rapid",
+      "natural"
+    ],
+    "description": "Produs pentru geamuri cu hidrofobitate și protecție durabilă.",
+    "url": "/product/turtle-wax-premium-shampoo"
+  },
+  {
+    "id": 106,
+    "name": "Gtechniq Pro Plus Tire Dressing",
+    "category": "glass_cleaner",
+    "price": 277,
+    "tags": [
+      "exterior",
+      "protecție",
+      "ușor",
+      "luciu"
+    ],
+    "description": "Produs pentru geamuri cu ușor de aplicat și hidrofobitate.",
+    "url": "/product/gtechniq-pro-plus-tire-dressing"
+  },
+  {
+    "id": 107,
+    "name": "Koch Chemie Mirror Coating",
+    "category": "glass_cleaner",
+    "price": 160,
+    "tags": [
+      "rapid",
+      "universal",
+      "luciu",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu rezultate rapide și ușor de aplicat.",
+    "url": "/product/koch-chemie-mirror-coating"
+  },
+  {
+    "id": 108,
+    "name": "Poorboy's Ultimate Glass Cleaner",
+    "category": "glass_cleaner",
+    "price": 64,
+    "tags": [
+      "natural",
+      "premium",
+      "luciu",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu ștergere ușoară și hidrofobitate.",
+    "url": "/product/poorboys-ultimate-glass-cleaner"
+  },
+  {
+    "id": 109,
+    "name": "Botny Hydro Trim Dressing",
+    "category": "glass_cleaner",
+    "price": 70,
+    "tags": [
+      "eficient",
+      "exterior",
+      "zgârieturi",
+      "interior"
+    ],
+    "description": "Produs pentru geamuri cu luciu intens și ușor de aplicat.",
+    "url": "/product/botny-hydro-trim-dressing"
+  },
+  {
+    "id": 110,
+    "name": "Carpro Deluxe Protectant",
+    "category": "glass_cleaner",
+    "price": 298,
+    "tags": [
+      "luciu",
+      "exterior",
+      "durabilitate",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu ușor de aplicat și ușor de aplicat.",
+    "url": "/product/carpro-deluxe-protectant"
+  },
+  {
+    "id": 111,
+    "name": "Swissvax Premium Shampoo",
+    "category": "glass_cleaner",
+    "price": 257,
+    "tags": [
+      "exterior",
+      "interior",
+      "luciu",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu ștergere ușoară și protecție UV.",
+    "url": "/product/swissvax-premium-shampoo"
+  },
+  {
+    "id": 112,
+    "name": "Zymol Extreme Cleaner",
+    "category": "glass_cleaner",
+    "price": 156,
+    "tags": [
+      "luciu",
+      "durabilitate",
+      "universal",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu ștergere ușoară și hidrofobitate.",
+    "url": "/product/zymol-extreme-cleaner"
+  },
+  {
+    "id": 113,
+    "name": "3M Ultimate Trim Dressing",
+    "category": "glass_cleaner",
+    "price": 291,
+    "tags": [
+      "interior",
+      "luciu",
+      "ușor",
+      "zgârieturi"
+    ],
+    "description": "Produs pentru geamuri cu protecție UV și protecție UV.",
+    "url": "/product/3m-ultimate-trim-dressing"
+  },
+  {
+    "id": 114,
+    "name": "Koch Chemie Ultimate Protectant",
+    "category": "glass_cleaner",
+    "price": 126,
+    "tags": [
+      "natural",
+      "luciu",
+      "durabilitate",
+      "interior"
+    ],
+    "description": "Produs pentru geamuri cu ștergere ușoară și ușor de aplicat.",
+    "url": "/product/koch-chemie-ultimate-protectant"
+  },
+  {
+    "id": 115,
+    "name": "Carpro Premium Shampoo",
+    "category": "glass_cleaner",
+    "price": 165,
+    "tags": [
+      "hidrofob",
+      "ușor",
+      "luciu",
+      "interior"
+    ],
+    "description": "Produs pentru geamuri cu ușor de aplicat și hidrofobitate.",
+    "url": "/product/carpro-premium-shampoo"
+  },
+  {
+    "id": 116,
+    "name": "Turtle Wax Elite Polish",
+    "category": "glass_cleaner",
+    "price": 44,
+    "tags": [
+      "interior",
+      "exterior",
+      "luciu",
+      "ușor"
+    ],
+    "description": "Produs pentru geamuri cu protecție durabilă și rezultate rapide.",
+    "url": "/product/turtle-wax-elite-polish"
+  },
+  {
+    "id": 117,
+    "name": "Turtle Wax Max Tire Dressing",
+    "category": "glass_cleaner",
+    "price": 81,
+    "tags": [
+      "zgârieturi",
+      "ușor",
+      "universal",
+      "durabilitate"
+    ],
+    "description": "Produs pentru geamuri cu vopsea netedă și rezultate rapide.",
+    "url": "/product/turtle-wax-max-tire-dressing"
+  },
+  {
+    "id": 118,
+    "name": "Meguiars Elite Glass Cleaner",
+    "category": "glass_cleaner",
+    "price": 298,
+    "tags": [
+      "eficient",
+      "universal",
+      "durabilitate",
+      "luciu"
+    ],
+    "description": "Produs pentru geamuri cu vopsea netedă și luciu intens.",
+    "url": "/product/meguiars-elite-glass-cleaner"
+  },
+  {
+    "id": 119,
+    "name": "Gyeon Royal Wax",
+    "category": "glass_cleaner",
+    "price": 60,
+    "tags": [
+      "protecție",
+      "interior",
+      "premium",
+      "luciu"
+    ],
+    "description": "Produs pentru geamuri cu rezultate rapide și vopsea netedă.",
+    "url": "/product/gyeon-royal-wax"
+  },
+  {
+    "id": 120,
+    "name": "Turtle Wax Pro Ultimate Polish",
+    "category": "glass_cleaner",
+    "price": 163,
+    "tags": [
+      "buget",
+      "luciu",
+      "durabilitate",
+      "eficient"
+    ],
+    "description": "Produs pentru geamuri cu hidrofobitate și protecție UV.",
+    "url": "/product/turtle-wax-pro-ultimate-polish"
+  },
+  {
+    "id": 121,
+    "name": "Soft99 Max Polish",
+    "category": "tire_dressing",
+    "price": 229,
+    "tags": [
+      "buget",
+      "premium",
+      "natural",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru protecție durabilă și aspect profesională.",
+    "url": "/product/soft99-max-polish"
+  },
+  {
+    "id": 122,
+    "name": "Turtle Wax Pro Ultra Glass Cleaner",
+    "category": "tire_dressing",
+    "price": 38,
+    "tags": [
+      "ușor",
+      "hidrofob",
+      "luciu",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru ștergere ușoară și aspect înaltă.",
+    "url": "/product/turtle-wax-pro-ultra-glass-cleaner"
+  },
+  {
+    "id": 123,
+    "name": "Chemical Guys Mirror Cleaner",
+    "category": "tire_dressing",
+    "price": 120,
+    "tags": [
+      "interior",
+      "rapid",
+      "luciu",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru protecție durabilă și aspect profesională.",
+    "url": "/product/chemical-guys-mirror-cleaner"
+  },
+  {
+    "id": 124,
+    "name": "Meguiars Professional Shampoo",
+    "category": "tire_dressing",
+    "price": 103,
+    "tags": [
+      "ușor",
+      "luciu",
+      "natural",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru protecție durabilă și aspect premium.",
+    "url": "/product/meguiars-professional-shampoo"
+  },
+  {
+    "id": 125,
+    "name": "Gtechniq Ceramic Glass Cleaner",
+    "category": "tire_dressing",
+    "price": 191,
+    "tags": [
+      "luciu",
+      "natural",
+      "ușor",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru hidrofobitate și aspect economică.",
+    "url": "/product/gtechniq-ceramic-glass-cleaner"
+  },
+  {
+    "id": 126,
+    "name": "Turtle Wax Pro Supreme Shampoo",
+    "category": "tire_dressing",
+    "price": 143,
+    "tags": [
+      "hidrofob",
+      "eficient",
+      "luciu",
+      "natural"
+    ],
+    "description": "Dressing anvelope pentru vopsea netedă și aspect economică.",
+    "url": "/product/turtle-wax-pro-supreme-shampoo"
+  },
+  {
+    "id": 127,
+    "name": "Gtechniq Pro Plus Coating",
+    "category": "tire_dressing",
+    "price": 231,
+    "tags": [
+      "hidrofob",
+      "luciu",
+      "rapid",
+      "natural"
+    ],
+    "description": "Dressing anvelope pentru vopsea netedă și aspect economică.",
+    "url": "/product/gtechniq-pro-plus-coating"
+  },
+  {
+    "id": 128,
+    "name": "Armor All Gold Coating",
+    "category": "tire_dressing",
+    "price": 297,
+    "tags": [
+      "durabilitate",
+      "natural",
+      "ușor"
+    ],
+    "description": "Dressing anvelope pentru ștergere ușoară și aspect premium.",
+    "url": "/product/armor-all-gold-coating"
+  },
+  {
+    "id": 129,
+    "name": "Adam's Mirror Tire Dressing",
+    "category": "tire_dressing",
+    "price": 176,
+    "tags": [
+      "premium",
+      "buget",
+      "luciu",
+      "exterior"
+    ],
+    "description": "Dressing anvelope pentru vopsea netedă și aspect premium.",
+    "url": "/product/adams-mirror-tire-dressing"
+  },
+  {
+    "id": 130,
+    "name": "Swissvax Professional Tire Dressing",
+    "category": "tire_dressing",
+    "price": 93,
+    "tags": [
+      "luciu",
+      "durabilitate",
+      "natural"
+    ],
+    "description": "Dressing anvelope pentru protecție UV și aspect economică.",
+    "url": "/product/swissvax-professional-tire-dressing"
+  },
+  {
+    "id": 131,
+    "name": "Swissvax Fusion Cleaner",
+    "category": "tire_dressing",
+    "price": 127,
+    "tags": [
+      "interior",
+      "natural",
+      "luciu",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru hidrofobitate și aspect economică.",
+    "url": "/product/swissvax-fusion-cleaner"
+  },
+  {
+    "id": 132,
+    "name": "3M Max Protectant",
+    "category": "tire_dressing",
+    "price": 54,
+    "tags": [
+      "zgârieturi",
+      "rapid",
+      "protecție",
+      "luciu"
+    ],
+    "description": "Dressing anvelope pentru protecție UV și aspect înaltă.",
+    "url": "/product/3m-max-protectant"
+  },
+  {
+    "id": 133,
+    "name": "Autoglym Quantum Glass Cleaner",
+    "category": "tire_dressing",
+    "price": 138,
+    "tags": [
+      "premium",
+      "exterior"
+    ],
+    "description": "Dressing anvelope pentru rezultate rapide și aspect înaltă.",
+    "url": "/product/autoglym-quantum-glass-cleaner"
+  },
+  {
+    "id": 134,
+    "name": "Mothers Extreme Tire Dressing",
+    "category": "tire_dressing",
+    "price": 46,
+    "tags": [
+      "zgârieturi",
+      "luciu",
+      "natural",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru luciu intens și aspect premium.",
+    "url": "/product/mothers-extreme-tire-dressing"
+  },
+  {
+    "id": 135,
+    "name": "Meguiars Signature Coating",
+    "category": "tire_dressing",
+    "price": 212,
+    "tags": [
+      "natural",
+      "zgârieturi",
+      "luciu",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru protecție UV și aspect profesională.",
+    "url": "/product/meguiars-signature-coating"
+  },
+  {
+    "id": 136,
+    "name": "Swissvax Signature Cleaner",
+    "category": "tire_dressing",
+    "price": 53,
+    "tags": [
+      "interior",
+      "protecție",
+      "eficient",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru luciu intens și aspect profesională.",
+    "url": "/product/swissvax-signature-cleaner"
+  },
+  {
+    "id": 137,
+    "name": "Poorboy's Mirror Tire Dressing",
+    "category": "tire_dressing",
+    "price": 238,
+    "tags": [
+      "eficient",
+      "buget",
+      "luciu",
+      "natural"
+    ],
+    "description": "Dressing anvelope pentru rezultate rapide și aspect premium.",
+    "url": "/product/poorboys-mirror-tire-dressing"
+  },
+  {
+    "id": 138,
+    "name": "Chemical Guys Ultra Cleaner",
+    "category": "tire_dressing",
+    "price": 213,
+    "tags": [
+      "protecție",
+      "interior",
+      "durabilitate",
+      "universal"
+    ],
+    "description": "Dressing anvelope pentru ștergere ușoară și aspect înaltă.",
+    "url": "/product/chemical-guys-ultra-cleaner"
+  },
+  {
+    "id": 139,
+    "name": "Swissvax Classic Trim Dressing",
+    "category": "tire_dressing",
+    "price": 63,
+    "tags": [
+      "exterior",
+      "hidrofob",
+      "luciu",
+      "durabilitate"
+    ],
+    "description": "Dressing anvelope pentru ștergere ușoară și aspect premium.",
+    "url": "/product/swissvax-classic-trim-dressing"
+  },
+  {
+    "id": 140,
+    "name": "Poorboy's Signature Protectant",
+    "category": "tire_dressing",
+    "price": 161,
+    "tags": [
+      "premium",
+      "eficient",
+      "luciu",
+      "natural"
+    ],
+    "description": "Dressing anvelope pentru ușor de aplicat și aspect economică.",
+    "url": "/product/poorboys-signature-protectant"
+  },
+  {
+    "id": 141,
+    "name": "Adam's Gold Glass Cleaner",
+    "category": "shampoo",
+    "price": 120,
+    "tags": [
+      "hidrofob",
+      "durabilitate",
+      "interior",
+      "protecție"
+    ],
+    "description": "Șampon auto cu luciu intens și ștergere ușoară.",
+    "url": "/product/adams-gold-glass-cleaner"
+  },
+  {
+    "id": 142,
+    "name": "Koch Chemie Diamond Sealant",
+    "category": "shampoo",
+    "price": 141,
+    "tags": [
+      "protecție",
+      "premium",
+      "luciu",
+      "hidrofob"
+    ],
+    "description": "Șampon auto cu protecție UV și vopsea netedă.",
+    "url": "/product/koch-chemie-diamond-sealant"
+  },
+  {
+    "id": 143,
+    "name": "Chemical Guys Pearl Polish",
+    "category": "shampoo",
+    "price": 114,
+    "tags": [
+      "universal",
+      "protecție",
+      "ușor",
+      "luciu"
+    ],
+    "description": "Șampon auto cu ușor de aplicat și hidrofobitate.",
+    "url": "/product/chemical-guys-pearl-polish"
+  },
+  {
+    "id": 144,
+    "name": "3M Pearl Sealant",
+    "category": "shampoo",
+    "price": 41,
+    "tags": [
+      "eficient",
+      "rapid",
+      "durabilitate",
+      "hidrofob"
+    ],
+    "description": "Șampon auto cu rezultate rapide și ștergere ușoară.",
+    "url": "/product/3m-pearl-sealant"
+  },
+  {
+    "id": 145,
+    "name": "Armor All Fusion Protectant",
+    "category": "shampoo",
+    "price": 87,
+    "tags": [
+      "zgârieturi",
+      "rapid",
+      "luciu",
+      "hidrofob"
+    ],
+    "description": "Șampon auto cu vopsea netedă și hidrofobitate.",
+    "url": "/product/armor-all-fusion-protectant"
+  },
+  {
+    "id": 146,
+    "name": "Autoglym Hydro Trim Dressing",
+    "category": "shampoo",
+    "price": 243,
+    "tags": [
+      "rapid",
+      "exterior",
+      "luciu",
+      "hidrofob"
+    ],
+    "description": "Șampon auto cu ușor de aplicat și ștergere ușoară.",
+    "url": "/product/autoglym-hydro-trim-dressing"
+  },
+  {
+    "id": 147,
+    "name": "Meguiars Royal Trim Dressing",
+    "category": "shampoo",
+    "price": 68,
+    "tags": [
+      "natural",
+      "hidrofob",
+      "premium",
+      "luciu"
+    ],
+    "description": "Șampon auto cu rezultate rapide și ștergere ușoară.",
+    "url": "/product/meguiars-royal-trim-dressing"
+  },
+  {
+    "id": 148,
+    "name": "Adam's Mirror Glass Cleaner",
+    "category": "shampoo",
+    "price": 258,
+    "tags": [
+      "ușor",
+      "interior",
+      "hidrofob",
+      "luciu"
+    ],
+    "description": "Șampon auto cu hidrofobitate și luciu intens.",
+    "url": "/product/adams-mirror-glass-cleaner"
+  },
+  {
+    "id": 149,
+    "name": "Chemical Guys Diamond Glass Cleaner",
+    "category": "shampoo",
+    "price": 130,
+    "tags": [
+      "natural",
+      "protecție",
+      "hidrofob",
+      "curățare"
+    ],
+    "description": "Șampon auto cu rezultate rapide și protecție durabilă.",
+    "url": "/product/chemical-guys-diamond-glass-cleaner"
+  },
+  {
+    "id": 150,
+    "name": "Chemical Guys Ceramic Tire Dressing",
+    "category": "shampoo",
+    "price": 213,
+    "tags": [
+      "rapid",
+      "buget",
+      "eficient",
+      "hidrofob"
+    ],
+    "description": "Șampon auto cu protecție UV și protecție UV.",
+    "url": "/product/chemical-guys-ceramic-tire-dressing"
+  },
+  {
+    "id": 151,
+    "name": "Soft99 Supreme Polish",
+    "category": "shampoo",
+    "price": 119,
+    "tags": [
+      "ușor",
+      "protecție"
+    ],
+    "description": "Șampon auto cu vopsea netedă și hidrofobitate.",
+    "url": "/product/soft99-supreme-polish"
+  },
+  {
+    "id": 152,
+    "name": "Koch Chemie Ultimate Cleaner",
+    "category": "shampoo",
+    "price": 266,
+    "tags": [
+      "exterior",
+      "hidrofob",
+      "universal",
+      "luciu"
+    ],
+    "description": "Șampon auto cu rezultate rapide și vopsea netedă.",
+    "url": "/product/koch-chemie-ultimate-cleaner"
+  },
+  {
+    "id": 153,
+    "name": "Botny Advanced Polish",
+    "category": "shampoo",
+    "price": 271,
+    "tags": [
+      "luciu",
+      "premium",
+      "interior",
+      "buget"
+    ],
+    "description": "Șampon auto cu protecție UV și protecție UV.",
+    "url": "/product/botny-advanced-polish"
+  },
+  {
+    "id": 154,
+    "name": "Gyeon Platinum Trim Dressing",
+    "category": "shampoo",
+    "price": 171,
+    "tags": [
+      "zgârieturi",
+      "luciu",
+      "buget",
+      "ușor"
+    ],
+    "description": "Șampon auto cu rezultate rapide și rezultate rapide.",
+    "url": "/product/gyeon-platinum-trim-dressing"
+  },
+  {
+    "id": 155,
+    "name": "Soft99 Pearl Shampoo",
+    "category": "shampoo",
+    "price": 180,
+    "tags": [
+      "universal",
+      "interior",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Șampon auto cu hidrofobitate și ștergere ușoară.",
+    "url": "/product/soft99-pearl-shampoo"
+  },
+  {
+    "id": 156,
+    "name": "Sonax Extreme Protectant",
+    "category": "shampoo",
+    "price": 135,
+    "tags": [
+      "durabilitate",
+      "hidrofob",
+      "luciu",
+      "protecție"
+    ],
+    "description": "Șampon auto cu vopsea netedă și hidrofobitate.",
+    "url": "/product/sonax-extreme-protectant"
+  },
+  {
+    "id": 157,
+    "name": "Swissvax Gold Protectant",
+    "category": "shampoo",
+    "price": 234,
+    "tags": [
+      "buget",
+      "luciu",
+      "hidrofob",
+      "protecție"
+    ],
+    "description": "Șampon auto cu ștergere ușoară și protecție durabilă.",
+    "url": "/product/swissvax-gold-protectant"
+  },
+  {
+    "id": 158,
+    "name": "Autoglym Fusion Trim Dressing",
+    "category": "shampoo",
+    "price": 288,
+    "tags": [
+      "zgârieturi",
+      "luciu",
+      "universal",
+      "protecție"
+    ],
+    "description": "Șampon auto cu protecție UV și ștergere ușoară.",
+    "url": "/product/autoglym-fusion-trim-dressing"
+  },
+  {
+    "id": 159,
+    "name": "Poorboy's Deluxe Trim Dressing",
+    "category": "shampoo",
+    "price": 196,
+    "tags": [
+      "natural",
+      "universal",
+      "hidrofob",
+      "curățare"
+    ],
+    "description": "Șampon auto cu luciu intens și protecție durabilă.",
+    "url": "/product/poorboys-deluxe-trim-dressing"
+  },
+  {
+    "id": 160,
+    "name": "Autoglym Ceramic Glass Cleaner",
+    "category": "shampoo",
+    "price": 259,
+    "tags": [
+      "natural",
+      "zgârieturi",
+      "interior",
+      "hidrofob"
+    ],
+    "description": "Șampon auto cu protecție durabilă și ștergere ușoară.",
+    "url": "/product/autoglym-ceramic-glass-cleaner"
+  },
+  {
+    "id": 161,
+    "name": "Turtle Wax Pro Signature Protectant",
+    "category": "degreaser",
+    "price": 226,
+    "tags": [
+      "durabilitate",
+      "exterior",
+      "eficient",
+      "zgârieturi"
+    ],
+    "description": "Degresant puternic cu protecție UV și vopsea netedă.",
+    "url": "/product/turtle-wax-pro-signature-protectant"
+  },
+  {
+    "id": 162,
+    "name": "Gtechniq Quantum Tire Dressing",
+    "category": "degreaser",
+    "price": 298,
+    "tags": [
+      "universal",
+      "zgârieturi",
+      "interior",
+      "eficient"
+    ],
+    "description": "Degresant puternic cu rezultate rapide și protecție UV.",
+    "url": "/product/gtechniq-quantum-tire-dressing"
+  },
+  {
+    "id": 163,
+    "name": "Chemical Guys Platinum Sealant",
+    "category": "degreaser",
+    "price": 112,
+    "tags": [
+      "luciu",
+      "natural",
+      "exterior",
+      "eficient"
+    ],
+    "description": "Degresant puternic cu vopsea netedă și luciu intens.",
+    "url": "/product/chemical-guys-platinum-sealant"
+  },
+  {
+    "id": 164,
+    "name": "Meguiars Professional Glass Cleaner",
+    "category": "degreaser",
+    "price": 52,
+    "tags": [
+      "interior",
+      "universal",
+      "ușor",
+      "exterior"
+    ],
+    "description": "Degresant puternic cu protecție UV și hidrofobitate.",
+    "url": "/product/meguiars-professional-glass-cleaner"
+  },
+  {
+    "id": 165,
+    "name": "Chemical Guys Extreme Coating",
+    "category": "degreaser",
+    "price": 146,
+    "tags": [
+      "ușor",
+      "exterior",
+      "premium",
+      "natural"
+    ],
+    "description": "Degresant puternic cu protecție durabilă și hidrofobitate.",
+    "url": "/product/chemical-guys-extreme-coating"
+  },
+  {
+    "id": 166,
+    "name": "Zymol Ultimate Trim Dressing",
+    "category": "degreaser",
+    "price": 238,
+    "tags": [
+      "zgârieturi",
+      "exterior",
+      "eficient",
+      "curățare"
+    ],
+    "description": "Degresant puternic cu luciu intens și ușor de aplicat.",
+    "url": "/product/zymol-ultimate-trim-dressing"
+  },
+  {
+    "id": 167,
+    "name": "Botny Professional Wax",
+    "category": "degreaser",
+    "price": 175,
+    "tags": [
+      "buget",
+      "ușor",
+      "natural",
+      "interior"
+    ],
+    "description": "Degresant puternic cu ușor de aplicat și vopsea netedă.",
+    "url": "/product/botny-professional-wax"
+  },
+  {
+    "id": 168,
+    "name": "Turtle Wax Gold Cleaner",
+    "category": "degreaser",
+    "price": 93,
+    "tags": [
+      "exterior",
+      "durabilitate",
+      "hidrofob",
+      "rapid"
+    ],
+    "description": "Degresant puternic cu luciu intens și ștergere ușoară.",
+    "url": "/product/turtle-wax-gold-cleaner"
+  },
+  {
+    "id": 169,
+    "name": "Mothers Pearl Shampoo",
+    "category": "degreaser",
+    "price": 79,
+    "tags": [
+      "universal",
+      "interior",
+      "buget",
+      "exterior"
+    ],
+    "description": "Degresant puternic cu rezultate rapide și vopsea netedă.",
+    "url": "/product/mothers-pearl-shampoo"
+  },
+  {
+    "id": 170,
+    "name": "Turtle Wax Pro Pearl Sealant",
+    "category": "degreaser",
+    "price": 136,
+    "tags": [
+      "exterior",
+      "eficient",
+      "durabilitate",
+      "hidrofob"
+    ],
+    "description": "Degresant puternic cu protecție durabilă și luciu intens.",
+    "url": "/product/turtle-wax-pro-pearl-sealant"
+  },
+  {
+    "id": 171,
+    "name": "Swissvax Hydro Polish",
+    "category": "degreaser",
+    "price": 158,
+    "tags": [
+      "interior",
+      "protecție",
+      "zgârieturi",
+      "exterior"
+    ],
+    "description": "Degresant puternic cu vopsea netedă și vopsea netedă.",
+    "url": "/product/swissvax-hydro-polish"
+  },
+  {
+    "id": 172,
+    "name": "Swissvax Professional Cleaner",
+    "category": "degreaser",
+    "price": 257,
+    "tags": [
+      "zgârieturi",
+      "universal",
+      "eficient",
+      "exterior"
+    ],
+    "description": "Degresant puternic cu protecție durabilă și ușor de aplicat.",
+    "url": "/product/swissvax-professional-cleaner"
+  },
+  {
+    "id": 173,
+    "name": "Mothers Signature Glass Cleaner",
+    "category": "degreaser",
+    "price": 184,
+    "tags": [
+      "durabilitate",
+      "buget",
+      "exterior",
+      "eficient"
+    ],
+    "description": "Degresant puternic cu ușor de aplicat și rezultate rapide.",
+    "url": "/product/mothers-signature-glass-cleaner"
+  },
+  {
+    "id": 174,
+    "name": "Zymol Deluxe Glass Cleaner",
+    "category": "degreaser",
+    "price": 210,
+    "tags": [
+      "zgârieturi",
+      "eficient",
+      "buget",
+      "exterior"
+    ],
+    "description": "Degresant puternic cu protecție UV și luciu intens.",
+    "url": "/product/zymol-deluxe-glass-cleaner"
+  },
+  {
+    "id": 175,
+    "name": "Meguiars Extreme Tire Dressing",
+    "category": "degreaser",
+    "price": 136,
+    "tags": [
+      "hidrofob",
+      "interior",
+      "durabilitate",
+      "zgârieturi"
+    ],
+    "description": "Degresant puternic cu vopsea netedă și rezultate rapide.",
+    "url": "/product/meguiars-extreme-tire-dressing"
+  },
+  {
+    "id": 176,
+    "name": "Armor All Hydro Sealant",
+    "category": "degreaser",
+    "price": 197,
+    "tags": [
+      "zgârieturi",
+      "interior",
+      "hidrofob",
+      "exterior"
+    ],
+    "description": "Degresant puternic cu ștergere ușoară și luciu intens.",
+    "url": "/product/armor-all-hydro-sealant"
+  },
+  {
+    "id": 177,
+    "name": "Zymol Signature Sealant",
+    "category": "degreaser",
+    "price": 120,
+    "tags": [
+      "protecție",
+      "luciu",
+      "exterior",
+      "eficient"
+    ],
+    "description": "Degresant puternic cu hidrofobitate și protecție UV.",
+    "url": "/product/zymol-signature-sealant"
+  },
+  {
+    "id": 178,
+    "name": "Autoglym Extreme Polish",
+    "category": "degreaser",
+    "price": 159,
+    "tags": [
+      "buget",
+      "hidrofob",
+      "exterior",
+      "eficient"
+    ],
+    "description": "Degresant puternic cu luciu intens și luciu intens.",
+    "url": "/product/autoglym-extreme-polish"
+  },
+  {
+    "id": 179,
+    "name": "Adam's Extreme Trim Dressing",
+    "category": "degreaser",
+    "price": 44,
+    "tags": [
+      "zgârieturi",
+      "interior",
+      "durabilitate",
+      "buget"
+    ],
+    "description": "Degresant puternic cu hidrofobitate și ștergere ușoară.",
+    "url": "/product/adams-extreme-trim-dressing"
+  },
+  {
+    "id": 180,
+    "name": "Autoglym Professional Coating",
+    "category": "degreaser",
+    "price": 59,
+    "tags": [
+      "rapid",
+      "premium",
+      "exterior",
+      "eficient"
+    ],
+    "description": "Degresant puternic cu hidrofobitate și hidrofobitate.",
+    "url": "/product/autoglym-professional-coating"
+  },
+  {
+    "id": 181,
+    "name": "Sonax Ultimate Cleaner",
+    "category": "microfiber",
+    "price": 123,
+    "tags": [
+      "rapid",
+      "natural",
+      "ușor",
+      "universal"
+    ],
+    "description": "Cărți microfibră pentru ușor de aplicat și protecție durabilă.",
+    "url": "/product/sonax-ultimate-cleaner"
+  },
+  {
+    "id": 182,
+    "name": "Koch Chemie Fusion Cleaner",
+    "category": "microfiber",
+    "price": 215,
+    "tags": [
+      "universal",
+      "luciu",
+      "ușor"
+    ],
+    "description": "Cărți microfibră pentru vopsea netedă și rezultate rapide.",
+    "url": "/product/koch-chemie-fusion-cleaner"
+  },
+  {
+    "id": 183,
+    "name": "Koch Chemie Premium Shampoo",
+    "category": "microfiber",
+    "price": 286,
+    "tags": [
+      "rapid",
+      "durabilitate",
+      "ușor",
+      "universal"
+    ],
+    "description": "Cărți microfibră pentru luciu intens și vopsea netedă.",
+    "url": "/product/koch-chemie-premium-shampoo"
+  },
+  {
+    "id": 184,
+    "name": "Soft99 Ultra Wax",
+    "category": "microfiber",
+    "price": 227,
+    "tags": [
+      "ușor",
+      "buget",
+      "zgârieturi",
+      "durabilitate"
+    ],
+    "description": "Cărți microfibră pentru luciu intens și ușor de aplicat.",
+    "url": "/product/soft99-ultra-wax"
+  },
+  {
+    "id": 185,
+    "name": "Autoglym Pearl Protectant",
+    "category": "microfiber",
+    "price": 129,
+    "tags": [
+      "exterior",
+      "universal",
+      "premium",
+      "zgârieturi"
+    ],
+    "description": "Cărți microfibră pentru luciu intens și rezultate rapide.",
+    "url": "/product/autoglym-pearl-protectant"
+  },
+  {
+    "id": 186,
+    "name": "Meguiars Diamond Trim Dressing",
+    "category": "microfiber",
+    "price": 117,
+    "tags": [
+      "durabilitate",
+      "rapid",
+      "premium",
+      "ușor"
+    ],
+    "description": "Cărți microfibră pentru protecție UV și ușor de aplicat.",
+    "url": "/product/meguiars-diamond-trim-dressing"
+  },
+  {
+    "id": 187,
+    "name": "Meguiars Pro Plus Tire Dressing",
+    "category": "microfiber",
+    "price": 144,
+    "tags": [
+      "rapid",
+      "protecție",
+      "ușor",
+      "luciu"
+    ],
+    "description": "Cărți microfibră pentru protecție durabilă și rezultate rapide.",
+    "url": "/product/meguiars-pro-plus-tire-dressing"
+  },
+  {
+    "id": 188,
+    "name": "Collinite Diamond Protectant",
+    "category": "microfiber",
+    "price": 253,
+    "tags": [
+      "ușor",
+      "eficient",
+      "luciu",
+      "universal"
+    ],
+    "description": "Cărți microfibră pentru hidrofobitate și ștergere ușoară.",
+    "url": "/product/collinite-diamond-protectant"
+  },
+  {
+    "id": 189,
+    "name": "Turtle Wax Pro Elite Sealant",
+    "category": "microfiber",
+    "price": 148,
+    "tags": [
+      "buget",
+      "universal",
+      "hidrofob",
+      "durabilitate"
+    ],
+    "description": "Cărți microfibră pentru luciu intens și luciu intens.",
+    "url": "/product/turtle-wax-pro-elite-sealant"
+  },
+  {
+    "id": 190,
+    "name": "Mothers Pure Trim Dressing",
+    "category": "microfiber",
+    "price": 243,
+    "tags": [
+      "luciu",
+      "protecție",
+      "ușor"
+    ],
+    "description": "Cărți microfibră pentru vopsea netedă și luciu intens.",
+    "url": "/product/mothers-pure-trim-dressing"
+  },
+  {
+    "id": 191,
+    "name": "Collinite Ceramic Tire Dressing",
+    "category": "microfiber",
+    "price": 224,
+    "tags": [
+      "durabilitate",
+      "rapid",
+      "zgârieturi",
+      "luciu"
+    ],
+    "description": "Cărți microfibră pentru ștergere ușoară și ștergere ușoară.",
+    "url": "/product/collinite-ceramic-tire-dressing"
+  },
+  {
+    "id": 192,
+    "name": "Turtle Wax Pro Diamond Protectant",
+    "category": "microfiber",
+    "price": 221,
+    "tags": [
+      "zgârieturi",
+      "premium",
+      "luciu",
+      "universal"
+    ],
+    "description": "Cărți microfibră pentru luciu intens și protecție durabilă.",
+    "url": "/product/turtle-wax-pro-diamond-protectant"
+  },
+  {
+    "id": 193,
+    "name": "Adam's Mirror Cleaner",
+    "category": "microfiber",
+    "price": 221,
+    "tags": [
+      "eficient",
+      "universal",
+      "ușor",
+      "luciu"
+    ],
+    "description": "Cărți microfibră pentru rezultate rapide și protecție UV.",
+    "url": "/product/adams-mirror-cleaner"
+  },
+  {
+    "id": 194,
+    "name": "Sonax Ultimate Coating",
+    "category": "microfiber",
+    "price": 191,
+    "tags": [
+      "luciu",
+      "ușor",
+      "universal",
+      "buget"
+    ],
+    "description": "Cărți microfibră pentru ștergere ușoară și protecție UV.",
+    "url": "/product/sonax-ultimate-coating"
+  },
+  {
+    "id": 195,
+    "name": "Chemical Guys Platinum Sealant",
+    "category": "microfiber",
+    "price": 207,
+    "tags": [
+      "ușor",
+      "hidrofob",
+      "protecție",
+      "universal"
+    ],
+    "description": "Cărți microfibră pentru ușor de aplicat și protecție UV.",
+    "url": "/product/chemical-guys-platinum-sealant"
+  },
+  {
+    "id": 196,
+    "name": "Turtle Wax Platinum Trim Dressing",
+    "category": "microfiber",
+    "price": 176,
+    "tags": [
+      "eficient",
+      "interior",
+      "buget",
+      "universal"
+    ],
+    "description": "Cărți microfibră pentru vopsea netedă și rezultate rapide.",
+    "url": "/product/turtle-wax-platinum-trim-dressing"
+  },
+  {
+    "id": 197,
+    "name": "Turtle Wax Diamond Wax",
+    "category": "microfiber",
+    "price": 59,
+    "tags": [
+      "natural",
+      "rapid",
+      "universal",
+      "eficient"
+    ],
+    "description": "Cărți microfibră pentru protecție durabilă și ștergere ușoară.",
+    "url": "/product/turtle-wax-diamond-wax"
+  },
+  {
+    "id": 198,
+    "name": "Botny Elite Polish",
+    "category": "microfiber",
+    "price": 282,
+    "tags": [
+      "eficient",
+      "universal",
+      "ușor",
+      "rapid"
+    ],
+    "description": "Cărți microfibră pentru hidrofobitate și ștergere ușoară.",
+    "url": "/product/botny-elite-polish"
+  },
+  {
+    "id": 199,
+    "name": "Soft99 Signature Shampoo",
+    "category": "microfiber",
+    "price": 59,
+    "tags": [
+      "luciu",
+      "hidrofob",
+      "zgârieturi",
+      "universal"
+    ],
+    "description": "Cărți microfibră pentru hidrofobitate și rezultate rapide.",
+    "url": "/product/soft99-signature-shampoo"
+  },
+  {
+    "id": 200,
+    "name": "Soft99 Ultimate Wax",
+    "category": "microfiber",
+    "price": 177,
+    "tags": [
+      "durabilitate",
+      "luciu",
+      "ușor",
+      "buget"
+    ],
+    "description": "Cărți microfibră pentru luciu intens și vopsea netedă.",
+    "url": "/product/soft99-ultimate-wax"
+  }
+]

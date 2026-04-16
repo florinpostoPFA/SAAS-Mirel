@@ -1,0 +1,46 @@
+{
+  "prewash_cleaner": {
+    "matchTags": ["snow_foam"],
+    "matchText": ["spuma activa", "prewash", "snow foam"],
+    "maxProducts": 1
+  },
+  "contact_cleaner": {
+    "matchTags": ["car_shampoo"],
+    "matchText": ["sampon"],
+    "maxProducts": 1
+  },
+  "wash_tool": {
+    "matchTags": ["wash_mitt", "bucket"],
+    "matchText": ["manusa", "galeata"],
+    "maxProducts": 2
+  },
+  "drying_tool": {
+    "matchTags": ["drying_towel"],
+    "matchText": ["prosop", "laveta uscare"],
+    "maxProducts": 1
+  },
+  "glass_cleaner": {
+    "matchTags": ["glass_cleaner"],
+    "matchText": ["geam"]
+  },
+  "wheel_cleaner": {
+    "matchTags": ["wheel_cleaner"],
+    "matchText": ["jante"]
+  },
+  
+  "interior_cleaner": {
+  "matchTags": ["interior_cleaner"],
+  "matchText": ["interior", "apc", "tapiterie"],
+  "maxProducts": 1
+},
+"interior_tool": {
+  "matchTags": ["vacuum", "brush"],
+  "matchText": ["aspirator", "perie"],
+  "maxProducts": 1
+},
+"interior_protection": {
+  "matchTags": ["interior_protectant"],
+  "matchText": ["protectie interior", "dressing interior"],
+  "maxProducts": 1
+}
+}

@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { info, error: logError } = require("../logger");
+const { debug, error: logError } = require("../logger");
 
 const SOURCE = "OpenAI";
 
@@ -17,7 +17,7 @@ async function ask(prompt) {
   }
 
   try {
-    info(SOURCE, `Calling OpenAI API with model gpt-4o-mini`);
+    debug(SOURCE, "Calling OpenAI API", { model: "gpt-4o-mini" });
     
     const res = await axios.post(
       "https://api.openai.com/v1/chat/completions",
@@ -46,7 +46,7 @@ async function ask(prompt) {
       throw new Error("Empty response from OpenAI API");
     }
 
-    info(SOURCE, `API response received (${content.length} chars)`);
+    debug(SOURCE, "OpenAI API response received", { chars: content.length });
     return content;
   } catch (err) {
     if (err.response) {

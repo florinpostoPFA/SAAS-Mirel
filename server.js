@@ -2,10 +2,12 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
+const path = require("path");
 
 const config = require("./config");
-const { handleChat } = require("./services/chatService");
-const { getSettings, saveSettings } = require("./services/settingsService");
+const chatService = require("./services/chatService");
+const { autoTagProduct } = require("./services/autoTagService");
+const settingsService = require("./services/settingsService");
 const {
   incrementConversation,
   trackKeywords,
@@ -20,13 +22,25 @@ const {
   getConversions,
   getTimeline
 } = require("./services/trackingService");
+const { logInfo, error: logError } = require("./services/logger");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-const productsCatalog = JSON.parse(fs.readFileSync("./data/products.json"));
+function loadProducts() {
+  const filePath = path.join(__dirname, "data", "products.json");
+  const data = fs.readFileSync(filePath, "utf-8");
+  const products = JSON.parse(data);
+
+  return products.map(product => ({
+    ...product,
+    aiTags: autoTagProduct(product)
+  }));
+}
+
+const productsCatalog = loadProducts();
 
 function getClient(api_key) {
   return { id: config.server.defaultClientId };
@@ -35,32 +49,20 @@ function getClient(api_key) {
 // 💬 CHAT
 app.post("/chat", async (req, res) => {
   try {
-    const { message, api_key } = req.body;
+    const { message, sessionId } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: "Message cannot be empty" });
-    }
+    const result = await chatService.handleChat({
+      message,
+      sessionId: sessionId || "test-session"
+    });
 
-    const client = getClient(api_key);
-
-    // Track conversation
-    incrementConversation();
-    trackTimeline();
-    trackKeywords(message);
-
-    // Handle chat - pass catalog as products
-    const { reply, products: recommendedProducts } = await handleChat(message, client.id, productsCatalog);
-
-    // Track products mentioned
-    trackProducts(recommendedProducts);
-
-    res.json({ reply, products: recommendedProducts });
+    res.json({
+      reply: result.reply || result.message || "No response"
+    });
   } catch (err) {
-    console.error("Chat error:", err);
-    const errorMessage = err.message || "Server error";
-    res.status(500).json({ 
-      error: errorMessage,
-      details: process.env.NODE_ENV === "development" ? err.stack : undefined
+    logError("SERVER", "Chat error", { error: err.message });
+    res.json({
+      reply: "A apărut o eroare."
     });
   }
 });
@@ -86,17 +88,18 @@ app.get("/stats", (req, res) => {
 
 // ⚙️ settings
 app.get("/settings", (req, res) => {
-  const client = getClient(req.query.api_key);
-  res.json(getSettings(client.id));
+  const settings = settingsService.getSettings();
+  res.json(settings);
 });
 
 app.post("/settings", (req, res) => {
-  const { api_key, settings } = req.body;
-  const client = getClient(api_key);
-
-  saveSettings(client.id, settings);
-
+  settingsService.saveSettings(req.body);
   res.json({ success: true });
+});
+
+app.get("/products", (req, res) => {
+  const products = loadProducts();
+  res.json(products);
 });
 
 // health
@@ -104,6 +107,19 @@ app.get("/health", (req, res) => {
   res.send("OK");
 });
 
-app.listen(config.server.port, () => {
-  console.log("🚀 running on http://localhost:" + config.server.port);
-});
+// Session cleanup - run every hour
+const { cleanupOldSessions } = require("./services/sessionService");
+setInterval(() => {
+  const cleanedCount = cleanupOldSessions();
+  if (cleanedCount > 0) {
+    logInfo("SERVER", { event: "session_cleanup", cleanedCount });
+  }
+}, 60 * 60 * 1000); // 1 hour
+
+if (require.main === module) {
+  app.listen(config.server.port, () => {
+    logInfo("SERVER", { event: "startup", port: config.server.port });
+  });
+}
+
+module.exports = app;

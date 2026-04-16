@@ -1,42 +1,54 @@
-const config = require("../config");
+const fs = require("fs");
+const path = require("path");
 
-const defaultConversationRules = config.defaultSettings.conversation_rules || {
-  greeting: {
-    enabled: true,
-    response: "Salut! Cu ce te pot ajuta?",
-    show_products: false
+const SETTINGS_PATH = path.join(__dirname, "../data/settings.json");
+
+const DEFAULT_SETTINGS = {
+  max_products: 3,
+  delay_recommendation: true,
+  tone: "friendly",
+  response_style: "persuasive",
+  sales_mode: "soft",
+  ask_questions: true,
+  max_questions: 2,
+  greeting_enabled: true,
+  tagRules: "",
+  cta: "Vezi produsul",
+  fallback_message: "Hai sa vedem cum te pot ajuta mai bine. Spune-mi, te intereseaza curatare interior, exterior sau alt tip de produs?"
+};
+
+function getSettings() {
+  try {
+    const data = fs.readFileSync(SETTINGS_PATH, "utf-8");
+    const parsed = JSON.parse(data);
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed
+    };
+  } catch (err) {
+    return DEFAULT_SETTINGS;
   }
+}
+
+function getClientSettings(clientId) {
+  try {
+    const data = fs.readFileSync(SETTINGS_PATH, "utf-8");
+    const parsed = JSON.parse(data);
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed
+    };
+  } catch (err) {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+function saveSettings(settings) {
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
+}
+
+module.exports = {
+  getSettings,
+  getClientSettings,
+  saveSettings,
 };
-
-let settingsDB = {
-  client1: config.defaultSettings
-};
-
-function mergeConversationRules(clientRules) {
-  return {
-    ...defaultConversationRules,
-    ...(clientRules || {})
-  };
-}
-
-function getSettings(clientId) {
-  const base = settingsDB[clientId] || {};
-  return {
-    ...config.defaultSettings,
-    ...base,
-    conversation_rules: mergeConversationRules(base.conversation_rules)
-  };
-}
-
-function saveSettings(clientId, newSettings) {
-  const base = settingsDB[clientId] || config.defaultSettings;
-  const merged = {
-    ...base,
-    ...newSettings,
-    conversation_rules: mergeConversationRules(newSettings.conversation_rules || base.conversation_rules)
-  };
-
-  settingsDB[clientId] = merged;
-}
-
-module.exports = { getSettings, saveSettings };

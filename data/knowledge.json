@@ -1,0 +1,2835 @@
+[
+{
+"id": "iron_remover_ce_este",
+"title": "Ce este Iron Remover si cand se foloseste",
+"content": "Iron Remover este o solutie pentru indepartarea particulelor feroase de pe vopsea si jante. Se foloseste periodic la 3-6 luni sau inainte de polish pentru decontaminare.",
+"tags": ["exterior", "decontaminare", "curatare", "vopsea"],
+"searchText": "iron remover ce este cand se foloseste indepartare particule feroase vopsea jante decontaminare",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "tar_glue_remover_utilizare",
+"title": "Cand folosesti Tar & Glue Remover",
+"content": "Tar & Glue Remover elimina bitumul si rasina de copac de pe vopsea. Se foloseste la mentenanta sau inainte de polish pentru curatarea contaminantilor persistenti.",
+"tags": ["exterior", "decontaminare", "curatare", "vopsea"],
+"searchText": "tar glue remover cand folosesti indepartare bitum rasina copac vopsea decontaminare",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "water_spot_remover_utilizare",
+"title": "Cum elimini petele de apa dura",
+"content": "Water Spot Remover indeparteaza depunerile minerale de pe suprafete. In cazuri severe, pot ramane urme care necesita polish sau slefuire pentru eliminare completa.",
+"tags": ["exterior", "decontaminare", "curatare", "vopsea"],
+"searchText": "water spot remover pete apa dura cum elimini depuneri minerale vopsea",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "argila_blanda_utilizare",
+"title": "Cand folosesti argila blanda",
+"content": "Argila blanda se foloseste pentru decontaminare usoara si mentenanta vopselei. Este ideala inainte de aplicarea unei protectii precum ceara sau sealant.",
+"tags": ["exterior", "decontaminare", "vopsea"],
+"searchText": "argila blanda cand folosesti decontaminare usoara vopsea protectie ceara",
+"variantOf": "clay_bar_usage",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "argila_agresiva_utilizare",
+"title": "Cand folosesti argila agresiva",
+"content": "Argila agresiva se foloseste pentru contaminari severe si pregatirea vopselei pentru polish. Este mai abraziva si necesita atentie pentru a evita zgarierea.",
+"tags": ["exterior", "decontaminare", "vopsea"],
+"searchText": "argila agresiva cand folosesti contaminari severe pregatire polish vopsea",
+"variantOf": "clay_bar_usage",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "insect_remover_utilizare",
+"title": "Cum folosesti Insect Remover corect",
+"content": "Insect Remover elimina insectele de pe suprafetele frontale ale masinii. Se aplica pe suprafata rece si se clateste rapid, fara a fi lasat sa se usuce.",
+"tags": ["exterior", "curatare"],
+"searchText": "insect remover cum folosesti indepartare insecte masina suprafata rece clatire",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "prewash_importanta",
+"title": "De ce este importanta prespalarea",
+"content": "Prespalarea indeparteaza murdaria grosiera si filmul rutier inainte de contact. Reduce riscul de zgariere in timpul spalarii manuale.",
+"tags": ["exterior", "curatare"],
+"searchText": "prespalare importanta de ce este necesara indepartare murdarie film rutier prevenire zgarieturi",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "sampon_neutru_rol",
+"title": "Ce face samponul cu PH neutru",
+"content": "Samponul cu PH neutru curata murdaria usoara si ofera lubrifiere pentru spalare sigura. Este ideal pentru intretinerea regulata a masinii.",
+"tags": ["exterior", "curatare"],
+"searchText": "sampon ph neutru ce face lubrifiere spalare sigura intretinere masina",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "sampon_ceramic_beneficii",
+"title": "Ce beneficii are samponul ceramic",
+"content": "Samponul cu SiO2 ofera curatare si protectie hidrofoba temporara. Ajuta la obtinerea unui luciu intens si la uscarea mai usoara a masinii.",
+"tags": ["exterior", "protectie"],
+"searchText": "sampon ceramic beneficii sio2 luciu efect hidrofob spalare masina",
+"variantOf": "protective_shampoo_usage",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "curatare_jante_indicator_rosu",
+"title": "Cum functioneaza solutia de jante cu indicator rosu",
+"content": "Solutia cu indicator rosu dizolva particulele feroase de pe jante. In timpul reactiei, produsul devine rosu, indicand actiunea chimica.",
+"tags": ["exterior", "curatare", "jante"],
+"searchText": "solutie jante indicator rosu cum functioneaza particule feroase dizolvare reactie",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "apc_ce_este",
+"title": "Ce este APC si cum se foloseste",
+"content": "APC este un degresant universal pentru interior si exterior. Se dilueaza, se aplica pe suprafata, se agita usor si se indeparteaza prin clatire sau extractie.",
+"tags": ["interior", "curatare", "plastic", "textil"],
+"searchText": "apc ce este cum se foloseste degresant universal diluare curatare interior exterior",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "curatare_textil_solutie",
+"title": "Cum cureti suprafetele textile",
+"content": "Solutiile pentru textile se aplica pe laveta sau direct pe suprafata si se curata fara clatire. Sunt ideale pentru intretinerea rapida a scaunelor si tapiteriei.",
+"tags": ["interior", "curatare", "textil"],
+"searchText": "cum cureti textile scaune tapiterie solutie textile fara clatire interior",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "dressing_plastic_interior",
+"title": "Cum alegi dressingul pentru plastic interior",
+"content": "Dressingul poate fi mat, satinat sau lucios in functie de aspectul dorit. Se aplica pe suprafete curate si se sterge excesul dupa cateva minute.",
+"tags": ["interior", "protectie", "plastic"],
+"searchText": "dressing plastic interior mat satinat lucios cum alegi aplicare protectie",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "protectie_piele_auto",
+"title": "Cum protejezi pielea din interior",
+"content": "Produsele pentru piele hidrateaza si protejeaza impotriva UV si uzurii. Se aplica uniform si se sterge excesul pentru un finisaj mat sau lucios.",
+"tags": ["interior", "protectie", "piele"],
+"searchText": "protectie piele auto cum aplici hidratare uv interior finisaj mat lucios",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "polish_vopsea_tipuri",
+"title": "Ce tipuri de paste de polish exista",
+"content": "Pastele de polish variaza de la abrazive la fine, in functie de nivelul de defecte. Cele abrazive corecteaza zgarieturi, iar cele fine ofera finisaj si luciu.",
+"tags": ["exterior", "vopsea", "corectie"],
+"searchText": "paste polish tipuri abraziv mediu fin corectie zgarieturi luciu vopsea",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "tire_rubber_cleaner_utilizare",
+"title": "Cand folosesti Tire and Rubber Cleaner",
+"content": "Aceasta solutie curata si degreseaza anvelopele in profunzime. Se foloseste inainte de aplicarea dressingului pentru o aderenta mai buna si durata mai lunga.",
+"tags": ["exterior", "curatare"],
+"searchText": "tire rubber cleaner cand folosesti curatare anvelope degresare pregatire dressing",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "curatare_motor_utilizare",
+"title": "Cum cureti motorul si zonele murdare",
+"content": "Solutiile dedicate elimina murdaria grea si reziduurile petroliere. Se aplica pe suprafete reci si nu se lasa sa se usuce.",
+"tags": ["exterior", "curatare"],
+"searchText": "curatare motor cum se face solutii degresare murdarie petroliera masina",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "spuma_activa_tipuri",
+"title": "Ce tipuri de spuma activa exista",
+"content": "Spuma activa poate fi alcalina, acida sau neutra. Se alege in functie de gradul de murdarie si tipul protectiei existente.",
+"tags": ["exterior", "curatare"],
+"searchText": "spuma activa tipuri alcalina acida neutra cum alegi prespalare",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "sampon_acid_utilizare",
+"title": "Cand folosesti sampon acid",
+"content": "Samponul acid este util pentru indepartarea depunerilor minerale. Se foloseste pe masini cu protectii ceramice sau inainte de polish.",
+"tags": ["exterior", "curatare", "vopsea"],
+"searchText": "sampon acid cand folosesti depuneri minerale protectie ceramica polish",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "sampon_cu_ceara_beneficii",
+"title": "Ce face samponul cu ceara",
+"content": "Samponul cu ceara ofera un luciu temporar si efect hidrofob. Ajuta la uscarea mai usoara si imbunatateste aspectul vopselei.",
+"tags": ["exterior", "protectie"],
+"searchText": "sampon cu ceara beneficii luciu hidrofob uscare usoara vopsea",
+"variantOf": "protective_shampoo_usage",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "solutie_jante_acida",
+"title": "Cand folosesti solutie acida pentru jante",
+"content": "Solutiile acide sunt eficiente pentru murdarie persistenta pe jante. Sunt mai agresive si trebuie folosite cu atentie.",
+"tags": ["exterior", "curatare"],
+"searchText": "solutie jante acida cand folosesti murdarie persistenta curatare jante",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "apc_alcalin_vs_acid",
+"title": "Diferenta intre APC alcalin si acid",
+"content": "APC alcalin este folosit pentru murdarie generala si grasimi. APC acid este mai eficient pentru pete dificile precum machiaj sau rugina usoara.",
+"tags": ["interior", "curatare"],
+"searchText": "apc alcalin vs acid diferenta utilizare murdarie grasimi pete dificile",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "solutie_universala_interior",
+"title": "Cum folosesti solutia universala interior",
+"content": "Se pulverizeaza pe laveta si se curata toate suprafetele interioare. Este ideala pentru intretinere rapida.",
+"tags": ["interior", "curatare"],
+"searchText": "solutie universala interior cum folosesti curatare rapida suprafete",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "protectie_ceramica_plastic_interior",
+"title": "Cum aplici protectie ceramica pe plastic interior",
+"content": "Se aplica pe suprafete curate si uscate in zone mici. Ofera protectie UV si reduce aparitia zgarieturilor fine.",
+"tags": ["interior", "protectie", "plastic"],
+"searchText": "protectie ceramica plastic interior cum aplici uv protectie zgarieturi",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "dressing_plastic_exterior",
+"title": "Cum protejezi plasticul exterior",
+"content": "Dressingurile pentru exterior reda aspectul de nou si protejeaza impotriva factorilor externi. Se aplica si se sterge excesul dupa uscare.",
+"tags": ["exterior", "protectie", "plastic"],
+"searchText": "dressing plastic exterior protectie aspect nou aplicare stergere exces",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "protectie_ceramica_plastic_exterior",
+"title": "Cum aplici protectie ceramica pe plastic exterior",
+"content": "Suprafata trebuie spalata si degresata inainte de aplicare. Protectia ofera durabilitate mare si rezistenta chimica.",
+"tags": ["exterior", "protectie", "plastic"],
+"searchText": "protectie ceramica plastic exterior aplicare degresare durabilitate",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "hidratare_piele_mat",
+"title": "Cum hidratezi pielea cu efect mat",
+"content": "Se aplica uniform si se sterge excesul dupa cateva minute. Ofera un aspect natural si protejeaza impotriva UV.",
+"tags": ["interior", "piele", "protectie"],
+"searchText": "hidratare piele efect mat aplicare protectie uv interior",
+"variantOf": "leather_conditioner_usage",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "hidratare_piele_lucios",
+"title": "Cum hidratezi pielea cu efect lucios",
+"content": "Se aplica si se lasa mai mult timp pentru absorbtie. Ofera un aspect satinat sau lucios.",
+"tags": ["interior", "piele", "protectie"],
+"searchText": "hidratare piele lucios aplicare efect satinat interior",
+"variantOf": "leather_conditioner_usage",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "protectie_ceramica_piele",
+"title": "Cum aplici protectie ceramica pe piele",
+"content": "Se aplica in doua straturi pentru protectie maxima. Protejeaza impotriva transferului de culoare si uzurii.",
+"tags": ["interior", "piele", "protectie"],
+"searchText": "protectie ceramica piele aplicare doua straturi protectie uzura",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "polish_sticla_utilizare",
+"title": "Cand folosesti polish pentru sticla",
+"content": "Polishul pentru sticla elimina microzgarieturile si contaminantii. Se foloseste cu accesorii dedicate pentru rezultate optime.",
+"tags": ["exterior", "geam"],
+"searchText": "polish sticla cand folosesti microzgarieturi curatare geam",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "polish_metal_utilizare",
+"title": "Cum lustruesti suprafetele metalice",
+"content": "Pastele pentru metal elimina oxidarea si reda luciul. Se folosesc cu lavete sau accesorii specifice.",
+"tags": ["exterior", "curatare"],
+"searchText": "polish metal cum lustruesti oxidare luciu suprafete metalice",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_generala_utilizare",
+"title": "La ce folosesti lavetele generale",
+"content": "Lavetele generale sunt utilizate pentru diverse operatiuni de curatare. Sunt versatile si utile in mai multe etape.",
+"tags": ["curatare"],
+"searchText": "laveta generala utilizare curatare diverse operatiuni auto",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_textil_plastic",
+"title": "Ce laveta folosesti pentru textil si plastic",
+"content": "Lavetele dedicate au putere mare de curatare si sunt sigure pentru interior. Sunt ideale pentru textile si plastic.",
+"tags": ["interior", "textil", "plastic"],
+"searchText": "laveta textil plastic interior curatare sigura suprafete",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_piele_utilizare",
+"title": "Ce laveta folosesti pentru piele",
+"content": "Lavetele pentru piele sunt delicate si previn deteriorarea suprafetei. Sunt recomandate pentru materiale sensibile.",
+"tags": ["interior", "piele"],
+"searchText": "laveta piele utilizare curatare delicata interior auto",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_geam_utilizare",
+"title": "Ce laveta folosesti pentru geamuri",
+"content": "Lavetele pentru sticla ofera finisaj fara urme. Sunt eficiente atat pentru curatare cat si pentru lustruire.",
+"tags": ["geam", "curatare"],
+"searchText": "laveta geam utilizare fara urme curatare lustruire sticla",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_uscare_auto",
+"title": "Cum alegi prosopul de uscare auto",
+"content": "Prosoapele din microfibra au absorbtie mare si previn zgarieturile. Se aleg modele dense pentru eficienta maxima.",
+"tags": ["exterior", "curatare"],
+"searchText": "prosop uscare auto cum alegi microfibra absorbtie mare fara zgarieturi",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_polish_reziduuri",
+"title": "Ce laveta folosesti dupa polish",
+"content": "Lavetele dedicate indeparteaza reziduurile de polish eficient. Au densitate medie si nu lasa urme.",
+"tags": ["exterior", "vopsea"],
+"searchText": "laveta polish reziduuri indepartare fara urme vopsea",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "spuma_activa_alcalina_vs_acida",
+"title": "Diferenta intre spuma activa alcalina si acida",
+"content": "Spuma alcalina indeparteaza murdaria grea si filmul rutier. Spuma acida se foloseste ulterior pentru neutralizare sau pentru depuneri minerale.",
+"tags": ["exterior", "curatare"],
+"searchText": "spuma activa alcalina vs acida diferenta murdarie grea neutralizare depuneri minerale",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "neutralizare_spuma_acida",
+"title": "Cand trebuie neutralizata suprafata dupa spalare",
+"content": "Dupa folosirea unei spume alcaline se poate aplica o spuma acida pentru neutralizare. Acest pas ajuta la echilibrarea chimica a suprafetei.",
+"tags": ["exterior", "curatare"],
+"searchText": "neutralizare suprafata spuma acida dupa alcalina echilibrare chimica",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "evitare_uscare_solutii",
+"title": "De ce nu trebuie lasate solutiile sa se usuce",
+"content": "Majoritatea solutiilor pot lasa pete sau urme daca se usuca pe suprafata. Se recomanda clatirea rapida si aplicarea pe suprafete reci.",
+"tags": ["curatare", "exterior"],
+"searchText": "de ce nu se lasa solutii sa se usuce pete urme aplicare suprafata rece",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_ceara_sealant",
+"title": "Ce laveta folosesti pentru ceara si sealant",
+"content": "Lavetele groase si fine sunt ideale pentru indepartarea excesului de ceara sau sealant. Ajuta la obtinerea unui finisaj uniform.",
+"tags": ["exterior", "curatare"],
+"searchText": "laveta ceara sealant ce folosesti indepartare exces finisaj uniform",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "laveta_coating_ceramic",
+"title": "Ce laveta folosesti pentru coating ceramic",
+"content": "Lavetele foarte fine sunt necesare pentru stergerea coatingurilor ceramice. Previn urmele si asigura un finisaj corect.",
+"tags": ["exterior", "protectie"],
+"searchText": "laveta coating ceramic stergere corecta fara urme microfibra fina",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "polish_one_step_vs_2in1_vs_3in1",
+"title": "Diferenta intre polish one step, 2in1 si 3in1",
+"content": "One step corecteaza si finiseaza intr-un singur pas. Produsele 2in1 si 3in1 combina corectia, finisarea si protectia pentru economie de timp.",
+"tags": ["exterior", "vopsea"],
+"searchText": "polish one step vs 2in1 vs 3in1 diferenta corectie finisare protectie",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "arsuri_insecte_corectie",
+"title": "Ce faci daca raman urme dupa insecte",
+"content": "Urmele pot fi arsuri in lac cauzate de insecte. Uneori dispar la soare, dar in cazuri grave necesita polish.",
+"tags": ["exterior", "vopsea"],
+"searchText": "urme insecte arsuri lac ce faci dispar soare sau polish",
+"source": "manual",
+"intent": "informational"
+},
+{
+"id": "arsuri_water_spot",
+"title": "Ce faci daca petele de apa nu dispar",
+"content": "Daca petele raman dupa curatare, pot fi arsuri in lac. Acestea necesita slefuire si polish pentru eliminare completa.",
+"tags": ["exterior", "vopsea"],
+"searchText": "pete apa nu dispar arsuri lac slefuire polish eliminare",
+"source": "manual",
+"intent": "informational"
+},
+{
+    "id": "polish_basics",
+    "title": "Cum functioneaza polishul auto si cat de des trebuie facut?",
+    "content": "Polishul auto presupune folosirea unor particule microabrazive pentru a nivela suprafata vopselei si a reda luciul. Este recomandat sa faci un polish profesional o data pe an si sa aplici ceara la fiecare cateva luni pentru a mentine protectia si stralucirea.",
+    "tags": ["polish", "detailing", "intretinere", "vopsea", "luciu"],
+    "searchText": "ce este polish auto cat de des se face polish masina detailing recomandari",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "prep_wash_polish",
+    "title": "Cum pregatesti masina inainte de polish?",
+    "content": "Masina trebuie spalata intr-un loc umbrit si clatita bine fara a lasa suprafata sa se usuce. Zona de lucru trebuie sa fie curata si protejata pentru a evita stropirea altor suprafete cu solutie de polish.",
+    "tags": ["pregatire", "spalare", "polish", "detailing"],
+    "searchText": "pregatire masina polish spalare inainte polish auto cum se face",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "pad_and_compound_choice",
+    "title": "Ce tip de burete si polish alegi in functie de culoarea masinii?",
+    "content": "Pentru suprafete deschise la culoare se poate folosi un burete si un polish mai agresiv. Pentru culori inchise este recomandat un burete si un compound mai fin, deoarece acestea sunt mai sensibile la holograme si urme de vartej.",
+    "tags": ["burete", "compound", "culoare", "polish"],
+    "searchText": "ce polish pentru masina neagra sau alba ce burete folosesc polish auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "machine_polishing_technique",
+    "title": "Cum folosesti corect masina de polish (rotativa sau orbitala)?",
+    "content": "Aplicati o cantitate moderata de polish si folositi o viteza medie. Mentineti buretele paralel cu suprafata si aplicati presiune constanta. Miscati masina inainte si inapoi pe zona de lucru pana cand produsul este absorbit si apare luciul.",
+    "tags": ["tehnica", "polish", "rotativa", "orbitala"],
+    "searchText": "cum folosesc masina de polish tehnica polish auto rotativa orbitala",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "pad_maintenance",
+    "title": "De ce este important sa cureti buretele de polish?",
+    "content": "Buretele trebuie clatit si curatat regulat pentru a preveni incarcarea cu compound. Marginile buretelui genereaza mai multa frecare, deci trebuie acordata atentie zonelor sensibile unde se foloseste doar marginea.",
+    "tags": ["burete", "intretinere", "polish", "detailing"],
+    "searchText": "curatare burete polish de ce este important cum intretin pad polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_after_polish",
+    "title": "De ce trebuie aplicata ceara dupa polish?",
+    "content": "Dupa polish, se recomanda aplicarea unui strat de ceara pentru a elimina imperfectiunile ramase si pentru protectie. Se foloseste un burete moale si un amestec de ceara si polish de finish (60:40), aplicat cu miscari uniforme.",
+    "tags": ["ceara", "protectie", "finish", "polish"],
+    "searchText": "de ce aplic ceara dupa polish cum aplic ceara masina dupa polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "final_steps_polish",
+    "title": "Care sunt pasii finali dupa polish si ceruire?",
+    "content": "Dupa aplicarea cerii, aceasta trebuie lasata sa se usuce, apoi indepartata cu o laveta de microfibra. Pentru o inspectie finala corecta, masina trebuie mutata intr-un loc insorit pentru a verifica rezultatul.",
+    "tags": ["finisare", "microfibra", "inspectie", "detailing"],
+    "searchText": "dupa polish ce urmeaza cum sterg ceara inspectie finala masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_application_basics",
+    "title": "Cum se aplică corect ceara auto?",
+    "content": "Ceara auto se aplică pe o suprafață curată, uscată și rece, la umbră. Se folosește un strat foarte subțire, aplicat panou cu panou, iar apoi se șterge cu o lavetă de microfibră curată și uscată.",
+    "tags": ["ceara", "aplicare", "detailing", "protectie"],
+    "searchText": "cum aplic ceara auto corect pasi ceruire masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_benefits",
+    "title": "De ce este importantă ceruirea mașinii?",
+    "content": "Ceara auto creează un strat protector peste lacul vopselei care reduce oxidarea UV, respinge apa și murdăria, ușurează spălarea și îmbunătățește luciul și profunzimea culorii. Nu repară defectele, ci doar protejează și îmbunătățește aspectul existent.",
+    "tags": ["protectie", "uv", "hidrofobicitate", "luciu"],
+    "searchText": "beneficii ceara auto de ce sa ceruiesti masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_types_overview",
+    "title": "Ce tipuri de ceară auto există și cum o alegi?",
+    "content": "Există trei tipuri principale: ceară solidă (luciu profund și durabilitate mare), ceară lichidă (ușor de aplicat și eficientă) și ceară spray sau ceramică (aplicare rapidă și ideală pentru întreținere). Alegerea depinde de nivelul de experiență și de rezultatul dorit.",
+    "tags": ["tipuri", "ceara", "carnauba", "ceramica"],
+    "searchText": "tipuri ceara auto solida lichida spray diferenta",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "solid_wax_characteristics",
+    "title": "Care sunt avantajele și dezavantajele cerii solide?",
+    "content": "Ceara solidă oferă luciu profund și aspect premium, mai ales pe culori închise, și o durabilitate bună. Dezavantajele sunt aplicarea mai lentă și necesitatea unei ștergeri atente pentru a evita urmele.",
+    "tags": ["ceara solida", "carnauba", "luciu", "durabilitate"],
+    "searchText": "ceara solida avantaje dezavantaje carnauba detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "liquid_wax_characteristics",
+    "title": "Care sunt avantajele cerii lichide?",
+    "content": "Ceara lichidă este ușor de aplicat, se întinde uniform și poate fi utilizată manual sau cu mașină orbitală. Oferă un echilibru bun între protecție și rapiditate, dar uneori are durabilitate puțin mai mică decât cea solidă.",
+    "tags": ["ceara lichida", "aplicare usoara", "orbitala"],
+    "searchText": "ceara lichida avantaje cum se aplica ceara lichida masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "spray_wax_characteristics",
+    "title": "Când este recomandată ceara spray sau ceramică?",
+    "content": "Ceara spray sau hibrid ceramic este ideală pentru întreținere rapidă. Se aplică foarte ușor, oferă hidrofobicitate excelentă și poate fi folosită inclusiv cu mașină orbitală, dar are de obicei durabilitate mai redusă.",
+    "tags": ["ceara spray", "ceramica", "intretinere", "hidrofobicitate"],
+    "searchText": "ceara spray auto cand se foloseste ceara ceramica detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_preparation_steps",
+    "title": "Cum pregătești corect mașina înainte de ceruire?",
+    "content": "Pregătirea include prespălare, spălare cu șampon pH neutru, decontaminare chimică, uscare completă, utilizarea clay bar dacă este necesar și degresare. Aplicarea cerii pe o suprafață contaminată reduce aderența și durabilitatea.",
+    "tags": ["pregatire", "decontaminare", "clay", "degresare"],
+    "searchText": "pregatire masina ceruire decontaminare clay bar ipa detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_machine_application",
+    "title": "Cum aplici ceara cu mașina orbitală?",
+    "content": "Se folosește un pad moale de finisare, cu viteză mică (1-3) și presiune minimă. Ceara se aplică pe pad, iar mișcările trebuie să fie uniforme. Este important să oprești mașina înainte de a o ridica de pe suprafață.",
+    "tags": ["orbitala", "aplicare", "pad", "detailing"],
+    "searchText": "cum aplic ceara cu masina orbitala viteza pad detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_durability",
+    "title": "Cât timp rezistă ceara auto și când trebuie reaplicată?",
+    "content": "Durabilitatea depinde de tip: spray (2–20 săptămâni), lichidă (4–8 săptămâni), solidă (1–12+ săptămâni). Reaplicarea se face în general la 4–12 săptămâni, în funcție de condițiile de utilizare.",
+    "tags": ["durabilitate", "reaplicare", "protectie"],
+    "searchText": "cat rezista ceara auto cand reaplic ceara masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_common_mistakes",
+    "title": "Care sunt cele mai frecvente greșeli la ceruirea mașinii?",
+    "content": "Greșelile comune includ aplicarea pe suprafețe fierbinți, folosirea unui strat prea gros, ștergerea cu microfibră murdară și lipsa decontaminării înainte de aplicare.",
+    "tags": ["greseli", "ceara", "detailing"],
+    "searchText": "greseli ceruire masina ce sa nu faci la aplicare ceara",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_faq_sun_application",
+    "title": "Poți aplica ceara auto la soare?",
+    "content": "Nu este recomandat, deoarece ceara se usucă prea repede și devine dificil de îndepărtat, ceea ce poate afecta rezultatul final.",
+    "tags": ["faq", "soare", "aplicare"],
+    "searchText": "pot aplica ceara la soare masina detailing sfaturi",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_faq_removal_time",
+    "title": "Cât timp trebuie lăsată ceara înainte de ștergere?",
+    "content": "În general, ceara se lasă între 5 și 15 minute, până când apare un aspect mat, dar trebuie respectate instrucțiunile producătorului.",
+    "tags": ["faq", "timp", "buffing"],
+    "searchText": "cat timp las ceara pe masina inainte de stergere",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_vs_sealant",
+    "title": "Ceara auto este mai bună decât sealantul?",
+    "content": "Depinde de obiectiv: ceara oferă un aspect natural și cald, în timp ce sealantul oferă de obicei o protecție mai durabilă.",
+    "tags": ["ceara", "sealant", "comparatie"],
+    "searchText": "ceara vs sealant auto care e mai bun protectie masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_vs_sealant_difference",
+    "title": "Care este diferența dintre ceara auto și sealant?",
+    "content": "Diferența principală constă în durabilitate și tipul de luciu. Ceara oferă un aspect cald și profund, în timp ce sealantul oferă protecție mai lungă și un finish clar, sticlos.",
+    "tags": ["ceara", "sealant", "diferenta", "protectie", "luciu"],
+    "searchText": "diferenta ceara vs sealant auto care e diferenta detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "carnauba_wax_explained",
+    "title": "Ce este ceara de carnauba și cum funcționează?",
+    "content": "Ceara de carnauba este un produs natural obținut din frunzele palmierului Copernicia prunifera. În detailing, este combinată cu uleiuri și solvenți pentru a putea fi aplicată, oferind luciu profund și protecție moderată.",
+    "tags": ["carnauba", "ceara naturala", "detailing"],
+    "searchText": "ce este ceara carnauba cum functioneaza ceara naturala auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "carnauba_benefits",
+    "title": "Ce avantaje oferă ceara de carnauba?",
+    "content": "Ceara de carnauba oferă un luciu cald și profund, aspect natural, poate masca optic micro-imperfecțiunile și oferă protecție moderată împotriva apei și contaminanților.",
+    "tags": ["carnauba", "luciu", "protectie"],
+    "searchText": "avantaje ceara carnauba luciu wet look masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "carnauba_durability",
+    "title": "Cât rezistă ceara de carnauba pe mașină?",
+    "content": "Ceara de carnauba rezistă în general între 1 și 8 săptămâni, iar unele formule hibride pot ajunge până la câteva luni, în funcție de condițiile de utilizare și întreținere.",
+    "tags": ["durabilitate", "carnauba", "protectie"],
+    "searchText": "cat rezista ceara carnauba masina durata protectie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "carnauba_use_case",
+    "title": "Pentru cine este potrivită ceara de carnauba?",
+    "content": "Ceara de carnauba este potrivită pentru pasionați, mașini de colecție sau de weekend și pentru cei care apreciază un luciu premium și nu sunt deranjați de reaplicarea frecventă.",
+    "tags": ["carnauba", "pasionati", "showcar"],
+    "searchText": "cine ar trebui sa foloseasca ceara carnauba masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "sealant_explained",
+    "title": "Ce este un sealant auto și cum funcționează?",
+    "content": "Sealantul este o protecție sintetică pe bază de polimeri care formează o peliculă rezistentă după întărire. Aceasta oferă protecție superioară împotriva chimicalelor, UV și contaminării.",
+    "tags": ["sealant", "polimeri", "protectie"],
+    "searchText": "ce este sealant auto cum functioneaza protectie polimeri",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "sealant_benefits",
+    "title": "Ce avantaje oferă un sealant auto?",
+    "content": "Sealantul oferă durabilitate mai mare, rezistență chimică ridicată, hidrofobicitate stabilă și un aspect clar, sticlos.",
+    "tags": ["sealant", "durabilitate", "hidrofobicitate"],
+    "searchText": "avantaje sealant auto protectie lunga masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "sealant_durability",
+    "title": "Cât rezistă un sealant auto?",
+    "content": "Sealanturile moderne oferă în general protecție între 3 și 6 luni, iar unele formule hibride pot ajunge până la 6–9 luni, în funcție de întreținere și condiții.",
+    "tags": ["sealant", "durabilitate", "protectie"],
+    "searchText": "cat rezista sealant auto durata protectie masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_vs_sealant_comparison",
+    "title": "Cum se compară ceara și sealantul în mod direct?",
+    "content": "Ceara este naturală, oferă luciu cald și necesită reaplicare frecventă. Sealantul este sintetic, oferă luciu sticlos, protecție mai lungă și întreținere mai rară.",
+    "tags": ["comparatie", "ceara", "sealant"],
+    "searchText": "comparatie ceara vs sealant auto ce sa aleg",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "layering_wax_over_sealant",
+    "title": "Poți aplica ceara peste sealant?",
+    "content": "Da, dar nu este întotdeauna recomandat. Deși poate îmbunătăți aspectul, aplicarea cerii peste sealant poate reduce durabilitatea acestuia din cauza procesului de aplicare.",
+    "tags": ["layering", "ceara", "sealant"],
+    "searchText": "pot aplica ceara peste sealant compatibilitate detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "choose_wax_or_sealant",
+    "title": "Cum alegi între ceară și sealant în funcție de utilizare?",
+    "content": "Alege ceara dacă vrei un luciu premium și îți place detailingul. Alege sealant dacă vrei protecție durabilă și întreținere redusă, mai ales pentru utilizare zilnică.",
+    "tags": ["alegere", "ceara", "sealant"],
+    "searchText": "ce sa aleg ceara sau sealant masina zilnica sau hobby",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "sealant_vs_ceramic_coating",
+    "title": "Înlocuiește sealantul un coating ceramic?",
+    "content": "Nu. Coatingul ceramic oferă protecție pe termen lung (1–5 ani), în timp ce sealantul este o soluție temporară cu durabilitate de câteva luni.",
+    "tags": ["sealant", "coating", "ceramic"],
+    "searchText": "sealant vs coating ceramic diferenta protectie auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "prep_before_protection",
+    "title": "Este necesară pregătirea suprafeței înainte de aplicarea cerii sau sealantului?",
+    "content": "Da. Suprafața trebuie spălată, decontaminată și degresată pentru a asigura aderență corectă și performanță maximă. Aplicarea pe o suprafață contaminată reduce durabilitatea.",
+    "tags": ["pregatire", "decontaminare", "protectie"],
+    "searchText": "pregatire inainte ceara sau sealant spalare decontaminare ipa",
+    "source": "blog",
+    "intent": "informational"
+  }
+,
+  {
+    "id": "clay_bar_purpose",
+    "title": "Ce face argila de decontaminare auto?",
+    "content": "Argila auto îndepărtează contaminanții ancorați în lacul vopselei, precum particule metalice, gudron, rășină sau depuneri industriale, care nu pot fi eliminați prin spălare normală.",
+    "tags": ["argila", "decontaminare", "lac", "contaminanti"],
+    "searchText": "ce face argila auto decontaminare clay bar la ce foloseste",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_bar_definition",
+    "title": "Ce este argila de decontaminare (clay bar)?",
+    "content": "Argila de decontaminare este un material sintetic pe bază de polimeri elastici, conceput pentru a extrage mecanic contaminanții din stratul de lac al vopselei.",
+    "tags": ["clay bar", "argila", "polimeri"],
+    "searchText": "ce este clay bar argila auto din ce este facuta",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_contaminants",
+    "title": "Ce tipuri de contaminanți îndepărtează argila auto?",
+    "content": "Argila elimină particule metalice, praf feros, gudron, rășină de copac, poluare industrială și alte depuneri care se fixează în lacul vopselei.",
+    "tags": ["contaminanti", "argila", "decontaminare"],
+    "searchText": "ce contaminanti elimina clay bar masina gudron praf feros",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_how_it_works",
+    "title": "Cum funcționează argila de decontaminare?",
+    "content": "Argila este ușor abrazivă și, împreună cu un lubrifiant, alunecă pe suprafață și extrage particulele contaminate, lăsând vopseaua netedă.",
+    "tags": ["functionare", "argila", "lubrifiant"],
+    "searchText": "cum functioneaza clay bar auto cum scoate contaminanti",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_bag_test",
+    "title": "Cum verifici dacă mașina are nevoie de decontaminare cu argilă?",
+    "content": "După spălare, treci mâna peste vopsea folosind o pungă subțire. Dacă simți asperități, suprafața este contaminată și necesită decontaminare.",
+    "tags": ["test", "decontaminare", "argila"],
+    "searchText": "test punga masina contaminare cum verific clay bar nevoie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_types",
+    "title": "Ce tipuri de argilă auto există?",
+    "content": "Există trei tipuri: fină (pentru întreținere și risc redus), medie (pentru contaminare moderată) și agresivă (pentru contaminare severă, dar poate necesita polish ulterior).",
+    "tags": ["tipuri", "argila", "mild", "heavy"],
+    "searchText": "tipuri clay bar fina medie agresiva ce aleg",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_alternatives",
+    "title": "Ce alternative moderne există la clay bar?",
+    "content": "Alternativele includ mănuși, bureți sau prosoape cu polimer decontaminant. Acestea sunt reutilizabile și mai rapide, dar pot fi ușor mai agresive decât argila fină.",
+    "tags": ["alternative", "clay mitt", "burete", "prosop"],
+    "searchText": "alternativa clay bar manusa decontaminare burete clay",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_steps",
+    "title": "Cum se face corect decontaminarea cu argilă?",
+    "content": "Spală mașina, folosește un lubrifiant dedicat, lucrează pe zone mici cu mișcări line fără presiune și verifică periodic argila pentru a menține suprafața curată.",
+    "tags": ["proces", "decontaminare", "argila"],
+    "searchText": "cum folosesc clay bar pasi decontaminare masina corect",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_frequency",
+    "title": "Cât de des trebuie făcută decontaminarea cu argilă?",
+    "content": "De obicei, decontaminarea se face de 1–2 ori pe an pentru mașini întreținute, sau mai des dacă vehiculul este expus constant la exterior.",
+    "tags": ["frecventa", "decontaminare", "argila"],
+    "searchText": "cat de des clay bar masina decontaminare frecventa",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_limitations",
+    "title": "Ce NU face argila de decontaminare?",
+    "content": "Argila nu elimină zgârieturi sau oxidare, nu înlocuiește polishul și nu substituie decontaminarea chimică.",
+    "tags": ["limitari", "argila", "polish"],
+    "searchText": "ce nu face clay bar zgrieturi oxidare polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "after_clay_steps",
+    "title": "Ce trebuie să faci după decontaminarea cu argilă?",
+    "content": "După clay, este recomandat să aplici ceară, sealant sau coating ceramic, sau să continui cu polish pentru rezultate optime.",
+    "tags": ["dupa", "protectie", "polish"],
+    "searchText": "dupa clay bar ce urmeaza ceara sealant polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_common_mistakes",
+    "title": "Care sunt greșelile frecvente la folosirea argilei auto?",
+    "content": "Greșelile includ aplicarea cu presiune mare, lipsa lubrifierii, utilizarea argilei căzute pe jos și folosirea unei argile agresive fără polish ulterior.",
+    "tags": ["greseli", "argila", "detailing"],
+    "searchText": "greseli clay bar zgrieturi lipsa lubrifiant",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_safety",
+    "title": "Argila zgârie vopseaua?",
+    "content": "Dacă este utilizată corect, cu lubrifiant și fără presiune, argila fină este sigură. Variantele agresive pot necesita polish ulterior.",
+    "tags": ["siguranta", "argila", "zgrieturi"],
+    "searchText": "argila zgaraie vopseaua este sigur clay bar",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_lubricant",
+    "title": "De ce este important lubrifiantul la clay bar?",
+    "content": "Lubrifiantul reduce frecarea și riscul de micro-zgârieturi. Apa simplă nu este recomandată deoarece poate deteriora argila și crește riscul de defecte.",
+    "tags": ["lubrifiant", "argila", "siguranta"],
+    "searchText": "ce lubrifiant folosesc clay bar de ce nu apa simpla",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_on_new_car",
+    "title": "Este necesară decontaminarea pe o mașină nouă?",
+    "content": "Da, chiar și mașinile noi pot avea contaminanți acumulați în timpul transportului, iar decontaminarea ajută la pregătirea corectă pentru protecție.",
+    "tags": ["masina noua", "decontaminare", "argila"],
+    "searchText": "trebuie clay pe masina noua decontaminare transport",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_bar_purpose",
+    "title": "Ce face argila de decontaminare auto?",
+    "content": "Argila auto îndepărtează contaminanții ancorați în lacul vopselei, precum particule metalice, gudron, rășină sau depuneri industriale, care nu pot fi eliminați prin spălare normală.",
+    "tags": ["argila", "decontaminare", "lac", "contaminanti"],
+    "searchText": "ce face argila auto decontaminare clay bar la ce foloseste",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_bar_definition",
+    "title": "Ce este argila de decontaminare (clay bar)?",
+    "content": "Argila de decontaminare este un material sintetic pe bază de polimeri elastici, conceput pentru a extrage mecanic contaminanții din stratul de lac al vopselei.",
+    "tags": ["clay bar", "argila", "polimeri"],
+    "searchText": "ce este clay bar argila auto din ce este facuta",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_contaminants",
+    "title": "Ce tipuri de contaminanți îndepărtează argila auto?",
+    "content": "Argila elimină particule metalice, praf feros, gudron, rășină de copac, poluare industrială și alte depuneri care se fixează în lacul vopselei.",
+    "tags": ["contaminanti", "argila", "decontaminare"],
+    "searchText": "ce contaminanti elimina clay bar masina gudron praf feros",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_how_it_works",
+    "title": "Cum funcționează argila de decontaminare?",
+    "content": "Argila este ușor abrazivă și, împreună cu un lubrifiant, alunecă pe suprafață și extrage particulele contaminate, lăsând vopseaua netedă.",
+    "tags": ["functionare", "argila", "lubrifiant"],
+    "searchText": "cum functioneaza clay bar auto cum scoate contaminanti",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_bag_test",
+    "title": "Cum verifici dacă mașina are nevoie de decontaminare cu argilă?",
+    "content": "După spălare, treci mâna peste vopsea folosind o pungă subțire. Dacă simți asperități, suprafața este contaminată și necesită decontaminare.",
+    "tags": ["test", "decontaminare", "argila"],
+    "searchText": "test punga masina contaminare cum verific clay bar nevoie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_types",
+    "title": "Ce tipuri de argilă auto există?",
+    "content": "Există trei tipuri: fină (pentru întreținere și risc redus), medie (pentru contaminare moderată) și agresivă (pentru contaminare severă, dar poate necesita polish ulterior).",
+    "tags": ["tipuri", "argila", "mild", "heavy"],
+    "searchText": "tipuri clay bar fina medie agresiva ce aleg",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_alternatives",
+    "title": "Ce alternative moderne există la clay bar?",
+    "content": "Alternativele includ mănuși, bureți sau prosoape cu polimer decontaminant. Acestea sunt reutilizabile și mai rapide, dar pot fi ușor mai agresive decât argila fină.",
+    "tags": ["alternative", "clay mitt", "burete", "prosop"],
+    "searchText": "alternativa clay bar manusa decontaminare burete clay",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_steps",
+    "title": "Cum se face corect decontaminarea cu argilă?",
+    "content": "Spală mașina, folosește un lubrifiant dedicat, lucrează pe zone mici cu mișcări line fără presiune și verifică periodic argila pentru a menține suprafața curată.",
+    "tags": ["proces", "decontaminare", "argila"],
+    "searchText": "cum folosesc clay bar pasi decontaminare masina corect",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_frequency",
+    "title": "Cât de des trebuie făcută decontaminarea cu argilă?",
+    "content": "De obicei, decontaminarea se face de 1–2 ori pe an pentru mașini întreținute, sau mai des dacă vehiculul este expus constant la exterior.",
+    "tags": ["frecventa", "decontaminare", "argila"],
+    "searchText": "cat de des clay bar masina decontaminare frecventa",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_limitations",
+    "title": "Ce NU face argila de decontaminare?",
+    "content": "Argila nu elimină zgârieturi sau oxidare, nu înlocuiește polishul și nu substituie decontaminarea chimică.",
+    "tags": ["limitari", "argila", "polish"],
+    "searchText": "ce nu face clay bar zgrieturi oxidare polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "after_clay_steps",
+    "title": "Ce trebuie să faci după decontaminarea cu argilă?",
+    "content": "După clay, este recomandat să aplici ceară, sealant sau coating ceramic, sau să continui cu polish pentru rezultate optime.",
+    "tags": ["dupa", "protectie", "polish"],
+    "searchText": "dupa clay bar ce urmeaza ceara sealant polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_common_mistakes",
+    "title": "Care sunt greșelile frecvente la folosirea argilei auto?",
+    "content": "Greșelile includ aplicarea cu presiune mare, lipsa lubrifierii, utilizarea argilei căzute pe jos și folosirea unei argile agresive fără polish ulterior.",
+    "tags": ["greseli", "argila", "detailing"],
+    "searchText": "greseli clay bar zgrieturi lipsa lubrifiant",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_safety",
+    "title": "Argila zgârie vopseaua?",
+    "content": "Dacă este utilizată corect, cu lubrifiant și fără presiune, argila fină este sigură. Variantele agresive pot necesita polish ulterior.",
+    "tags": ["siguranta", "argila", "zgrieturi"],
+    "searchText": "argila zgaraie vopseaua este sigur clay bar",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_lubricant",
+    "title": "De ce este important lubrifiantul la clay bar?",
+    "content": "Lubrifiantul reduce frecarea și riscul de micro-zgârieturi. Apa simplă nu este recomandată deoarece poate deteriora argila și crește riscul de defecte.",
+    "tags": ["lubrifiant", "argila", "siguranta"],
+    "searchText": "ce lubrifiant folosesc clay bar de ce nu apa simpla",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_on_new_car",
+    "title": "Este necesară decontaminarea pe o mașină nouă?",
+    "content": "Da, chiar și mașinile noi pot avea contaminanți acumulați în timpul transportului, iar decontaminarea ajută la pregătirea corectă pentru protecție.",
+    "tags": ["masina noua", "decontaminare", "argila"],
+    "searchText": "trebuie clay pe masina noua decontaminare transport",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "what_is_car_wax",
+    "title": "Ce este ceara auto?",
+    "content": "Ceara auto este un amestec de ceară naturală sau sintetică combinată cu uleiuri și solvenți pentru a putea fi aplicată pe vopsea. Aceasta formează un strat protector și estetic peste lacul mașinii.",
+    "tags": ["ceara", "definitie", "protectie"],
+    "searchText": "ce este ceara auto definitie ceara masina din ce este facuta",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_composition",
+    "title": "Din ce este făcută ceara auto?",
+    "content": "Ceara auto poate proveni din surse naturale, precum carnauba, sau poate fi sintetică. Pentru a fi aplicabilă, este combinată cu uleiuri și solvenți care îi oferă flexibilitate și ușurință în utilizare.",
+    "tags": ["compozitie", "carnauba", "sintetic"],
+    "searchText": "din ce este facuta ceara auto carnauba solvenți uleiuri",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_benefits_protection",
+    "title": "Cum protejează ceara auto vopseaua mașinii?",
+    "content": "Ceara creează o peliculă protectoare care apără vopseaua de contaminanți, apă, murdărie și radiații UV, reducând impactul factorilor externi asupra lacului.",
+    "tags": ["protectie", "uv", "contaminanti"],
+    "searchText": "cum protejeaza ceara auto vopseaua masina uv apa murdarie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_hydrophobic_effect",
+    "title": "Cum ajută ceara auto la respingerea apei?",
+    "content": "Ceara face suprafața hidrofobă, determinând apa să se scurgă mai ușor și reducând depunerea contaminanților transportați de aceasta.",
+    "tags": ["hidrofobicitate", "apa", "protectie"],
+    "searchText": "ce inseamna hidrofob ceara auto respinge apa masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_shine_effect",
+    "title": "Cum îmbunătățește ceara luciul mașinii?",
+    "content": "Ceara umple optic micro-imperfecțiunile și zgârieturile fine din lac, creând un strat care reflectă lumina mai uniform și oferă un luciu intens.",
+    "tags": ["luciu", "finisaj", "estetica"],
+    "searchText": "cum da luciu ceara auto masina wet look efect",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "when_to_apply_wax",
+    "title": "Când trebuie aplicată ceara auto?",
+    "content": "Ceara se aplică după spălare, decontaminare și, dacă este cazul, polish și degresare. Este ultimul pas în procesul de detailing.",
+    "tags": ["aplicare", "proces", "detailing"],
+    "searchText": "cand aplic ceara auto dupa spalare decontaminare polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_frequency",
+    "title": "Cât de des trebuie aplicată ceara auto?",
+    "content": "Frecvența depinde de întreținere: de obicei de 3–4 ori pe an, dar dacă mașina este spălată cu substanțe agresive, ceara poate necesita reaplicare la 30–45 de zile.",
+    "tags": ["frecventa", "intretinere", "ceara"],
+    "searchText": "cat de des aplic ceara auto frecventa ceruire masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_application_method",
+    "title": "Cum se aplică corect ceara auto manual?",
+    "content": "Ceara se aplică cu mișcări circulare, suprapunând zonele lucrate. Se folosește o cantitate moderată, iar excesul se îndepărtează ulterior cu o lavetă de microfibră.",
+    "tags": ["aplicare", "manual", "tehnica"],
+    "searchText": "cum aplic ceara manual miscari circulare microfibra",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_removal_timing",
+    "title": "Cum știi când este gata ceara pentru ștergere?",
+    "content": "Ceara este gata de ștergere când, la testul cu degetul, suprafața rămâne curată. De obicei, poți începe ștergerea după ce ai terminat aplicarea pe întreaga mașină.",
+    "tags": ["timp", "buffing", "test"],
+    "searchText": "cand sterg ceara auto test deget cand e gata",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_microfiber_usage",
+    "title": "Cum folosești corect laveta de microfibră la ștergerea cerii?",
+    "content": "Folosește o lavetă de microfibră curată, împăturită în patru, și schimbă frecvent partea de lucru pentru a menține eficiența și a evita urmele.",
+    "tags": ["microfibra", "stergere", "detailing"],
+    "searchText": "cum folosesc microfibra la ceara auto stergere corecta",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_maintenance_benefit",
+    "title": "Cum ajută ceara la întreținerea mașinii?",
+    "content": "Ceara reduce acumularea murdăriei, ceea ce face ca spălările ulterioare să fie mai rapide și mai ușoare.",
+    "tags": ["intretinere", "curatare", "protectie"],
+    "searchText": "cum ajuta ceara la spalare masina mai usoara",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "wax_value",
+    "title": "Este ceara auto o soluție cost-eficientă?",
+    "content": "Da, ceara auto este accesibilă și poate fi utilizată pentru multiple aplicări. Costul per aplicare este redus, oferind un raport bun între preț și beneficii.",
+    "tags": ["cost", "eficienta", "detailing"],
+    "searchText": "cat costa ceara auto merita investitia detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "microfiber_towels_importance",
+    "title": "De ce sunt prosoapele din microfibră esențiale în detailing?",
+    "content": "Lavetele din microfibră sunt fabricate din fibre sintetice foarte fine (poliester și poliamidă) și au înlocuit complet prosoapele din bumbac. Sunt eficiente pentru ștergere, aplicarea soluțiilor și uscarea vopselei fără a zgâria suprafața.",
+    "tags": ["microfibra", "lavete", "detailing", "uscare"],
+    "searchText": "prosoape microfibra auto de ce sunt bune detailing lavete",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "dual_action_polisher_benefits",
+    "title": "Ce este mașina de polish Dual Action și de ce este preferată?",
+    "content": "Mașina Dual Action este un echipament de polish mai sigur decât cea rotativă, fiind mai puțin agresivă și mai ușor de utilizat. Reduce riscul de defecte și elimină efectul de hologramă.",
+    "tags": ["dual action", "polish", "orbitala", "siguranta"],
+    "searchText": "ce este masina dual action polish avantaj orbital vs rotativa",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "dual_action_vs_rotary",
+    "title": "Care este diferența dintre Dual Action și mașina rotativă?",
+    "content": "Mașinile rotative sunt mai agresive și pot deteriora vopseaua dacă sunt folosite greșit, în timp ce sistemul Dual Action oferă o corecție eficientă cu risc redus și rezultate fără holograme.",
+    "tags": ["comparatie", "dual action", "rotativa"],
+    "searchText": "dual action vs rotativa diferente polish masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "paint_protection_solutions",
+    "title": "Ce soluții există pentru protecția vopselei după polish?",
+    "content": "După corecția vopselei, se pot aplica soluții precum coating ceramic, sealant ceramic, sealant polimeric sau ceară (carnauba sau polimerică) pentru a proteja și menține luciul.",
+    "tags": ["protectie", "coating", "sealant", "ceara"],
+    "searchText": "protectie vopsea dupa polish coating ceramic sealant ce aleg",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_bar_history_use",
+    "title": "De ce este importantă argila de decontaminare în detailing?",
+    "content": "Argila a revoluționat detailingul prin capacitatea de a elimina contaminanți fără a folosi compounduri agresive. Îndepărtează particule metalice, rășină și alte impurități de pe caroserie.",
+    "tags": ["argila", "decontaminare", "istoric"],
+    "searchText": "de ce folosim clay bar auto ce elimina argila masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "clay_bar_usage_basics",
+    "title": "Cum se folosește corect argila de decontaminare?",
+    "content": "Argila se folosește pe suprafață bine spălată, cu lubrifiant, în mișcări line înainte-înapoi, fără presiune. Este important să fie modelată și menținută curată în timpul utilizării.",
+    "tags": ["argila", "utilizare", "tehnica"],
+    "searchText": "cum folosesc clay bar corect pasi decontaminare",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "microfiber_pads_correction",
+    "title": "Ce rol au pad-urile din microfibră în corecția vopselei?",
+    "content": "Pad-urile din microfibră, utilizate cu mașina Dual Action, permit corectarea defectelor de pe vopsea în siguranță. Eficiența depinde de tipul padului, presiune, viteză și pasta abrazivă folosită.",
+    "tags": ["paduri", "microfibra", "corectie", "polish"],
+    "searchText": "pad microfibra polish ce face cum corecteaza vopseaua",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_innovations_summary",
+    "title": "Care sunt cele mai importante inovații în detailing auto?",
+    "content": "Printre cele mai importante inovații se numără microfibra, mașinile Dual Action, soluțiile moderne de protecție a vopselei, argila de decontaminare și pad-urile din microfibră pentru corecție.",
+    "tags": ["inovatii", "detailing", "echipamente"],
+    "searchText": "inovatii detailing auto produse importante microfibra dual action",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_definition",
+    "title": "Ce este un Scrub Bar în detailing interior?",
+    "content": "Scrub Bar este un burete abraziv cu două fețe, realizat din microfibre coarse, conceput pentru curățarea eficientă a interiorului auto. Acesta ajută la dislocarea murdăriei din textile, piele, plastic și cauciuc.",
+    "tags": ["scrub bar", "detailing interior", "curatare", "microfibra"],
+    "searchText": "ce este scrub bar auto burete detailing interior cum functioneaza",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_effectiveness",
+    "title": "De ce curăță atât de eficient un Scrub Bar?",
+    "content": "Microfibrele abrazive oferă contact uniform și agitație densă, ceea ce ajută la dislocarea murdăriei mai rapid și mai eficient decât periile clasice.",
+    "tags": ["eficienta", "microfibra", "curatare"],
+    "searchText": "de ce scrub bar curata mai bine decat perie detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_vs_brush",
+    "title": "Cum se compară Scrub Bar-ul cu periile clasice?",
+    "content": "Spre deosebire de perii, Scrub Bar oferă mai multe puncte de contact și control mai bun al presiunii, reducând riscul de deteriorare sau urme pe suprafețe sensibile.",
+    "tags": ["comparatie", "perii", "scrub bar"],
+    "searchText": "scrub bar vs perie interior auto diferente",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_dirt_removal",
+    "title": "Cum ajută Scrub Bar la îndepărtarea murdăriei persistente?",
+    "content": "Scrub Bar rupe filmul de murdărie format din uleiuri, praf și reziduuri, facilitând îndepărtarea acestuia prin ștergere sau extracție.",
+    "tags": ["murdarie", "curatare", "detailing"],
+    "searchText": "cum scoate scrub bar murdaria interior masina textile piele",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_usage_areas",
+    "title": "Pe ce suprafețe poate fi folosit Scrub Bar-ul?",
+    "content": "Scrub Bar poate fi utilizat pe textile, plafon, piele, plastic și cauciuc, fiind ideal pentru zone mari și murdărie persistentă.",
+    "tags": ["suprafete", "textile", "piele", "plastic"],
+    "searchText": "unde folosesc scrub bar interior masina textile piele plastic",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_limitations",
+    "title": "Ce NU înlocuiește Scrub Bar-ul?",
+    "content": "Nu înlocuiește pensulele pentru zone înguste sau metodele blânde pentru suprafețe sensibile precum piano black.",
+    "tags": ["limitari", "unelte", "detailing"],
+    "searchText": "cand nu folosesc scrub bar interior auto limitari",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_workflow",
+    "title": "Care este metoda corectă de utilizare a unui Scrub Bar?",
+    "content": "Se aspiră suprafața, se aplică soluția potrivită, se lucrează pe zone mici cu presiune redusă și mișcări controlate, apoi se șterge sau se extrage murdăria.",
+    "tags": ["workflow", "utilizare", "detailing"],
+    "searchText": "cum folosesc scrub bar corect pasi curatare interior auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_chemicals",
+    "title": "De ce este importantă soluția de curățare când folosești Scrub Bar?",
+    "content": "Scrub Bar trebuie utilizat împreună cu o soluție de curățare care emulsionează murdăria. Folosirea fără soluție crește riscul de deteriorare și reduce eficiența.",
+    "tags": ["chimie", "solutii", "curatare"],
+    "searchText": "ce solutie folosesc cu scrub bar interior auto cleaner",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_pressure_control",
+    "title": "Câtă presiune trebuie aplicată cu Scrub Bar?",
+    "content": "Se recomandă presiune redusă și mișcări scurte. Textura buretelui face majoritatea muncii, fără a fi nevoie de forță mare.",
+    "tags": ["tehnica", "presiune", "utilizare"],
+    "searchText": "cat apas scrub bar interior masina presiune corecta",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_maintenance",
+    "title": "Cum se întreține și curăță un Scrub Bar?",
+    "content": "Scrub Bar poate fi spălat la mașină cu detergent pentru microfibre, ceea ce îl face reutilizabil și economic pe termen lung.",
+    "tags": ["intretinere", "curatare", "microfibra"],
+    "searchText": "cum curat scrub bar spalare detergent microfibra",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_common_mistakes",
+    "title": "Care sunt greșelile frecvente în utilizarea Scrub Bar?",
+    "content": "Greșelile includ utilizarea fără soluție, aplicarea unei presiuni prea mari, lucrul pe suprafețe sensibile și lipsa aspirării înainte de curățare.",
+    "tags": ["greseli", "scrub bar", "detailing"],
+    "searchText": "greseli scrub bar interior auto ce sa nu faci",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "scrub_bar_benefits",
+    "title": "Care sunt avantajele utilizării unui Scrub Bar?",
+    "content": "Scrub Bar oferă agitație constantă, reduce necesitatea mai multor perii, accelerează procesul de curățare și este ușor de utilizat și întreținut.",
+    "tags": ["avantaje", "eficienta", "detailing"],
+    "searchText": "avantaje scrub bar interior auto de ce sa folosesc",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_as_profession",
+    "title": "Ce înseamnă detailingul auto ca meserie?",
+    "content": "Detailingul auto este o meserie tehnică ce implică utilizarea corectă a chimiei, echipamentelor și proceselor, combinată cu experiență practică pentru a obține rezultate profesionale.",
+    "tags": ["detailing", "meserie", "profesional"],
+    "searchText": "ce inseamna detailing auto meserie ce presupune detailing profesional",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_school_definition",
+    "title": "Ce este Școala de Detailing Auto?",
+    "content": "Școala de Detailing Auto este un centru de formare dedicat învățării corecte a detailingului, oferind cursuri practice și teoretice pentru începători și profesioniști.",
+    "tags": ["cursuri", "educatie", "detailing"],
+    "searchText": "ce este scoala de detailing auto cursuri detailing romania",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_school_students",
+    "title": "Câți cursanți au participat la Școala de Detailing Auto?",
+    "content": "Peste 400 de cursanți au trecut prin programele școlii, confirmând interesul și nevoia de educație practică în detailing.",
+    "tags": ["cursanti", "experienta", "educatie"],
+    "searchText": "cati cursanti scoala detailing auto experienta cursuri",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_courses_audience",
+    "title": "Cui se adresează cursurile de detailing auto?",
+    "content": "Cursurile sunt potrivite pentru începători, detaileri care vor să se perfecționeze, pasionați auto și antreprenori care doresc servicii premium.",
+    "tags": ["cursuri", "audienta", "detailing"],
+    "searchText": "pentru cine sunt cursuri detailing auto incepatori sau profesionisti",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_exterior_learning",
+    "title": "Ce înveți la detailing exterior într-un curs?",
+    "content": "Include spălarea corectă, decontaminarea, corecția vopselei și aplicarea protecțiilor precum ceară, sealant sau coating ceramic.",
+    "tags": ["detailing exterior", "spalare", "protectie"],
+    "searchText": "ce invat detailing exterior spalare corectie vopsea coating",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_interior_learning",
+    "title": "Ce înveți la detailing interior într-un curs?",
+    "content": "Se învață curățarea textilelor, pielii și plasticelor, alegerea uneltelor și evitarea greșelilor frecvente în detailingul interior.",
+    "tags": ["detailing interior", "curatare", "piele", "textile"],
+    "searchText": "ce invat detailing interior curatare piele textile plastic",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_workflow_mindset",
+    "title": "Ce înseamnă un workflow corect în detailing?",
+    "content": "Un workflow corect presupune organizarea proceselor, alegerea produselor potrivite și diferențierea între un rezultat aparent curat și unul cu adevărat curat.",
+    "tags": ["workflow", "procese", "profesional"],
+    "searchText": "workflow detailing auto cum organizez procesele corect",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_school_difference",
+    "title": "Ce face diferită Școala de Detailing Auto față de alte cursuri?",
+    "content": "Accentul este pus pe înțelegerea proceselor, corectarea greșelilor reale și obținerea de rezultate repetabile, nu pe demonstrații superficiale.",
+    "tags": ["diferenta", "cursuri", "educatie"],
+    "searchText": "de ce sa aleg scoala de detailing auto vs alte cursuri",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_products_education",
+    "title": "De ce este importantă alegerea corectă a produselor în detailing?",
+    "content": "Rezultatele constante depind de combinarea educației corecte cu produsele potrivite, utilizate în funcție de situație și suprafață.",
+    "tags": ["produse", "educatie", "detailing"],
+    "searchText": "cum aleg produse detailing corect importanta produselor",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_learning_importance",
+    "title": "De ce este importantă educația în detailing auto?",
+    "content": "Educația oferă o bază solidă, înțelegerea proceselor și o direcție clară pentru a obține rezultate profesionale, nu doar ocazionale.",
+    "tags": ["educatie", "detailing", "invatare"],
+    "searchText": "de ce sa invat detailing auto importanta educatiei detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_cleaning_without_extractor",
+    "title": "Cum cureți corect textilele auto fără extractor?",
+    "content": "Curățarea corectă presupune trei pași: aplici soluția pentru a desprinde murdăria, agiți cu o perie sau scrub bar pentru a o scoate din fibră și apoi o îndepărtezi cu o lavetă de microfibră.",
+    "tags": ["textile", "curatare", "fara extractor", "detailing interior"],
+    "searchText": "cum curat textile auto fara extractor pasi corecti",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "why_vacuum_not_enough",
+    "title": "De ce nu este suficient aspiratul pentru textilele auto?",
+    "content": "Aspiratorul îndepărtează doar murdăria de la suprafață, dar contaminanții adânci rămân în fibră, ceea ce duce la aspect tern și mirosuri neplăcute.",
+    "tags": ["aspirare", "limitari", "textile"],
+    "searchText": "de ce nu ajunge aspiratorul la curatare mocheta auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "common_textile_cleaning_mistake",
+    "title": "Care este greșeala frecventă în curățarea textilelor auto?",
+    "content": "O greșeală comună este folosirea unei soluții și a unei lavete fără extracție reală, ceea ce duce la împrăștierea murdăriei în loc de eliminarea ei.",
+    "tags": ["greseli", "textile", "curatare"],
+    "searchText": "greseala curatare textile auto doar stergere nu scoate murdarie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_cleaning_tools",
+    "title": "De ce ai nevoie pentru curățarea textilelor fără extractor?",
+    "content": "Ai nevoie de o soluție dedicată pentru textile, o perie sau scrub bar pentru agitație și o lavetă de microfibră pentru a îndepărta murdăria.",
+    "tags": ["unelte", "produse", "textile"],
+    "searchText": "ce produse folosesc pentru curatare textile auto fara extractor",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_solution_application",
+    "title": "Cum aplici corect soluția pe textilele auto?",
+    "content": "Soluția trebuie pulverizată uniform fără a îmbiba materialul, astfel încât să acționeze eficient fără a satura fibra.",
+    "tags": ["solutie", "aplicare", "textile"],
+    "searchText": "cum aplic solutie textile auto fara sa ud excesiv",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_agitation_method",
+    "title": "Cum se face corect agitația pe textile?",
+    "content": "Se folosesc mișcări controlate și presiune medie cu o perie pentru textile sau scrub bar, evitând frecarea agresivă care poate deteriora materialul.",
+    "tags": ["agitatie", "perie", "tehnica"],
+    "searchText": "cum frec corect textile auto perie presiune detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "alcantara_cleaning_method",
+    "title": "Cum cureți corect Alcantara?",
+    "content": "Pentru Alcantara se recomandă folosirea unui scrub bar în loc de perie, deoarece materialul este sensibil și se poate deteriora ușor.",
+    "tags": ["alcantara", "curatare", "materiale sensibile"],
+    "searchText": "cum curat alcantara auto fara sa o stric scrub bar",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_extraction_step",
+    "title": "De ce este importantă ștergerea după curățare?",
+    "content": "După agitație, murdăria trebuie îndepărtată cu microfibră. Dacă acest pas este omis, reziduurile și soluția rămân în material.",
+    "tags": ["microfibra", "extractie", "curatare"],
+    "searchText": "de ce trebuie sa sterg textile dupa curatare microfibra",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_cleaning_logic",
+    "title": "De ce funcționează metoda de curățare fără extractor?",
+    "content": "Metoda funcționează deoarece urmează un proces logic: soluția desprinde murdăria, agitația o scoate din fibră, iar microfibra o îndepărtează complet.",
+    "tags": ["proces", "logica", "detailing"],
+    "searchText": "de ce functioneaza curatare textile fara extractor pasi",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "when_to_clean_textiles",
+    "title": "Când este recomandat să cureți textilele auto?",
+    "content": "Este recomandat când textilele arată uzate, au mirosuri neplăcute sau când vrei să menții interiorul fără a ajunge la o curățare completă.",
+    "tags": ["intretinere", "textile", "curatare"],
+    "searchText": "cand sa curat mocheta auto semne murdarie interior",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "prewash_definition",
+    "title": "Ce este prewash-ul și de ce este important?",
+    "content": "Prewash-ul este etapa de pre-spălare fără contact, în care se aplică spumă activă pentru a dizolva murdăria înainte de spălarea manuală, reducând riscul de zgârieturi.",
+    "tags": ["prewash", "spalare", "siguranta"],
+    "searchText": "ce este prewash auto de ce este important spalare fara contact",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "premium_foam_definition",
+    "title": "Ce înseamnă o spumă activă premium?",
+    "content": "O spumă activă premium este o soluție concentrată, cu putere mare de degresare și eficiență ridicată în îndepărtarea murdăriei de trafic.",
+    "tags": ["spuma activa", "premium", "prewash"],
+    "searchText": "ce inseamna spuma activa premium auto prewash profesional",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "foam_degreasing_power",
+    "title": "De ce este importantă puterea de degresare a spumei active?",
+    "content": "Murdăria de trafic conține uleiuri și poluanți care necesită o degresare eficientă. O spumă premium dizolvă acest strat, nu doar îl înmoaie.",
+    "tags": ["degresare", "traffic film", "curatare"],
+    "searchText": "de ce conteaza degresarea spuma activa traffic film",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "foam_concentration_importance",
+    "title": "De ce este importantă concentrația unei spume active?",
+    "content": "O formulă concentrată permite ajustarea diluției în funcție de utilizare și reduce costul per spălare, fiind mai eficientă în utilizare profesională.",
+    "tags": ["concentratie", "cost", "eficienta"],
+    "searchText": "spuma activa concentrata avantaj dilutie cost spalare",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "foam_surface_safety",
+    "title": "Este spuma activă sigură pentru toate suprafețele?",
+    "content": "Produsele premium sunt formulate pentru a fi sigure pe aluminiu, crom, plastic și cauciuc, respectând standarde OEM precum certificarea VDA.",
+    "tags": ["siguranta", "suprafete", "VDA"],
+    "searchText": "spuma activa este sigura pe crom aluminiu plastic",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "alkaline_vs_ph_neutral",
+    "title": "Ce alegi: spumă activă alcalină sau pH neutru?",
+    "content": "Spuma alcalină este mai eficientă pentru murdărie grea și prewash profesional, în timp ce cea pH neutru este potrivită pentru întreținere și mașini protejate.",
+    "tags": ["alcalin", "ph neutru", "comparatie"],
+    "searchText": "spuma activa alcalina vs ph neutru ce aleg",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "foam_professional_usage",
+    "title": "De ce folosesc profesioniștii spumă activă concentrată?",
+    "content": "Pentru eficiență operațională: consum redus per mașină, flexibilitate în diluție și performanță constantă în utilizare intensivă.",
+    "tags": ["profesional", "eficienta", "cost"],
+    "searchText": "de ce folosesc spalatoriile spuma activa concentrata",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "vda_certification",
+    "title": "Ce înseamnă certificarea VDA pentru spuma activă?",
+    "content": "Certificarea VDA Clasa A confirmă că produsul respectă standardele OEM ale producătorilor auto și este sigur pentru suprafețe sensibile.",
+    "tags": ["VDA", "certificare", "siguranta"],
+    "searchText": "ce inseamna certificare VDA spuma activa auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "foam_common_mistakes",
+    "title": "Care sunt greșelile frecvente la utilizarea spumei active?",
+    "content": "Greșelile includ diluția incorectă, aplicarea pe suprafețe fierbinți, lăsarea produsului să se usuce și utilizarea în soare direct.",
+    "tags": ["greseli", "spuma activa", "utilizare"],
+    "searchText": "greseli spuma activa prewash ce sa nu faci",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "foam_selection_criteria",
+    "title": "Cum alegi corect o spumă activă premium?",
+    "content": "Alege în funcție de concentrație, puterea de curățare, compatibilitatea cu suprafețe sensibile, certificări și costul real per spălare.",
+    "tags": ["alegere", "spuma activa", "criterii"],
+    "searchText": "cum aleg spuma activa premium prewash auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "prewash_vs_manual_wash",
+    "title": "Care este diferența dintre prewash și spălarea manuală?",
+    "content": "Prewash-ul dizolvă murdăria fără contact înainte de spălarea manuală, reducând riscul de zgârieturi în timpul spălării.",
+    "tags": ["prewash", "spalare manuala", "comparatie"],
+    "searchText": "diferenta prewash si spalare manuala auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_stain_cause",
+    "title": "De ce apar petele pe textilele auto?",
+    "content": "Materialele textile sunt poroase și absorb rapid lichidele, care se fixează în fibre și devin dificil de îndepărtat dacă nu există protecție.",
+    "tags": ["textile", "pete", "interior"],
+    "searchText": "de ce apar pete pe tapiterie auto textile absorb lichide",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "cleaning_vs_protection",
+    "title": "Care este diferența dintre curățare și protecția textilelor auto?",
+    "content": "Curățarea elimină murdăria existentă, în timp ce protecția hidrofobă previne absorbția lichidelor și apariția petelor pe termen lung.",
+    "tags": ["curatare", "protectie", "textile"],
+    "searchText": "diferenta curatare si protectie textile auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "hydrophobic_protection_explained",
+    "title": "Ce este protecția hidrofobă pentru textile auto?",
+    "content": "Protecția hidrofobă creează o barieră invizibilă care respinge lichidele, determinându-le să rămână la suprafață și să fie ușor de îndepărtat.",
+    "tags": ["hidrofobic", "protectie", "textile"],
+    "searchText": "ce inseamna protectie hidrofoba textile auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_protection_benefits",
+    "title": "Care sunt beneficiile protejării textilelor auto?",
+    "content": "Protecția reduce absorbția lichidelor, previne petele, facilitează curățarea și prelungește durata de viață a materialelor.",
+    "tags": ["beneficii", "protectie", "interior"],
+    "searchText": "avantaje protectie textile auto impotriva petelor",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "when_to_apply_textile_protection",
+    "title": "Când este recomandată protecția textilelor auto?",
+    "content": "Este recomandată după curățare profesională, la mașini noi sau pentru vehicule utilizate zilnic, mai ales în cazul mașinilor de familie sau flote.",
+    "tags": ["moment", "protectie", "textile"],
+    "searchText": "cand aplic protectie textile auto scaune masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_protection_steps",
+    "title": "Cum aplici corect protecția pe textilele auto?",
+    "content": "Curăță și usucă complet suprafața, aplică uniform soluția de protecție și las-o să se usuce complet înainte de utilizarea mașinii.",
+    "tags": ["aplicare", "protectie", "textile"],
+    "searchText": "cum aplic protectie textile auto pasi corecti",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_protection_mistakes",
+    "title": "Care sunt greșelile frecvente în protejarea textilelor auto?",
+    "content": "Greșelile includ aplicarea fără curățare, utilizarea excesivă de produs, uscarea insuficientă și folosirea produselor nepotrivite pentru textile.",
+    "tags": ["greseli", "protectie", "textile"],
+    "searchText": "greseli protectie textile auto aplicare gresita",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_product_choice",
+    "title": "Ce tip de produs alegi pentru protecția textilelor auto?",
+    "content": "Alege soluții dedicate textilelor care oferă respingerea apei, mențin respirabilitatea materialului și nu modifică aspectul sau culoarea.",
+    "tags": ["produse", "alegere", "textile"],
+    "searchText": "ce produs protectie textile auto hidrofob tapiterie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_protection_duration",
+    "title": "Cât timp rezistă protecția textilelor auto?",
+    "content": "Durabilitatea depinde de utilizare, tipul contaminărilor, întreținere și modul de aplicare, dar poate fi prelungită prin întreținere corectă.",
+    "tags": ["durabilitate", "protectie", "textile"],
+    "searchText": "cat rezista protectie textile auto durata hidrofob",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "textile_prevention_importance",
+    "title": "De ce este prevenția mai eficientă decât curățarea textilelor?",
+    "content": "Petele adânci sunt dificil de eliminat, iar protecția previne formarea lor, menține interiorul curat și reduce costurile de întreținere.",
+    "tags": ["preventie", "intretinere", "textile"],
+    "searchText": "de ce sa protejez textile auto prevenire pete interior",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "car_shampoo_importance",
+    "title": "De ce este important șamponul auto în detailing?",
+    "content": "Șamponul auto influențează siguranța spălării, protecția vopselei, durabilitatea coating-ului și aspectul final al mașinii, fiind un element esențial în întreținere.",
+    "tags": ["sampon", "detailing", "protectie"],
+    "searchText": "de ce este important sampon auto detailing protectie vopsea",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "acid_alkaline_shampoo_use",
+    "title": "Când folosești un șampon auto acid sau alcalin?",
+    "content": "Șampoanele acide sau alcaline sunt folosite pentru curățare profundă, îndepărtarea protecțiilor vechi și pregătirea suprafeței înainte de polish sau aplicarea unui coating.",
+    "tags": ["acid", "alcalin", "pregatire"],
+    "searchText": "cand folosesc sampon acid sau alcalin auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ph_neutral_shampoo",
+    "title": "De ce este recomandat șamponul auto pH neutru?",
+    "content": "Șamponul pH neutru este ideal pentru întreținere deoarece curăță eficient fără a afecta protecțiile existente și reduce riscul de zgârieturi.",
+    "tags": ["ph neutru", "intretinere", "siguranta"],
+    "searchText": "de ce sa folosesc sampon ph neutru auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ceramic_shampoo_benefits",
+    "title": "Ce este un șampon auto cu aditivi ceramic (SiO₂)?",
+    "content": "Este un șampon care conține polimeri sau SiO₂ pentru a îmbunătăți efectul hidrofob, luciul și durata protecției existente.",
+    "tags": ["ceramic", "sio2", "hidrofobic"],
+    "searchText": "ce este sampon ceramic auto sio2 beneficii",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ceramic_shampoo_usage",
+    "title": "Când folosești un șampon ceramic?",
+    "content": "Se folosește pentru întreținerea și revitalizarea protecțiilor existente, oferind un plus de hidrofobicitate și luciu între aplicările de protecție.",
+    "tags": ["ceramic", "intretinere", "protectie"],
+    "searchText": "cand folosesc sampon ceramic auto intretinere coating",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "multi_function_shampoo",
+    "title": "Ce este un șampon auto multifuncțional?",
+    "content": "Un șampon multifuncțional poate fi utilizat pentru spălare, lubrifiere pentru argilă și decontaminare ușoară, optimizând procesul de detailing.",
+    "tags": ["multifunctional", "clay", "detailing"],
+    "searchText": "ce este sampon auto 3 in 1 wash and clay",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "shampoo_for_ceramic_coating",
+    "title": "Ce șampon alegi pentru o mașină cu protecție ceramică?",
+    "content": "Pentru mașinile protejate ceramic se recomandă șampoane pH neutru care nu afectează coating-ul și oferă lubrifiere bună.",
+    "tags": ["coating", "ph neutru", "intretinere"],
+    "searchText": "ce sampon folosesc pentru masina cu coating ceramic",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "shampoo_selection_guide",
+    "title": "Cum alegi corect șamponul auto?",
+    "content": "Alegerea depinde de scop: pH neutru pentru întreținere, acid/alcalin pentru pregătire, ceramic pentru revitalizare și multifuncțional pentru eficiență.",
+    "tags": ["alegere", "sampon", "ghid"],
+    "searchText": "cum aleg sampon auto potrivit detailing ghid",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "shampoo_common_mistake",
+    "title": "Poți folosi orice șampon auto pe o mașină protejată?",
+    "content": "Da, dar nu este recomandat să folosești frecvent șampoane acide sau alcaline pe mașini protejate, deoarece pot afecta protecția.",
+    "tags": ["greseli", "sampon", "protectie"],
+    "searchText": "pot folosi orice sampon pe masina cu coating ceramic",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "shampoo_with_wax",
+    "title": "Este recomandat șamponul auto cu ceară?",
+    "content": "Șampoanele cu ceară sunt utile pentru întreținere rapidă și luciu suplimentar, dar pentru coating-uri ceramice sunt mai eficiente formulele dedicate.",
+    "tags": ["ceara", "sampon", "luciu"],
+    "searchText": "sampon cu ceara este bun pentru masina avantaje",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_products_definition",
+    "title": "Ce sunt produsele de detailing auto?",
+    "content": "Produsele de detailing sunt soluții și accesorii concepute pentru curățare profundă, restaurare, protecție și întreținere estetică, oferind rezultate profesionale și siguranță pentru materiale sensibile.",
+    "tags": ["detailing", "produse", "definitie"],
+    "searchText": "ce sunt produse detailing auto ce fac",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_vs_regular_products",
+    "title": "Care este diferența dintre produsele de detailing și cele obișnuite?",
+    "content": "Produsele de detailing sunt formulate pentru performanță profesională și protecția materialelor delicate, spre deosebire de produsele auto obișnuite.",
+    "tags": ["comparatie", "detailing", "produse"],
+    "searchText": "diferenta produse detailing vs produse auto normale",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "exterior_wash_products",
+    "title": "Ce produse sunt necesare pentru spălarea exteriorului?",
+    "content": "Spălarea corectă include șampoane auto, spumă activă pentru prewash și accesorii precum mănuși sau bureți speciali.",
+    "tags": ["spalare", "exterior", "produse"],
+    "searchText": "ce produse folosesc pentru spalare exterior masina",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_products_usage",
+    "title": "Ce este un APC și unde se folosește?",
+    "content": "APC (All Purpose Cleaner) este o soluție universală care poate curăța plastic, textile, motor și alte zone murdare, fiind foarte versatilă.",
+    "tags": ["apc", "curatare", "interior"],
+    "searchText": "ce este APC auto la ce foloseste all purpose cleaner",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "interior_products_types",
+    "title": "Ce produse sunt necesare pentru detailing interior?",
+    "content": "Interiorul necesită produse dedicate pentru piele, textile și plastic, pentru curățare, protecție și menținerea aspectului materialelor.",
+    "tags": ["interior", "piele", "plastic"],
+    "searchText": "ce produse folosesc pentru detailing interior auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "paint_correction_products",
+    "title": "Ce produse se folosesc pentru corecția vopselei?",
+    "content": "Corecția vopselei implică utilizarea compound-urilor și polish-urilor pentru a elimina zgârieturi, oxidare și defecte ale lacului.",
+    "tags": ["corectie", "polish", "compound"],
+    "searchText": "ce produse folosesc pentru corectie vopsea auto polish",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "paint_protection_products",
+    "title": "Ce produse se folosesc pentru protecția vopselei?",
+    "content": "Protecția vopselei se face cu ceruri, sealant-uri și coating-uri ceramice care creează un strat hidrofob și protejează împotriva contaminanților.",
+    "tags": ["protectie", "ceramic", "sealant"],
+    "searchText": "ce produse folosesc pentru protectie vopsea auto ceramic",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_accessories",
+    "title": "Ce accesorii sunt esențiale în detailing auto?",
+    "content": "Accesoriile importante includ prosoape de uscare, lavete microfibră, aplicatoare și perii pentru diverse suprafețe.",
+    "tags": ["accesorii", "microfibra", "perii"],
+    "searchText": "accesorii detailing auto necesare microfibra perii",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_kits",
+    "title": "Ce sunt kiturile de detailing auto și când le alegi?",
+    "content": "Kiturile de detailing includ produse esențiale pentru curățare și protecție, fiind ideale pentru începători sau pentru cei care vor o soluție completă.",
+    "tags": ["kituri", "detailing", "seturi"],
+    "searchText": "ce contine kit detailing auto merita sa cumpar kit",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_brands",
+    "title": "Care sunt cele mai populare branduri de detailing auto?",
+    "content": "Branduri precum ADBL, Gtechniq, Koch Chemie, Labocosmetica, Ewocar și Meguiar’s sunt recunoscute la nivel global pentru produse profesionale.",
+    "tags": ["branduri", "detailing", "produse"],
+    "searchText": "cele mai bune branduri detailing auto profesionale",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_store_benefits",
+    "title": "De ce să cumperi dintr-un magazin specializat de detailing?",
+    "content": "Magazinele specializate oferă produse profesionale, stoc real, consultanță tehnică și posibilitatea de a testa produsele înainte de achiziție.",
+    "tags": ["magazin", "consultanta", "produse"],
+    "searchText": "de ce sa cumpar din magazin detailing specializat avantaje",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_products_importance",
+    "title": "De ce este important să alegi corect produsele de detailing?",
+    "content": "Produsele potrivite fac diferența între o curățare obișnuită și un rezultat profesional, influențând protecția, aspectul și durabilitatea finisajului.",
+    "tags": ["alegere", "detailing", "rezultate"],
+    "searchText": "de ce conteaza alegerea produselor detailing auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "detailing_brand_definition",
+    "title": "Ce înseamnă un brand bun de produse detailing auto?",
+    "content": "Un brand de detailing este considerat bun atunci când oferă formule eficiente și sigure, rezultate constante, produse dezvoltate pentru utilizare profesională și performanță predictibilă în condiții reale.",
+    "tags": ["branduri", "detailing", "calitate"],
+    "searchText": "ce inseamna brand bun detailing auto cum aleg brand detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "adbl_overview",
+    "title": "Ce oferă brandul ADBL în detailing auto?",
+    "content": "ADBL este un producător polonez popular datorită raportului calitate-preț, oferind produse pentru interior, exterior, corecția vopselei și accesorii, utilizate atât de pasionați cât și de profesioniști.",
+    "tags": ["adbl", "branduri", "produse"],
+    "searchText": "ADBL ce produse face detailing auto review ADBL",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "labocosmetica_overview",
+    "title": "De ce este apreciat brandul Labocosmetica?",
+    "content": "Labocosmetica este un brand italian premium cunoscut pentru formule avansate, eficiente și compatibile între ele, utilizate frecvent în detailing profesional.",
+    "tags": ["labocosmetica", "branduri", "premium"],
+    "searchText": "Labocosmetica ce este produse detailing Italia review",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "gtechniq_overview",
+    "title": "Pentru ce este cunoscut brandul Gtechniq?",
+    "content": "Gtechniq este lider în protecții ceramice, oferind produse durabile care creează un strat hidrofob și protejează vopseaua împotriva contaminanților.",
+    "tags": ["gtechniq", "ceramic", "protectie"],
+    "searchText": "Gtechniq ce face coating ceramic protectie auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "koch_chemie_overview",
+    "title": "De ce este Koch Chemie un brand respectat în detailing?",
+    "content": "Koch Chemie este un producător german cu tradiție, cunoscut pentru formule stabile, eficiente și utilizate pe scară largă în detailing profesional.",
+    "tags": ["koch chemie", "branduri", "profesional"],
+    "searchText": "Koch Chemie produse detailing ce sunt MZR H9 review",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ewocar_overview",
+    "title": "Ce tip de produse oferă Ewocar?",
+    "content": "Ewocar este specializat în produse din microfibră, apreciate pentru absorbție ridicată, durabilitate și utilizare în uscare, curățare și aplicare produse.",
+    "tags": ["ewocar", "microfibra", "accesorii"],
+    "searchText": "Ewocar microfibra prosop uscare auto calitate",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "kenotek_overview",
+    "title": "Ce avantaje oferă produsele Kenotek?",
+    "content": "Kenotek este un brand belgian apreciat pentru eficiență, versatilitate și ușurință în utilizare, fiind popular în detailing și spălătorii auto.",
+    "tags": ["kenotek", "branduri", "curatare"],
+    "searchText": "Kenotek produse auto ce sunt textile cleaner review",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "workstuff_overview",
+    "title": "Ce produse oferă Work Stuff în detailing?",
+    "content": "Work Stuff produce accesorii premium precum pensule, perii și lavete microfibră, apreciate pentru calitate și durabilitate.",
+    "tags": ["work stuff", "accesorii", "detailing"],
+    "searchText": "Work Stuff pensule detailing accesorii auto calitate",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "meguiars_overview",
+    "title": "De ce este Meguiar’s un brand atât de popular?",
+    "content": "Meguiar’s este un brand american cu tradiție de peste 100 de ani, cunoscut pentru ceruri, șampoane, polish-uri și produse interior, fiind utilizat global.",
+    "tags": ["meguiars", "branduri", "popular"],
+    "searchText": "Meguiars produse detailing istorie si ce ofera",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "why_professional_products",
+    "title": "De ce să alegi produse detailing profesionale?",
+    "content": "Produsele profesionale oferă rezultate mai bune, siguranță pentru suprafețe, eficiență ridicată și consum redus comparativ cu produsele auto obișnuite.",
+    "tags": ["produse profesionale", "detailing", "beneficii"],
+    "searchText": "de ce sa folosesc produse detailing profesionale avantaje",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "where_to_buy_detailing",
+    "title": "Unde găsești produse detailing auto profesionale?",
+    "content": "Produsele detailing profesionale se găsesc în magazine specializate care oferă produse originale, consultanță tehnică și o gamă completă de branduri consacrate.",
+    "tags": ["cumparare", "magazin", "detailing"],
+    "searchText": "unde cumpar produse detailing auto profesionale Romania",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "popular_brands_summary",
+    "title": "Care sunt cele mai populare branduri de detailing auto?",
+    "content": "Printre cele mai apreciate branduri se numără ADBL, Labocosmetica, Gtechniq, Koch Chemie, Ewocar, Kenotek, Work Stuff, Meguiar’s, MA-FRA, Sonax și Chemical Guys.",
+    "tags": ["branduri", "top", "detailing"],
+    "searchText": "top branduri detailing auto cele mai bune marci detailing",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "brand_selection_importance",
+    "title": "De ce contează alegerea brandului în detailing auto?",
+    "content": "Alegerea brandului influențează direct calitatea rezultatelor, siguranța suprafețelor și consistența procesului de detailing.",
+    "tags": ["alegere", "branduri", "rezultate"],
+    "searchText": "de ce conteaza brandul in detailing auto rezultate",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_definition",
+    "title": "Ce este un APC (All Purpose Cleaner) în detailing auto?",
+    "content": "APC este o soluție universală de curățare concepută pentru multiple suprafețe auto, care poate fi diluată în funcție de gradul de murdărie și tipul aplicației.",
+    "tags": ["apc", "detailing", "curatare"],
+    "searchText": "ce este APC auto all purpose cleaner ce inseamna",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_usage_areas",
+    "title": "Unde poți folosi un APC auto?",
+    "content": "Un APC poate fi utilizat pe plastic interior, textile, compartiment motor, jante, anvelope, praguri și alte zone murdare ale mașinii.",
+    "tags": ["utilizare", "apc", "suprafete"],
+    "searchText": "unde folosesc APC auto interior exterior motor jante",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_how_it_works",
+    "title": "Cum funcționează un APC auto?",
+    "content": "APC-ul funcționează prin dizolvarea grăsimilor, emulsionarea murdăriei și facilitarea îndepărtării contaminanților cu ajutorul periei, microfibrei sau apei.",
+    "tags": ["functionare", "apc", "detergent"],
+    "searchText": "cum functioneaza APC auto curatare grasimi murdarie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_plastic_cleaning",
+    "title": "Poate APC-ul curăța plasticul interior?",
+    "content": "Da, un APC diluat corect curăță eficient plasticul interior de praf, grăsimi și urme, fără a deteriora suprafața.",
+    "tags": ["plastic", "interior", "apc"],
+    "searchText": "pot curata plastic interior cu APC auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_textile_cleaning",
+    "title": "Poate APC-ul curăța textilele auto?",
+    "content": "Da, APC-ul poate fi utilizat pentru curățarea scaunelor, mochetelor și plafonului, fiind eficient în îndepărtarea murdăriei din fibre.",
+    "tags": ["textile", "apc", "curatare"],
+    "searchText": "APC pentru textile auto scaune mocheta functioneaza",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_engine_cleaning",
+    "title": "Este APC-ul potrivit pentru curățarea compartimentului motor?",
+    "content": "Da, APC-ul este ideal pentru motor deoarece dizolvă uleiurile, grăsimile și reziduurile acumulate în timp.",
+    "tags": ["motor", "apc", "curatare"],
+    "searchText": "cum curat motor cu APC auto siguranta",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_dilution",
+    "title": "Cum se diluează corect un APC auto?",
+    "content": "APC-ul se diluează în funcție de murdărie: 1:10–1:20 pentru interior ușor murdar, 1:4–1:10 pentru motor și zone foarte murdare.",
+    "tags": ["dilutie", "apc", "utilizare"],
+    "searchText": "cum diluez APC auto proportii corecte",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_selection",
+    "title": "Cum alegi un APC auto potrivit?",
+    "content": "Alegerea depinde de gradul de murdărie, tipul suprafeței și versatilitatea produsului, fiind important să alegi unul sigur și eficient.",
+    "tags": ["alegere", "apc", "produse"],
+    "searchText": "cum aleg APC auto bun detailing profesional",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_common_mistakes",
+    "title": "Care sunt greșelile frecvente în utilizarea unui APC?",
+    "content": "Greșelile includ utilizarea nediluată pe suprafețe sensibile, lăsarea produsului să se usuce și aplicarea pe suprafețe fierbinți.",
+    "tags": ["greseli", "apc", "utilizare"],
+    "searchText": "greseli folosire APC auto ce sa nu faci",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_on_leather",
+    "title": "Poți folosi APC pe piele?",
+    "content": "Nu este recomandat decât dacă produsul specifică acest lucru, deoarece pielea necesită produse dedicate pentru a evita deteriorarea.",
+    "tags": ["piele", "apc", "siguranta"],
+    "searchText": "pot folosi APC pe piele auto sigur sau nu",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_professional_use",
+    "title": "Cine folosește soluțiile APC în detailing?",
+    "content": "APC-urile sunt utilizate de detaileri profesioniști, spălătorii auto, pasionați și flote datorită versatilității și eficienței lor.",
+    "tags": ["profesional", "apc", "detailing"],
+    "searchText": "cine foloseste APC auto detailing profesional",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "apc_importance",
+    "title": "De ce este APC-ul un produs esențial în detailing?",
+    "content": "APC-ul simplifică procesul de curățare, putând înlocui mai multe produse și oferind eficiență ridicată pe multiple suprafețe.",
+    "tags": ["importanta", "apc", "detailing"],
+    "searchText": "de ce este APC esential in detailing auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "tipuri_spalatorii_solutii",
+    "title": "Ce soluții folosesc diferitele tipuri de spălătorii auto?",
+    "content": "Spălătoriile self service folosesc spumă activă, detergenți de prespălare, soluții pentru jante, ceară lichidă și soluții de uscare fără pete. Spălătoriile touchless utilizează detergenți alcalini puternici, spume concentrate și soluții pentru insecte. Spălătoriile tradiționale folosesc șampoane auto, degresanți, soluții pentru jante și dressing pentru anvelope.",
+    "tags": ["spalatorii auto", "self service", "touchless", "produse detailing", "solutii auto"],
+    "searchText": "tipuri spalatorii auto ce produse folosesc self service touchless traditional detergenti spalatorie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "caracteristici_solutii_profesionale",
+    "title": "Ce caracteristici trebuie să aibă soluțiile pentru spălătorii auto?",
+    "content": "Soluțiile profesionale trebuie să aibă putere mare de curățare pentru murdărie complexă, să fie concentrate pentru diluții economice și să fie compatibile cu echipamentele precum pompe dozatoare, lănci de spumare și sisteme automate.",
+    "tags": ["detergenti profesionali", "eficienta curatare", "concentratie", "echipamente spalatorie"],
+    "searchText": "caracteristici detergenti spalatorie auto profesionali ce sa alegi concentratie compatibilitate",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "rol_spuma_activa",
+    "title": "De ce este spuma activă esențială în spălătoriile auto?",
+    "content": "Spuma activă înmoaie și desprinde murdăria înainte de clătire, reducând riscul de zgârieturi și permițând curățarea fără contact mecanic. Este un produs de bază în majoritatea spălătoriilor profesionale.",
+    "tags": ["spuma activa", "prespalare", "siguranta vopsea", "curatare fara contact"],
+    "searchText": "ce face spuma activa de ce este importanta prespalare auto beneficii spuma activa",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "avantaje_kenotek",
+    "title": "De ce folosesc spălătoriile auto produsele Kenotek?",
+    "content": "Produsele Kenotek sunt populare datorită puterii mari de curățare, consumului redus prin concentrație ridicată, compatibilității cu echipamentele self service și rezultatelor constante în utilizare intensivă.",
+    "tags": ["kenotek", "produse profesionale", "spalatorii auto", "brand detailing"],
+    "searchText": "kenotek spalatorie auto avantaje produse kenotek spuma activa profesionala",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "solutii_self_service",
+    "title": "Ce soluții sunt folosite în spălătoriile auto self service?",
+    "content": "Spălătoriile self service folosesc spumă activă concentrată, detergenți alcalini pentru prespălare, ceară lichidă și soluții pentru clătire fără pete, toate optimizate pentru sisteme automate și utilizatori fără experiență.",
+    "tags": ["self service", "dozare automata", "spuma activa", "ceara lichida"],
+    "searchText": "solutii spalatorie self service produse necesare spuma activa detergent alcalin ceara",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "solutii_volum_mare",
+    "title": "Ce produse se folosesc în spălătoriile auto cu volum mare?",
+    "content": "Spălătoriile cu volum mare folosesc detergenți alcalini puternici, degresanți și soluții specializate pentru camioane și utilaje, concepute pentru murdărie industrială și trafic intens.",
+    "tags": ["flote auto", "detergenti alcalini", "degresanti", "camioane"],
+    "searchText": "produse spalatorii flote camioane detergent puternic degresant industrial",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "cum_alegi_produse_spalatorie",
+    "title": "Cum alegi produsele potrivite pentru o spălătorie auto?",
+    "content": "Alegerea produselor depinde de tipul spălătoriei, echipamentele utilizate, volumul zilnic de mașini și tipul murdăriei. Produsele profesionale reduc costurile per spălare, îmbunătățesc rezultatele și protejează suprafețele vehiculelor.",
+    "tags": ["alegere produse", "eficienta cost", "detailing profesional", "spalatorie auto"],
+    "searchText": "cum aleg produse spalatorie auto ce detergenti folosesc criterii selectie spalatorie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ce_este_chemical_guys",
+    "title": "Ce este Chemical Guys?",
+    "content": "Chemical Guys este un brand american specializat în produse pentru detailing auto, oferind soluții pentru curățarea, protecția și întreținerea vehiculelor. Este cunoscut pentru gama variată, formule eficiente și produse potrivite atât pentru profesioniști, cât și pentru utilizatori casnici.",
+    "tags": ["chemical guys", "brand detailing", "cosmetica auto", "produse auto"],
+    "searchText": "ce este chemical guys brand detailing auto produse chemical guys informatii",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "game_produse_chemical_guys",
+    "title": "Ce tipuri de produse oferă Chemical Guys?",
+    "content": "Chemical Guys oferă o gamă completă de produse pentru detailing auto, inclusiv șampoane auto, spume active, soluții pentru interior, ceară și sealant-uri, quick detailers, produse pentru jante și anvelope, precum și accesorii pentru detailing.",
+    "tags": ["produse detailing", "chemical guys", "sampon auto", "ceara auto", "accesorii detailing"],
+    "searchText": "ce produse are chemical guys gama produse detailing auto ce include chemical guys",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "sampoane_chemical_guys",
+    "title": "Care sunt cele mai populare șampoane auto Chemical Guys?",
+    "content": "Printre cele mai populare șampoane Chemical Guys se numără Mr. Pink (pH neutru, spumă bogată), Honeydew Snow Foam (spumă activă pentru prespălare) și Citrus Wash & Gloss (șampon concentrat cu putere mare de curățare).",
+    "tags": ["sampon auto", "chemical guys", "mr pink", "snow foam", "detailing exterior"],
+    "searchText": "chemical guys mr pink honeydew snow foam citrus wash gloss sampon auto recomandari",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "produse_interior_chemical_guys",
+    "title": "Ce produse Chemical Guys sunt folosite pentru interior auto?",
+    "content": "Chemical Guys oferă soluții pentru curățarea plasticului, vinilului, pielii, textilelor și tapițeriei. Produse populare includ InnerClean Interior Cleaner, Leather Cleaner și Fabric Clean, formulate pentru curățare eficientă fără deteriorarea materialelor.",
+    "tags": ["interior auto", "curatare interior", "chemical guys", "piele", "textile"],
+    "searchText": "chemical guys interior cleaner leather cleaner fabric clean produse interior auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "protectie_vopsea_chemical_guys",
+    "title": "Ce produse Chemical Guys se folosesc pentru protecția vopselei?",
+    "content": "Pentru protecția vopselei, Chemical Guys oferă ceară auto, sealant-uri, quick detailers și produse pentru întreținerea luciului. Exemple populare sunt Butter Wet Wax pentru luciu intens și Hybrid V7 Quick Detailer pentru întreținerea aspectului.",
+    "tags": ["protectie vopsea", "ceara auto", "quick detailer", "chemical guys"],
+    "searchText": "chemical guys butter wet wax hybrid v7 quick detailer protectie vopsea produse",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "accesorii_chemical_guys",
+    "title": "Ce accesorii oferă Chemical Guys pentru detailing auto?",
+    "content": "Chemical Guys oferă accesorii precum lavete din microfibră, aplicatoare pentru ceară, bureți pentru spălare și alte unelte pentru curățare, concepute pentru a face procesul de detailing mai eficient și mai ușor.",
+    "tags": ["accesorii detailing", "microfibra", "bureti spalare", "chemical guys"],
+    "searchText": "accesorii chemical guys microfibra aplicatoare bureti detailing auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "popularitate_chemical_guys",
+    "title": "De ce sunt atât de populare produsele Chemical Guys?",
+    "content": "Produsele Chemical Guys sunt populare datorită gamei foarte variate, experienței plăcute în utilizare, rezultatelor eficiente și faptului că sunt potrivite atât pentru profesioniști, cât și pentru utilizatori acasă.",
+    "tags": ["chemical guys", "popularitate", "detailing auto", "produse profesionale"],
+    "searchText": "de ce sunt populare chemical guys avantaje produse detailing auto chemical guys",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "unde_gasesti_chemical_guys",
+    "title": "Unde poți găsi produse Chemical Guys în România?",
+    "content": "Produsele Chemical Guys pot fi achiziționate din magazine specializate în detailing auto din România, inclusiv din magazine online precum CAR Hub, unde sunt disponibile soluții pentru spălare, interior și protecția vopselei.",
+    "tags": ["chemical guys romania", "magazin detailing", "produse auto", "car hub"],
+    "searchText": "unde gasesc chemical guys romania magazin produse detailing chemical guys romania",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ce_este_koch_chemie",
+    "title": "Ce este Koch Chemie?",
+    "content": "Koch Chemie este un producător german de produse profesionale pentru detailing auto, cu peste 50 de ani de experiență. Brandul este cunoscut pentru formule eficiente, standarde ridicate de calitate și rezultate excelente în curățarea și protecția vehiculelor.",
+    "tags": ["koch chemie", "brand detailing", "produse profesionale", "cosmetica auto"],
+    "searchText": "ce este koch chemie brand german detailing auto produse koch chemie informatii",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "categorii_produse_koch_chemie",
+    "title": "Ce tipuri de produse oferă Koch Chemie?",
+    "content": "Koch Chemie oferă o gamă completă de produse pentru detailing auto, inclusiv soluții pentru prespălare, șampoane auto și produse pentru curățarea interiorului, acoperind toate etapele procesului de îngrijire a vehiculului.",
+    "tags": ["produse detailing", "koch chemie", "prespalare", "sampon auto", "interior auto"],
+    "searchText": "ce produse koch chemie gama detailing auto prespalare sampon interior",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "produse_prespalare_koch",
+    "title": "Ce produse Koch Chemie sunt folosite pentru prespălare?",
+    "content": "Pentru prespălare, Koch Chemie oferă produse precum Green Star, Vorreiniger B și Gentle Snow Foam, utilizate pentru îndepărtarea murdăriei înainte de spălarea manuală.",
+    "tags": ["prespalare", "green star", "snow foam", "detailing exterior"],
+    "searchText": "koch chemie green star vorreiniger b gentle snow foam prespalare auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "sampoane_koch_chemie",
+    "title": "Ce șampoane auto oferă Koch Chemie?",
+    "content": "Koch Chemie oferă șampoane auto precum Nano Magic Shampoo, Auto Shampoo și Gentle Snow Foam, dezvoltate pentru curățare eficientă fără a afecta protecțiile existente pe vopsea.",
+    "tags": ["sampon auto", "koch chemie", "nano magic shampoo", "detailing exterior"],
+    "searchText": "koch chemie nano magic shampoo auto shampoo produse spalare auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "produse_interior_koch",
+    "title": "Ce produse Koch Chemie sunt utilizate pentru interior auto?",
+    "content": "Pentru interior, Koch Chemie oferă produse precum Pol Star, Top Star și Leather Star, utilizate pentru curățarea textilelor, pielii și suprafețelor din plastic.",
+    "tags": ["interior auto", "koch chemie", "pol star", "leather cleaner"],
+    "searchText": "koch chemie pol star top star leather star curatare interior auto produse",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "avantaje_koch_chemie",
+    "title": "De ce sunt populare produsele Koch Chemie?",
+    "content": "Produsele Koch Chemie sunt apreciate pentru eficiența în curățare, formulele concentrate și rezultatele excelente în detailing auto, fiind utilizate frecvent de profesioniști.",
+    "tags": ["koch chemie", "avantaje", "detailing profesional", "produse concentrate"],
+    "searchText": "de ce sa aleg koch chemie avantaje produse detailing profesional",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "unde_gasesti_koch_chemie",
+    "title": "Unde poți găsi produse Koch Chemie în România?",
+    "content": "Produsele Koch Chemie pot fi achiziționate din magazine specializate în detailing auto din România, inclusiv din magazine precum CAR Hub, care oferă soluții pentru spălare, interior și protecția suprafețelor.",
+    "tags": ["koch chemie romania", "magazin detailing", "produse auto", "car hub"],
+    "searchText": "unde gasesc koch chemie romania produse detailing magazin koch chemie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "top_produse_koch_chemie",
+    "title": "Care sunt cele mai populare produse Koch Chemie pentru detailing auto?",
+    "content": "Printre cele mai populare produse Koch Chemie se numără Green Star (APC), Pol Star (curățare textile), Gentle Snow Foam (spumă activă pentru prespălare) și Nano Magic Shampoo (șampon auto cu protecție și luciu).",
+    "tags": ["koch chemie", "top produse", "detailing auto", "produse populare"],
+    "searchText": "top produse koch chemie cele mai bune produse detailing koch chemie recomandari",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "green_star_utilizare",
+    "title": "La ce se folosește Koch Chemie Green Star?",
+    "content": "Koch Chemie Green Star este un APC (All Purpose Cleaner) utilizat pentru curățarea interiorului, degresarea compartimentului motor și curățarea jantelor.",
+    "tags": ["green star", "apc", "curatare interior", "degresare motor"],
+    "searchText": "koch chemie green star ce este cum se foloseste apc auto curatare interior motor jante",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "pol_star_utilizare",
+    "title": "La ce se folosește Koch Chemie Pol Star?",
+    "content": "Koch Chemie Pol Star este o soluție profesională pentru curățarea textilelor și tapițeriei auto, fiind utilizată pentru scaune, plafon și covorașe.",
+    "tags": ["pol star", "textile auto", "curatare tapiterie", "interior auto"],
+    "searchText": "koch chemie pol star utilizare curatare tapiterie scaune textile plafon covorase",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "gentle_snow_foam_beneficii",
+    "title": "Ce face Koch Chemie Gentle Snow Foam?",
+    "content": "Koch Chemie Gentle Snow Foam este o spumă activă pentru prespălare care înmoaie murdăria, reduce riscul zgârieturilor și pregătește suprafața pentru spălarea manuală.",
+    "tags": ["snow foam", "prespalare", "spuma activa", "detailing exterior"],
+    "searchText": "koch chemie gentle snow foam ce face prespalare auto beneficii spuma activa",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "nano_magic_shampoo_beneficii",
+    "title": "Ce beneficii oferă Koch Chemie Nano Magic Shampoo?",
+    "content": "Koch Chemie Nano Magic Shampoo oferă curățare eficientă, efect hidrofob și luciu intens al vopselei, fiind un șampon auto premium pentru detailing.",
+    "tags": ["nano magic shampoo", "sampon auto", "luciu vopsea", "protectie hidrofoba"],
+    "searchText": "koch chemie nano magic shampoo beneficii sampon auto hidrofob luciu vopsea",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ordine_folosire_koch_chemie",
+    "title": "În ce ordine se folosesc produsele Koch Chemie în detailing auto?",
+    "content": "Produsele Koch Chemie trebuie utilizate în ordinea corectă a procesului de detailing: prespălare, spălare manuală, curățare interior și, dacă este necesar, corecția vopselei, urmată de aplicarea unei protecții.",
+    "tags": ["koch chemie", "ordine detailing", "proces detailing", "ghid utilizare"],
+    "searchText": "ordine folosire produse koch chemie pasi detailing auto corect",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "prespalare_koch_chemie",
+    "title": "Cum se face corect prespălarea cu produse Koch Chemie?",
+    "content": "Prespălarea îndepărtează murdăria grosieră și reduce riscul zgârieturilor. Produse utilizate includ Green Star, Vorreiniger B și Gentle Snow Foam, care ajută la desprinderea contaminanților înainte de spălarea manuală.",
+    "tags": ["prespalare", "koch chemie", "snow foam", "apc"],
+    "searchText": "cum faci prespalare koch chemie green star vorreiniger b gentle snow foam",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "spalare_manuala_koch",
+    "title": "Cum se face spălarea manuală cu produse Koch Chemie?",
+    "content": "După prespălare, spălarea manuală se realizează cu șampoane precum Nano Magic Shampoo, Auto Shampoo sau Gentle Snow Foam, care curăță eficient fără a afecta protecțiile existente pe vopsea.",
+    "tags": ["spalare manuala", "sampon auto", "koch chemie", "detailing exterior"],
+    "searchText": "spalare manuala koch chemie nano magic shampoo auto shampoo cum se foloseste",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "curatare_interior_koch",
+    "title": "Cum se curăță interiorul cu produse Koch Chemie?",
+    "content": "Pentru interior se folosesc produse dedicate precum Pol Star pentru textile, Top Star pentru protecția plasticului și Leather Star pentru întreținerea pielii, toate concepute pentru curățare sigură și eficientă.",
+    "tags": ["interior auto", "koch chemie", "pol star", "leather care"],
+    "searchText": "curatare interior koch chemie pol star top star leather star utilizare",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "corectie_vopsea_koch",
+    "title": "Cum se face corecția vopselei cu produse Koch Chemie?",
+    "content": "Corecția vopselei se realizează folosind paste de polish precum H9 Heavy Cut, F6 Fine Cut și M3 Micro Cut, împreună cu paduri adecvate, pentru a elimina zgârieturile și a reda luciul vopselei.",
+    "tags": ["polish auto", "corectie vopsea", "koch chemie", "heavy cut"],
+    "searchText": "koch chemie h9 f6 m3 polish corectie vopsea cum se face",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "protectie_dupa_polish",
+    "title": "Ce trebuie făcut după corecția vopselei?",
+    "content": "După procesul de polish este recomandată aplicarea unei protecții pentru a menține luciul și a proteja vopseaua împotriva factorilor externi.",
+    "tags": ["protectie vopsea", "after polish", "detailing auto", "sealant"],
+    "searchText": "ce faci dupa polish protectie vopsea sealant ceara dupa corectie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ce_este_green_star",
+    "title": "Ce este Koch Chemie Green Star?",
+    "content": "Koch Chemie Green Star este un APC (All Purpose Cleaner) concentrat, utilizat în detailing auto pentru curățarea interiorului, compartimentului motor, jantelor și elementelor din plastic.",
+    "tags": ["green star", "apc", "koch chemie", "curatare auto"],
+    "searchText": "ce este koch chemie green star apc la ce se foloseste green star",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "utilizari_green_star",
+    "title": "Pentru ce suprafețe se poate folosi Koch Chemie Green Star?",
+    "content": "Green Star poate fi utilizat pe multiple suprafețe, inclusiv interior auto, compartiment motor, jante și elemente din plastic, datorită formulei sale versatile.",
+    "tags": ["green star", "suprafete", "detailing auto", "apc"],
+    "searchText": "unde se foloseste green star suprafete interior motor jante plastic",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "dilutii_green_star",
+    "title": "Cum se diluează corect Koch Chemie Green Star?",
+    "content": "Green Star se diluează în funcție de utilizare: 1:10–1:20 pentru interior auto, 1:5–1:10 pentru compartiment motor și 1:5 pentru jante, permițând adaptarea puterii de curățare.",
+    "tags": ["green star", "dilutie", "apc", "detailing"],
+    "searchText": "dilutie koch chemie green star interior motor jante proportii apc",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "avantaje_green_star",
+    "title": "Care sunt avantajele Koch Chemie Green Star?",
+    "content": "Green Star oferă putere mare de curățare, formulă concentrată, versatilitate în utilizare și compatibilitate cu multiple suprafețe, fiind unul dintre cele mai populare produse APC din detailing.",
+    "tags": ["green star", "avantaje", "apc", "koch chemie"],
+    "searchText": "avantaje koch chemie green star de ce este bun apc detailing auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ce_este_mzr",
+    "title": "Ce este Koch Chemie MZR?",
+    "content": "Koch Chemie MZR este un detergent profesional pentru curățarea textilelor auto, conceput pentru a îndepărta murdăria, petele, grăsimile și reziduurile din fibre fără a deteriora materialul sau culoarea.",
+    "tags": ["koch chemie", "mzr", "curatare textile", "detailing interior"],
+    "searchText": "ce este koch chemie mzr detergent textile auto la ce foloseste mzr",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "utilizare_mzr",
+    "title": "Unde se poate folosi Koch Chemie MZR?",
+    "content": "MZR poate fi utilizat pentru curățarea scaunelor textile, covorașelor, plafonului și tapițeriei textile, fiind eficient în îndepărtarea murdăriei și petelor din interiorul vehiculului.",
+    "tags": ["mzr", "textile auto", "interior auto", "detailing"],
+    "searchText": "unde folosesc koch chemie mzr scaune covorase plafon tapiterie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "dilutii_mzr",
+    "title": "Cum se diluează Koch Chemie MZR în funcție de murdărie?",
+    "content": "MZR se diluează în funcție de nivelul de murdărie: 1:20–1:10 pentru curățare ușoară, 1:10–1:5 pentru murdărie medie și 1:5–1:3 pentru murdărie intensă sau pete persistente.",
+    "tags": ["mzr", "dilutie", "curatare textile", "detailing"],
+    "searchText": "dilutie koch chemie mzr proportii textile murdarie usoara medie intensa",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "cum_folosesti_mzr",
+    "title": "Cum se folosește corect Koch Chemie MZR?",
+    "content": "Se diluează produsul, se aplică pe suprafață cu pulverizator, perie sau extractor, se agită în fibre, apoi se extrage murdăria și se lasă suprafața să se usuce complet.",
+    "tags": ["mzr", "utilizare", "extractor", "curatare textile"],
+    "searchText": "cum folosesc koch chemie mzr pasi curatare textile auto extractor",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "avantaje_mzr",
+    "title": "Care sunt avantajele Koch Chemie MZR?",
+    "content": "MZR oferă putere mare de curățare, formulă concentrată, compatibilitate cu extractoare și curățare profundă a fibrelor textile, fiind foarte versatil pentru detailing interior.",
+    "tags": ["mzr", "avantaje", "curatare textile", "detailing profesional"],
+    "searchText": "avantaje koch chemie mzr curatare profunda textile auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "ce_este_ductile",
+    "title": "Ce este Labocosmetica Ductile?",
+    "content": "Labocosmetica Ductile este un detergent acid profesional utilizat pentru curățarea textilelor auto și neutralizarea reziduurilor alcaline, fiind eficient împotriva petelor minerale și a depunerilor de săruri.",
+    "tags": ["labocosmetica", "ductile", "detergent acid", "detailing interior"],
+    "searchText": "ce este labocosmetica ductile detergent acid interior auto la ce foloseste",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "cand_folosesti_ductile",
+    "title": "Când se folosește un detergent acid precum Labocosmetica Ductile?",
+    "content": "Se utilizează atunci când soluțiile alcaline nu mai funcționează, pentru eliminarea petelor minerale, depunerilor de transpirație și neutralizarea reziduurilor alcaline din textile.",
+    "tags": ["detergent acid", "ductile", "pete minerale", "neutralizare alcalina"],
+    "searchText": "cand folosesc detergent acid interior auto pete minerale reziduuri alcaline ductile",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "utilizare_ductile",
+    "title": "Pe ce suprafețe se poate folosi Labocosmetica Ductile?",
+    "content": "Ductile poate fi utilizat pe scaune textile, covorașe, plafon și tapițerie textilă pentru a elimina petele și reziduurile fără a deteriora materialele.",
+    "tags": ["ductile", "textile auto", "interior auto", "detailing"],
+    "searchText": "unde folosesc labocosmetica ductile scaune covorase plafon tapiterie",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "dilutii_ductile",
+    "title": "Cum se diluează Labocosmetica Ductile?",
+    "content": "Ductile se diluează 1:20 pentru curățare ușoară, 1:10 pentru murdărie normală și 1:5 pentru pete persistente și depuneri minerale.",
+    "tags": ["ductile", "dilutie", "detergent acid", "curatare textile"],
+    "searchText": "dilutie labocosmetica ductile proportii textile interior auto",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "cum_folosesti_ductile",
+    "title": "Cum se folosește corect Labocosmetica Ductile?",
+    "content": "Se diluează produsul, se aplică pe suprafață cu pulverizator sau perie, se agită pentru a pătrunde în fibre și se extrage murdăria cu un extractor pentru rezultate profesionale.",
+    "tags": ["ductile", "utilizare", "extractor", "detailing interior"],
+    "searchText": "cum folosesc labocosmetica ductile pasi curatare textile extractor",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+    "id": "avantaje_ductile",
+    "title": "Care sunt avantajele Labocosmetica Ductile?",
+    "content": "Ductile neutralizează reziduuri alcaline, îndepărtează pete minerale, curăță eficient textilele și este compatibil cu echipamente profesionale, oferind rezultate excelente în detailing interior.",
+    "tags": ["ductile", "avantaje", "detailing interior", "curatare textile"],
+    "searchText": "avantaje labocosmetica ductile detergent acid interior auto beneficii",
+    "source": "blog",
+    "intent": "informational"
+  },
+  {
+"id": "meguiars_endurance_tire_gel",
+"title": "Ce beneficii oferă Meguiar’s Endurance Tire Gel pentru anvelope?",
+"content": "Meguiar’s Endurance Tire Gel este un dressing pentru anvelope care oferă luciu intens, protecție UV și durabilitate ridicată. Formula sa nu se evaporă rapid și nu stropește caroseria în timpul mersului, menținând un aspect proaspăt și rezistent în timp.",
+"tags": ["meguiars", "anvelope", "tire gel", "dressing anvelope", "luciu anvelope"],
+"searchText": "Meguiars Endurance Tire Gel ce face, dressing anvelope rezistent, solutie luciu anvelope durabil, protectie UV anvelope",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_ultimate_compound",
+"title": "Pentru ce se folosește Meguiar’s Ultimate Compound?",
+"content": "Meguiar’s Ultimate Compound este o pastă de corecție utilizată pentru îndepărtarea zgârieturilor fine, eliminarea oxidării și restaurarea luciului vopselei. Este apreciată pentru eficiența ridicată și pentru faptul că poate fi folosită cu ușurință chiar și de utilizatori fără experiență.",
+"tags": ["meguiars", "corectie vopsea", "compound", "zgârieturi", "polish auto"],
+"searchText": "Meguiars Ultimate Compound la ce foloseste, pasta polish zgârieturi fine, cum scapi de oxidare vopsea auto, restaurare luciu masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_gold_class_car_wash",
+"title": "De ce este popular Meguiar’s Gold Class Car Wash?",
+"content": "Meguiar’s Gold Class Car Wash este un șampon auto cunoscut pentru spuma bogată, lubrifierea excelentă și capacitatea de curățare eficientă. Este ideal pentru spălarea manuală, reducând riscul de zgârieturi și oferind un finisaj curat și lucios.",
+"tags": ["meguiars", "sampon auto", "spalare manuala", "detailing exterior", "curatare masina"],
+"searchText": "Meguiars Gold Class Car Wash review, cel mai bun sampon auto spuma bogata, spalare manuala fara zgârieturi, sampon detailing auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_hybrid_ceramic_wax",
+"title": "Cum funcționează Meguiar’s Hybrid Ceramic Wax?",
+"content": "Meguiar’s Hybrid Ceramic Wax oferă protecție ceramică rapidă cu efect hidrofob puternic. Este ușor de aplicat și permite obținerea unei protecții durabile fără procese complexe, fiind o soluție modernă pentru protejarea vopselei auto.",
+"tags": ["meguiars", "ceara auto", "protectie ceramica", "hidrofob", "detailing"],
+"searchText": "Meguiars Hybrid Ceramic Wax cum se aplica, protectie ceramica rapida masina, efect hidrofob auto, ceara auto usoara",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_brand_overview",
+"title": "De ce este Meguiar’s un brand popular în detailing auto?",
+"content": "Meguiar’s este un brand american cu peste 100 de ani de experiență în îngrijirea auto, cunoscut pentru tehnologiile inovatoare în corecția lacului, protecția suprafețelor și curățarea interiorului. Produsele sunt utilizate atât de profesioniști, cât și de pasionați care doresc rezultate de nivel profesional.",
+"tags": ["meguiars", "brand detailing", "ingrijire auto", "produse detailing", "profesional"],
+"searchText": "ce este Meguiars, brand detailing auto istorie Meguiars, produse profesionale auto detailing, Meguiars Romania ghid",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_product_range_structure",
+"title": "Cum este structurată gama de produse Meguiar’s?",
+"content": "Gama Meguiar’s este organizată pentru a acoperi toate etapele detailingului auto: prespălare și spălare, decontaminare, corecția lacului, protecția vopselei și curățarea interiorului. Această structură permite realizarea unui proces complet folosind produse din aceeași gamă.",
+"tags": ["meguiars", "gama produse", "etape detailing", "proces complet", "organizare produse"],
+"searchText": "gama Meguiars ce produse exista, etape detailing auto Meguiars, sistem complet ingrijire masina, produse Meguiars structura",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_prewash_stage",
+"title": "Cum se face prespălarea folosind produse Meguiar’s?",
+"content": "Prespălarea este prima etapă a detailingului și are rolul de a îndepărta murdăria fără contact. Produse precum Meguiar’s Ultimate Snow Foam sau All Purpose Cleaner înmoaie murdăria și permit clătirea cu apă sub presiune, reducând riscul apariției zgârieturilor în etapele următoare.",
+"tags": ["meguiars", "prespalare", "snow foam", "curatare auto", "detailing exterior"],
+"searchText": "prespalare auto Meguiars snow foam cum se foloseste, spuma activa auto beneficii, curatare fara contact masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_hand_wash_stage",
+"title": "Cum se realizează spălarea manuală cu produse Meguiar’s?",
+"content": "Spălarea manuală se face după prespălare, de obicei folosind metoda celor două găleți. Meguiar’s Gold Class Car Wash Shampoo oferă spumă bogată, lubrifiere ridicată și curățare eficientă, reducând frecarea dintre mănușă și vopsea și prevenind zgârieturile.",
+"tags": ["meguiars", "spalare manuala", "sampon auto", "doua galeti", "detailing"],
+"searchText": "spalare manuala masina doua galeti Meguiars, Gold Class Car Wash beneficii, cum speli masina fara zgârieturi",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_decontamination_stage",
+"title": "Ce înseamnă decontaminarea vopselei și ce produse Meguiar’s se folosesc?",
+"content": "Decontaminarea elimină particule invizibile precum fier, gudron sau depuneri industriale rămase după spălare. Produse precum Meguiar’s Iron Removing Spray și Hybrid Ceramic Quick Clay Kit curăță suprafața în profunzime și o pregătesc pentru corecția lacului.",
+"tags": ["meguiars", "decontaminare", "iron remover", "clay bar", "detailing exterior"],
+"searchText": "decontaminare vopsea auto ce inseamna, iron remover Meguiars cum functioneaza, clay bar masina utilizare",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_paint_correction_stage",
+"title": "Cum se face corecția vopselei cu produse Meguiar’s?",
+"content": "Corecția lacului elimină defectele vizibile ale vopselei. Meguiar’s Ultimate Compound este folosit pentru îndepărtarea zgârieturilor și oxidării, iar Ultimate Polish pentru finisare și obținerea unui luciu intens.",
+"tags": ["meguiars", "corectie lac", "compound", "polish", "zgârieturi"],
+"searchText": "corectie vopsea Meguiars compound polish diferenta, cum elimini zgârieturi masina, polish finisare luciu auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_paint_protection_stage",
+"title": "Cum se protejează vopseaua cu produse Meguiar’s?",
+"content": "După corecție, vopseaua trebuie protejată cu produse precum Meguiar’s Hybrid Ceramic Wax sau Ultimate Liquid Wax. Acestea creează o barieră protectoare împotriva contaminanților și oferă un efect hidrofob care respinge apa și murdăria.",
+"tags": ["meguiars", "protectie vopsea", "ceara auto", "ceramic wax", "hidrofob"],
+"searchText": "protectie vopsea auto Meguiars ce produse, ceara lichida vs ceramic wax, efect hidrofob masina cum functioneaza",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_tire_care_stage",
+"title": "Cum se îngrijesc anvelopele cu Meguiar’s Endurance Tire Gel?",
+"content": "Îngrijirea anvelopelor este o etapă finală importantă în detailing. Meguiar’s Endurance Tire Gel oferă luciu intens, protecție UV și durabilitate ridicată, menținând aspectul anvelopelor pentru o perioadă îndelungată.",
+"tags": ["meguiars", "anvelope", "tire gel", "dressing anvelope", "finisaj"],
+"searchText": "ingrijire anvelope Meguiars Endurance Tire Gel, cum aplici dressing anvelope, luciu anvelope rezistent",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_full_process_overview",
+"title": "Care sunt etapele corecte într-un proces complet de detailing cu Meguiar’s?",
+"content": "Un proces complet de detailing auto include mai multe etape succesive: prespălare, spălare manuală, decontaminare, corecția lacului, finisare, protecție și îngrijirea anvelopelor. Produsele Meguiar’s sunt concepute pentru a acoperi fiecare dintre aceste etape și pentru a oferi rezultate profesionale.",
+"tags": ["meguiars", "proces detailing", "etape detailing", "ghid complet", "ingrijire auto"],
+"searchText": "etape detailing auto corect, proces complet Meguiars pas cu pas, cum faci detailing masina acasa",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_prewash_usage",
+"title": "Cum se folosește corect spuma activă Meguiar’s în prespălare?",
+"content": "Prespălarea se face folosind produse precum Meguiar’s Ultimate Snow Foam, aplicate cu o lance de spumare. Spuma se lasă să acționeze câteva minute pentru a dizolva murdăria, după care se clătește fără contact, reducând riscul zgârieturilor.",
+"tags": ["meguiars", "prespalare", "snow foam", "spuma activa", "detailing exterior"],
+"searchText": "cum se foloseste Meguiars Ultimate Snow Foam, prespalare auto spuma activa instructiuni, lance spumare masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_hand_wash_usage",
+"title": "Cum se face corect spălarea manuală cu Meguiar’s?",
+"content": "Spălarea manuală se realizează după prespălare folosind un șampon precum Meguiar’s Gold Class Car Wash Shampoo. Este recomandată metoda celor două găleți pentru a reduce riscul de zgârieturi și pentru a menține suprafața în siguranță.",
+"tags": ["meguiars", "spalare manuala", "sampon auto", "doua galeti", "siguranta vopsea"],
+"searchText": "spalare manuala masina metoda doua galeti Meguiars, cum folosesti Gold Class Car Wash, prevenire zgarieturi spalare",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_chemical_decontamination_usage",
+"title": "Cum se realizează decontaminarea chimică cu Meguiar’s?",
+"content": "Decontaminarea chimică se face după spălare folosind produse precum Meguiar’s Iron Removing Spray, care dizolvă particulele metalice provenite din frâne și alte contaminări invizibile de pe vopsea.",
+"tags": ["meguiars", "decontaminare", "iron remover", "particule metalice", "detailing"],
+"searchText": "cum folosesti iron remover Meguiars, decontaminare chimica vopsea auto, eliminare particule metalice masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_compound_usage",
+"title": "Cum se utilizează Meguiar’s Ultimate Compound pentru corecția vopselei?",
+"content": "Meguiar’s Ultimate Compound se folosește pentru corecția lacului atunci când există swirl-uri sau zgârieturi fine. Produsul ajută la eliminarea defectelor și la restaurarea luciului vopselei.",
+"tags": ["meguiars", "compound", "corectie vopsea", "zgârieturi", "polish"],
+"searchText": "cum se foloseste Meguiars Ultimate Compound, corectie swirluri masina, eliminare zgarieturi fine auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_polish_usage",
+"title": "De ce și cum se aplică Meguiar’s Ultimate Polish?",
+"content": "Meguiar’s Ultimate Polish se aplică după compound pentru finisarea suprafeței. Acesta îmbunătățește claritatea vopselei, elimină microdefectele și oferă un luciu profund.",
+"tags": ["meguiars", "polish", "finisare", "luciu auto", "detailing"],
+"searchText": "Meguiars Ultimate Polish cum se aplica, polish finisare masina, luciu profund vopsea auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_protection_usage",
+"title": "Cum se aplică protecția vopselei cu Meguiar’s Hybrid Ceramic Wax?",
+"content": "Protecția vopselei se realizează în etapa finală folosind produse precum Meguiar’s Hybrid Ceramic Wax. Acesta oferă protecție hidrofobă și luciu intens, ajutând la respingerea apei și murdăriei.",
+"tags": ["meguiars", "protectie vopsea", "ceramic wax", "hidrofob", "detailing"],
+"searchText": "cum se aplica Meguiars Hybrid Ceramic Wax, protectie hidrofoba masina, ceara ceramica usoara auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "meguiars_tire_gel_usage",
+"title": "Cum se folosește Meguiar’s Endurance Tire Gel pentru anvelope?",
+"content": "Meguiar’s Endurance Tire Gel se aplică pe anvelope pentru a oferi un aspect intens și protecție UV. Este o etapă finală importantă care completează detailingul exterior și menține anvelopele protejate și lucioase.",
+"tags": ["meguiars", "anvelope", "tire gel", "dressing anvelope", "finisaj"],
+"searchText": "cum aplici Meguiars Endurance Tire Gel, dressing anvelope luciu intens, protectie UV anvelope auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_towel_importance",
+"title": "De ce este important un prosop de uscare auto de calitate?",
+"content": "Uscarea corectă previne petele de apă cauzate de mineralele rămase după evaporare și reduce riscul de microzgârieturi. Un prosop de microfibră de calitate oferă absorbție ridicată, fibre moi sigure pentru lac și capacitatea de a reține cantități mari de apă.",
+"tags": ["prosop uscare auto", "microfibra", "detailing exterior", "pete apa", "protectie vopsea"],
+"searchText": "de ce ai nevoie de prosop uscare auto, pete apa masina cum eviti, prosop microfibra sigur lac auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "gsm_meaning_microfiber_towel",
+"title": "Ce înseamnă GSM la un prosop de uscare auto?",
+"content": "GSM (grams per square meter) indică densitatea fibrelor din microfibră. Prosoapele de 600–800 GSM sunt mai ușoare, cele de 1000–1200 GSM sunt ideale pentru uz general, iar cele de 1400–1600 GSM sunt premium, cu absorbție foarte mare și capacitate de uscare completă fără stoarcere frecventă.",
+"tags": ["gsm", "microfibra", "prosop auto", "absorbtie", "detailing"],
+"searchText": "ce inseamna GSM prosop microfibra auto, diferenta 800 vs 1200 vs 1600 GSM, ce GSM sa aleg prosop uscare masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "twisted_loop_towels_benefits",
+"title": "De ce sunt prosoapele twisted loop cele mai eficiente pentru uscarea mașinii?",
+"content": "Prosoapele twisted loop sunt considerate standardul modern în detailing deoarece fibrele lungi și răsucite absorb rapid cantități mari de apă și reduc frecarea pe vopsea. Sunt ideale pentru uscarea completă a caroseriei fără riscuri de zgâriere.",
+"tags": ["twisted loop", "prosop uscare", "microfibra", "detailing profesional", "absorbtie"],
+"searchText": "prosop twisted loop ce este, cel mai bun prosop uscare masina, microfibra twisted loop avantaje",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "sandwich_drying_towel_features",
+"title": "Ce avantaje oferă prosoapele de uscare tip sandwich?",
+"content": "Prosoapele tip sandwich au o construcție care permite absorbție mare, distribuirea uniformă a apei și reducerea frecării pe vopsea. Un avantaj important este faptul că se storc foarte ușor, fiind practice în utilizare.",
+"tags": ["prosop sandwich", "microfibra", "uscare auto", "detailing", "absorbtie"],
+"searchText": "prosop sandwich auto ce este, avantaj prosop uscare sandwich, microfibra usor de stors masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "small_towels_detailing_usage",
+"title": "Pentru ce sunt utile prosoapele mici în detailing auto?",
+"content": "Prosoapele compacte sunt folosite pentru zone greu accesibile precum oglinzi, jante sau spații înguste. Sunt ideale pentru finisajul uscării sau pentru completarea lucrului acolo unde prosoapele mari nu sunt practice.",
+"tags": ["prosop mic", "detalii auto", "jante", "oglinzi", "detailing"],
+"searchText": "prosop mic detailing la ce foloseste, uscare jante microfibra, prosop mic zone greu accesibile masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "best_drying_towel_types",
+"title": "Care sunt cele mai eficiente tipuri de prosoape pentru uscarea mașinii?",
+"content": "Cele mai eficiente sunt prosoapele twisted loop cu gramaj mare (1000–1600 GSM), datorită absorbției ridicate și frecării reduse. Există și alternative precum prosoapele tip sandwich sau modelele clasice, însă twisted loop rămân preferate de majoritatea detailerilor.",
+"tags": ["prosop uscare auto", "twisted loop", "gsm mare", "detailing", "microfibra"],
+"searchText": "cel mai bun prosop uscare masina ce tip sa aleg, twisted loop vs sandwich prosop auto, prosop microfibra profesional",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "how_to_dry_car_correctly",
+"title": "Cum se usucă corect mașina cu un prosop de microfibră?",
+"content": "Mașina trebuie clătită bine înainte de uscare. Se folosește un prosop curat, care se așază pe suprafață și se trage ușor fără presiune, începând de sus în jos. Această metodă reduce riscul de microzgârieturi și asigură o uscare eficientă.",
+"tags": ["uscare masina", "microfibra", "tehnica corecta", "detailing exterior", "fara zgarieturi"],
+"searchText": "cum usuci masina corect fara zgarieturi, tehnica prosop microfibra auto, uscare masina pas cu pas",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "professional_towels_advantages",
+"title": "De ce sunt preferate prosoapele profesionale în detailing?",
+"content": "Prosoapele profesionale oferă absorbție superioară, protecție mai bună pentru lac și durabilitate crescută. Sunt preferate în detailing deoarece oferă rezultate constante și materiale de calitate, fiind utilizate frecvent de branduri specializate.",
+"tags": ["prosop profesional", "microfibra", "detailing", "durabilitate", "calitate"],
+"searchText": "prosop profesional detailing avantaje, microfibra premium auto de ce merita, prosoape detailing calitate",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_faq",
+"title": "Întrebări frecvente despre prosoapele de uscare auto",
+"content": "Prosoapele twisted loop de 1000–1600 GSM sunt cele mai eficiente pentru uscarea mașinii. GSM indică densitatea și capacitatea de absorbție. Prosoapele obișnuite nu sunt recomandate deoarece pot zgâria vopseaua. De obicei, un prosop mare este suficient pentru o mașină. Prosoapele din microfibră trebuie spălate fără balsam, preferabil cu detergent dedicat.",
+"tags": ["faq", "prosop auto", "microfibra", "gsm", "detailing"],
+"searchText": "cate prosoape pentru uscare masina, pot folosi prosop normal auto, cum speli prosop microfibra, cel mai bun prosop uscare",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_scratches_causes",
+"title": "De ce apar zgârieturi în timpul uscării mașinii?",
+"content": "Zgârieturile apar din cauza particulelor de murdărie rămase pe suprafață, utilizării unor prosoape de slabă calitate, aplicării unei presiuni prea mari și mișcărilor incorecte. Chiar și particulele fine pot zgâria lacul atunci când sunt frecate de suprafață.",
+"tags": ["zgârieturi auto", "uscare masina", "microfibra", "detailing", "swirl-uri"],
+"searchText": "de ce apar zgarieturi la uscare masina, cauze swirl uri auto, uscarea gresita vopsea auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_rinse_before_drying",
+"title": "De ce este importantă clătirea corectă înainte de uscarea mașinii?",
+"content": "Clătirea elimină resturile de murdărie și spumă înainte de uscare. Tehnica „sheeting” permite apei să curgă uniform și reduce cantitatea de apă rămasă pe suprafață, facilitând uscarea și scăzând riscul de zgârieturi.",
+"tags": ["clatire auto", "sheeting", "detailing exterior", "spalare masina", "prevenire zgarieturi"],
+"searchText": "clatire masina inainte de uscare, ce este sheeting auto, cum reduci apa pe masina dupa spalare",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_towel_selection",
+"title": "Cum alegi prosopul potrivit pentru uscarea mașinii fără zgârieturi?",
+"content": "Prosoapele din microfibră twisted loop, cu gramaj mare, sunt cele mai eficiente deoarece absorb rapid apa fără presiune. Variantele mai groase sunt ideale pentru uscarea completă, iar prosoapele tip sandwich sunt mai ușor de stors și manevrat.",
+"tags": ["prosop uscare", "microfibra", "twisted loop", "gsm", "detailing"],
+"searchText": "ce prosop sa aleg pentru uscare masina fara zgarieturi, twisted loop vs sandwich prosop auto, prosop microfibra bun auto",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_technique",
+"title": "Care este tehnica corectă de uscare a mașinii?",
+"content": "Prosopul se așază pe suprafață și se trage ușor pe panou fără presiune. Se evită mișcările circulare și se începe uscarea de sus în jos. Prosoapele de calitate absorb apa fără frecare intensă.",
+"tags": ["tehnica uscare", "microfibra", "detailing exterior", "fara zgarieturi", "spalare auto"],
+"searchText": "cum usuci masina corect fara sa zgarii, tehnica prosop microfibra auto, uscare de sus in jos masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_two_towels_method",
+"title": "De ce este recomandat să folosești două prosoape la uscare?",
+"content": "Detailerii folosesc un prosop mare pentru caroserie și unul mic pentru zone dificile precum oglinzi, grile sau jante. Această metodă oferă mai mult control și un rezultat mai curat.",
+"tags": ["doua prosoape", "detailing", "uscare auto", "microfibra", "finisaj"],
+"searchText": "cate prosoape pentru uscare masina, prosop mare si mic detailing, uscare detalii auto oglinzi jante",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "contactless_drying_option",
+"title": "Ce este uscarea fără contact și când este utilă?",
+"content": "Uscarea fără contact implică utilizarea unei suflante (blower) pentru a elimina apa fără atingerea suprafeței. Aceasta reduce riscul de zgârieturi, iar prosopul este folosit doar pentru finisaj.",
+"tags": ["blower", "uscare fara contact", "detailing", "siguranta vopsea", "tehnici"],
+"searchText": "uscare masina blower ce este, uscare fara contact auto avantaje, cum folosesti suflanta detailing",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_common_mistakes",
+"title": "Care sunt cele mai frecvente greșeli în uscarea mașinii?",
+"content": "Greșelile includ folosirea unui prosop murdar, uscarea în soare direct, aplicarea presiunii pe suprafață și utilizarea prosoapelor obișnuite. Acestea duc la apariția swirl-urilor și deteriorarea lacului în timp.",
+"tags": ["greseli detailing", "uscare masina", "zgârieturi", "swirl uri", "microfibra"],
+"searchText": "greseli uscare masina zgarieturi, ce sa nu faci la uscare auto, swirl uri cum apar uscare",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_best_practices",
+"title": "Cum eviți zgârieturile și swirl-urile la uscarea mașinii?",
+"content": "Pentru a evita defectele, clătește bine mașina, folosește un prosop curat din microfibră, nu aplica presiune și utilizează mișcări ușoare și controlate. Uscarea imediată după spălare previne și apariția petelor de apă.",
+"tags": ["prevenire zgârieturi", "swirl uri", "uscare auto", "microfibra", "detailing"],
+"searchText": "cum eviti swirl uri la uscare masina, sfaturi uscare fara zgarieturi, prevenire pete apa masina",
+"source": "blog",
+"intent": "informational"
+},
+{
+"id": "car_drying_faq",
+"title": "Întrebări frecvente despre uscarea corectă a mașinii",
+"content": "Este recomandat să usuci mașina imediat după spălare pentru a evita petele. Zgârieturile pot apărea dacă prosopul este murdar sau dacă se aplică presiune. Prosoapele twisted loop sau sandwich sunt cele mai sigure. Nu este obligatoriu să folosești două prosoape, dar este recomandat. Evită uscarea în soare direct și folosește mișcări ușoare pentru a preveni swirl-urile.",
+"tags": ["faq", "uscare masina", "microfibra", "detailing", "sfaturi"],
+"searchText": "uscarea masinii dupa spalare sfaturi, pot usca masina la soare, ce prosop e sigur pentru vopsea auto",
+"source": "blog",
+"intent": "informational"
+}
+]
