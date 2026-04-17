@@ -24,10 +24,24 @@ const {
 } = require("./services/trackingService");
 const { logInfo, error: logError } = require("./services/logger");
 
+
+const rateLimit = require("express-rate-limit");
 const app = express();
+const API_KEY = process.env.API_KEY;
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
+
+function checkApiKey(req, res, next) {
+  const apiKey = req.header("x-api-key");
+
+  if (apiKey !== API_KEY) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  next();
+}
 
 function loadProducts() {
   const filePath = path.join(__dirname, "data", "products.json");
@@ -47,9 +61,23 @@ function getClient(api_key) {
 }
 
 // 💬 CHAT
-app.post("/chat", async (req, res) => {
+const chatLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20,
+  message: { error: "Prea multe cereri. Încearcă din nou peste un minut." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.post("/chat", chatLimiter, checkApiKey, async (req, res) => {
   try {
     const { message, sessionId } = req.body;
+
+    if (!message || typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Te rog să scrii un mesaj pentru asistent." });
+    }
+    if (message.length > 500) {
+      return res.status(400).json({ error: "Mesaj prea lung. Te rog să reformulezi." });
+    }
 
     const result = await chatService.handleChat({
       message,
@@ -87,12 +115,12 @@ app.get("/stats", (req, res) => {
 });
 
 // ⚙️ settings
-app.get("/settings", (req, res) => {
+app.get("/settings", checkApiKey, (req, res) => {
   const settings = settingsService.getSettings();
   res.json(settings);
 });
 
-app.post("/settings", (req, res) => {
+app.post("/settings", checkApiKey, (req, res) => {
   settingsService.saveSettings(req.body);
   res.json({ success: true });
 });

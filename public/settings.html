@@ -122,7 +122,11 @@ function check(value, fallback) {
 
 async function load() {
   try {
-    const res = await fetch(`/settings?api_key=${apiKey}`);
+    const res = await fetch("/settings", {
+      headers: {
+        "x-api-key": "your-secret-key"
+      }
+    });
     const data = await res.json();
 
     const conversation = check(data.conversation_rules, {});
@@ -180,7 +184,10 @@ async function save() {
 
   await fetch("/settings", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "your-secret-key"
+    },
     body: JSON.stringify({ api_key: apiKey, settings })
   });
 
@@ -193,7 +200,10 @@ async function test() {
 
   const res = await fetch("/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "your-secret-key"
+    },
     body: JSON.stringify({ api_key: apiKey, message: "salut" })
   });
 

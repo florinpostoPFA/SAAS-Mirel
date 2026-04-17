@@ -1,5 +1,9 @@
 const request = require("supertest");
 
+process.env.API_KEY = "test-api-key";
+
+const API_KEY = process.env.API_KEY;
+
 // Mock LLM (we control responses, not logic)
 jest.mock("../services/llm", () => ({
   askLLM: jest.fn()
@@ -10,10 +14,16 @@ const { detectLanguage } = require("../services/chatService");
 const app = require("../server");
 
 const postChat = (message, sessionId = "test-session", clientId = "C1") =>
-  request(app).post("/chat").send({ message, sessionId, clientId });
+  request(app)
+    .post("/chat")
+    .set("x-api-key", API_KEY)
+    .send({ message, sessionId, clientId });
 
 const postSettings = (settings) =>
-  request(app).post("/settings").send(settings);
+  request(app)
+    .post("/settings")
+    .set("x-api-key", API_KEY)
+    .send(settings);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -188,7 +198,9 @@ describe("AI eCommerce Assistant API", () => {
 
   describe("Settings API", () => {
     it("GET /settings returns valid config", async () => {
-      const res = await request(app).get("/settings");
+      const res = await request(app)
+        .get("/settings")
+        .set("x-api-key", API_KEY);
 
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty("max_products");
@@ -198,7 +210,9 @@ describe("AI eCommerce Assistant API", () => {
     it("POST /settings persists changes", async () => {
       await postSettings({ max_products: 1, cta: "Cumpara acum" });
 
-      const res = await request(app).get("/settings");
+      const res = await request(app)
+        .get("/settings")
+        .set("x-api-key", API_KEY);
 
       expect(res.body.max_products).toBe(1);
       expect(res.body.cta).toBe("Cumpara acum");

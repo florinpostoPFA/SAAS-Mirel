@@ -60,7 +60,10 @@
     try {
       const res = await fetch("http://192.168.0.160:3000/chat", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "your-secret-key"
+        },
         body: JSON.stringify({
           api_key: apiKey,
           message: text,

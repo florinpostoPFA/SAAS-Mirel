@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 
+const API_KEY = "your-secret-key";
+
 export default function SettingsPage() {
   // Recommendation Settings
   const [maxProducts, setMaxProducts] = useState(5);
@@ -22,7 +24,11 @@ export default function SettingsPage() {
   const [cta, setCta] = useState("View Product");
 
   useEffect(() => {
-    fetch("http://192.168.0.160:3001/settings")
+    fetch("http://192.168.0.160:3001/settings", {
+      headers: {
+        "x-api-key": API_KEY
+      }
+    })
       .then(res => res.json())
       .then(data => {
         if (!data) return;
@@ -53,6 +59,7 @@ export default function SettingsPage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-api-key": API_KEY
       },
       body: JSON.stringify({
         max_products,
