@@ -28,49 +28,6 @@ const { logInfo, error: logError, warn: logWarn } = require("./services/logger")
 const rateLimit = require("express-rate-limit");
 const app = express();
 const API_KEY = process.env.API_KEY;
-export default function ProductAIDashboard() {
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: "Hi, I’m Turbo. How can I help you today?"
-    }
-  ]);
-
-  const [input, setInput] = useState("");
-
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-
-    try {
-      const response = await fetch("https://postosaas.com/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input })
-      });
-      const data = await response.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.reply }
-      ]);
-    } catch (err) {
-      console.error(err);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error contacting server" }
-      ]);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center py-10 px-4">
-      {/* ...existing code... */}
-    </div>
-  );
-}
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
