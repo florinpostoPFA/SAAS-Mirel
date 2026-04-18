@@ -70,7 +70,7 @@ const chatLimiter = rateLimit({
 });
 app.post("/chat", chatLimiter, checkApiKey, async (req, res) => {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId, feedback } = req.body;
 
     if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "Te rog să scrii un mesaj pentru asistent." });
@@ -81,7 +81,8 @@ app.post("/chat", chatLimiter, checkApiKey, async (req, res) => {
 
     const result = await chatService.handleChat({
       message,
-      sessionId: sessionId || "test-session"
+      sessionId: sessionId || "test-session",
+      feedback
     });
 
     res.json({

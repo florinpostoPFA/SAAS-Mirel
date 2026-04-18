@@ -13,6 +13,7 @@ const { getSession: getSessionService, updateSessionWithProducts, getSessionCont
 const { getSession, saveSession } = require("./sessionStore");
 const { decideNextAction } = require("./decisionService");
 const { info, debug, error, warn, logInfo } = require("./logger");
+const { appendInteractionLine } = require("./interactionLog");
 const supportService = require("./supportService");
 const { emit } = require("./eventBus");
 const { resolveFlow, resolveFlowCandidate, resolveFlowCandidates } = require("./flowResolver");
@@ -93,6 +94,80 @@ function logResponseSummary(type, options = {}) {
     steps: Number(options.steps || 0),
     products: Number(options.products || 0)
   });
+}
+
+function extractFeedback(reqPayload) {
+  if (!reqPayload || typeof reqPayload !== "object") {
+    return { helpful: null, reason: null };
+  }
+  const f = reqPayload.feedback;
+  if (f && typeof f === "object") {
+    const helpful = f.helpful;
+    return {
+      helpful:
+        typeof helpful === "boolean"
+          ? helpful
+          : helpful === null || helpful === undefined
+            ? null
+            : Boolean(helpful),
+      reason:
+        f.reason != null && String(f.reason).trim() !== ""
+          ? String(f.reason).slice(0, 500)
+          : null
+    };
+  }
+  return { helpful: null, reason: null };
+}
+
+function summarizeProductsForLog(products) {
+  if (!Array.isArray(products) || products.length === 0) return [];
+  return products.slice(0, 25).map(p => ({
+    id: p.id != null ? p.id : null,
+    sku: p.sku != null ? String(p.sku) : null,
+    name: p.name != null ? String(p.name) : null
+  }));
+}
+
+function inferOutputType(result) {
+  if (!result || typeof result !== "object") return "unknown";
+  if (result.type === "question") return "question";
+  if (Array.isArray(result.products) && result.products.length > 0) return "recommendation";
+  if (result.reply != null || result.message != null) return "reply";
+  return "unknown";
+}
+
+function endInteraction(interactionRef, result, patch = {}) {
+  if (patch.intentType != null) interactionRef.intentType = patch.intentType;
+  if (patch.tags != null) interactionRef.tags = patch.tags;
+  if (patch.slots != null) interactionRef.slots = patch.slots;
+  if (patch.decision) {
+    interactionRef.decision = { ...interactionRef.decision, ...patch.decision };
+  }
+
+  const entry = {
+    timestamp: interactionRef.timestamp,
+    sessionId: interactionRef.sessionId,
+    message: interactionRef.message,
+    intent: {
+      queryType: interactionRef.queryType,
+      type: interactionRef.intentType,
+      tags: interactionRef.tags
+    },
+    slots: interactionRef.slots,
+    decision: {
+      action: interactionRef.decision.action,
+      flowId: interactionRef.decision.flowId,
+      missingSlot: interactionRef.decision.missingSlot
+    },
+    output: {
+      type: patch.outputType != null ? patch.outputType : inferOutputType(result),
+      products: patch.products != null ? patch.products : summarizeProductsForLog(result.products)
+    },
+    feedback: interactionRef.feedback
+  };
+
+  appendInteractionLine(entry);
+  return result;
 }
 
 function formatSelectionResponse(products = []) {
@@ -1104,6 +1179,13 @@ function hasEnoughInfo(tags) {
  * Prioritizes session continuity and intelligent decision making
  */
 async function handleChat(message, clientId, products, sessionId = "default") {
+  if (typeof message === "object" && message != null && message.sessionId != null) {
+    sessionId = String(message.sessionId);
+  }
+  if (typeof message === "object" && message != null && message.clientId != null) {
+    clientId = message.clientId;
+  }
+
   let userMessage = message;
 
   if (typeof message === "object" && message.message) {
@@ -1129,7 +1211,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
   emit("user_message", { message: userMessage, sessionId });
 
+  let interactionRef = null;
+
   try {
+    interactionRef = {
+      timestamp: new Date().toISOString(),
+      sessionId,
+      message: userMessage,
+      queryType,
+      intentType: null,
+      tags: null,
+      slots: null,
+      decision: { action: null, flowId: null, missingSlot: null },
+      feedback: extractFeedback(typeof message === "object" ? message : null)
+    };
+
     // Load settings once and reuse the full object across the whole flow.
     const settings = getClientSettings(clientId);
 
@@ -1169,10 +1265,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         } else if (isNo(userMessage)) {
           sessionContext.pendingQuestion = null;
           saveSession(sessionId, sessionContext);
-          return {
+          return endInteraction(interactionRef, {
             type: "question",
             message: "Este vorba despre interior sau exterior?"
-          };
+          }, {
+            intentType: typeof sessionContext.originalIntent === "string"
+              ? sessionContext.originalIntent
+              : sessionContext.originalIntent?.type || "product_guidance",
+            tags: sessionContext.tags || null,
+            slots: sessionContext.slots || null,
+            decision: { action: "clarification", flowId: null, missingSlot: "context" },
+            outputType: "question"
+          });
         }
       }
 
@@ -1187,22 +1291,39 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.slots = slotResult.slots;
         saveSession(sessionId, sessionContext);
         if (slotResult.missing) {
+          const slotSnapshot = {
+            context: slotResult.slots?.context || null,
+            object: slotResult.slots?.object || null,
+            surface: slotResult.slots?.surface || null
+          };
           if (slotResult.missing === "context") {
             sessionContext.state = "NEEDS_CONTEXT";
             saveSession(sessionId, sessionContext);
-            return {
+            return endInteraction(interactionRef, {
               type: "question",
               message: "Este vorba despre interior sau exterior?"
-            };
+            }, {
+              intentType: "selection",
+              tags: sessionContext.tags || null,
+              slots: slotSnapshot,
+              decision: { action: "clarification", flowId: null, missingSlot: "context" },
+              outputType: "question"
+            });
           }
           if (slotResult.missing === "object") {
             sessionContext.state = "NEEDS_OBJECT";
             saveSession(sessionId, sessionContext);
             const allowedObjects = getAllowedObjects(slotResult.slots);
-            return {
+            return endInteraction(interactionRef, {
               type: "question",
               message: `Ce obiect vrei sa cureti? (${allowedObjects.join(", ")})`
-            };
+            }, {
+              intentType: "selection",
+              tags: sessionContext.tags || null,
+              slots: slotSnapshot,
+              decision: { action: "clarification", flowId: null, missingSlot: "object" },
+              outputType: "question"
+            });
           }
           if (slotResult.missing === "surface") {
             sessionContext.state = "NEEDS_SURFACE";
@@ -1218,10 +1339,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
               glass: "geamuri"
             };
             const options = allowedSurfaces.map(surface => labelMap[surface] || surface).join(", ");
-            return {
+            return endInteraction(interactionRef, {
               type: "question",
               message: `Pe ce suprafata? (${options})`
-            };
+            }, {
+              intentType: "selection",
+              tags: sessionContext.tags || null,
+              slots: slotSnapshot,
+              decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+              outputType: "question"
+            });
           }
         }
         // All slots present, continue with selection logic below (let main handler proceed)
@@ -1247,6 +1374,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       detected: intent,
       problemOverrideApplied: shouldForceProblemGuidance
     });
+    interactionRef.intentType = intent;
 
     // Detect and enrich tags BEFORE any flow branching (guidance, questioning, search)
     const availableProductTags = [...new Set((products || []).flatMap(p => p.tags || []))];
@@ -1287,10 +1415,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       ...workingTags
     ])];
 
+    interactionRef.tags = workingTags;
+
     if (intent === "greeting") {
-      return {
+      return endInteraction(interactionRef, {
         reply: "Salut! Cu ce te pot ajuta?"
-      };
+      }, {
+        decision: { action: "greeting", flowId: null, missingSlot: null },
+        outputType: "reply"
+      });
     }
 
     // ROUTING LAYER (before slots)
@@ -1306,7 +1439,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         logInfo("DECISION", { type: "knowledge", fallbackReason: "query_type_informational_no_match" });
         emit("ai_response", { response: reply });
         logResponseSummary("knowledge", { products: 0 });
-        return { reply, products: [] };
+        interactionRef.slots = sessionContext.slots || null;
+        return endInteraction(interactionRef, { reply, products: [] }, {
+          decision: { action: "knowledge", flowId: null, missingSlot: null },
+          outputType: "reply"
+        });
       }
 
       const knowledgeContext = knowledgeResults.map(k => k.content).join("\n");
@@ -1328,7 +1465,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       logInfo("DECISION", { type: "knowledge", fallbackReason: "query_type_informational" });
       emit("ai_response", { response: reply });
       logResponseSummary("knowledge", { products: 0 });
-      return { reply, products: [] };
+      interactionRef.slots = sessionContext.slots || null;
+      return endInteraction(interactionRef, { reply, products: [] }, {
+        decision: { action: "knowledge", flowId: null, missingSlot: null },
+        outputType: "reply"
+      });
     }
 
     // SELECTION (strict slot logic, no fallback/knowledge)
@@ -1338,23 +1479,38 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
 
       if (slotResult.missing) {
+        const slotSnapshot = {
+          context: slotResult.slots?.context || null,
+          object: slotResult.slots?.object || null,
+          surface: slotResult.slots?.surface || null
+        };
         // Ask for missing slot
         if (slotResult.missing === "context") {
           sessionContext.state = "NEEDS_CONTEXT";
           saveSession(sessionId, sessionContext);
-          return {
+          return endInteraction(interactionRef, {
             type: "question",
             message: "Este vorba despre interior sau exterior?"
-          };
+          }, {
+            intentType: "selection",
+            slots: slotSnapshot,
+            decision: { action: "clarification", flowId: null, missingSlot: "context" },
+            outputType: "question"
+          });
         }
         if (slotResult.missing === "object") {
           sessionContext.state = "NEEDS_OBJECT";
           saveSession(sessionId, sessionContext);
           const allowedObjects = getAllowedObjects(slotResult.slots);
-          return {
+          return endInteraction(interactionRef, {
             type: "question",
             message: `Ce obiect vrei sa cureti? (${allowedObjects.join(", ")})`
-          };
+          }, {
+            intentType: "selection",
+            slots: slotSnapshot,
+            decision: { action: "clarification", flowId: null, missingSlot: "object" },
+            outputType: "question"
+          });
         }
         if (slotResult.missing === "surface") {
           sessionContext.state = "NEEDS_SURFACE";
@@ -1370,10 +1526,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             glass: "geamuri"
           };
           const options = allowedSurfaces.map(surface => labelMap[surface] || surface).join(", ");
-          return {
+          return endInteraction(interactionRef, {
             type: "question",
             message: `Pe ce suprafata? (${options})`
-          };
+          }, {
+            intentType: "selection",
+            slots: slotSnapshot,
+            decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+            outputType: "question"
+          });
         }
       }
 
@@ -1402,7 +1563,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       emit("products_recommended", { products: finalProducts, tags: roleConfig?.matchTags || selectionTags });
       emit("ai_response", { response: reply });
       logResponseSummary("product_search", { products: finalProducts.length });
-      return { reply, products: finalProducts };
+      interactionRef.slots = {
+        context: slotResult.slots?.context || null,
+        object: slotResult.slots?.object || null,
+        surface: slotResult.slots?.surface || null
+      };
+      interactionRef.intentType = "selection";
+      return endInteraction(interactionRef, { reply, products: finalProducts }, {
+        decision: { action: "recommend", flowId: null, missingSlot: null },
+        outputType: "recommendation",
+        products: summarizeProductsForLog(finalProducts)
+      });
     }
 
     if (queryType === "procedural") {
@@ -1422,10 +1593,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             candidates: candidateFlows.map(flow => flow.flowId).filter(Boolean)
           });
           logResponseSummary("question", { products: 0 });
-          return {
+          return endInteraction(interactionRef, {
             type: "question",
             message: disambiguation.message
-          };
+          }, {
+            slots: proceduralSlots,
+            decision: { action: "clarification", flowId: null, missingSlot: null },
+            outputType: "question"
+          });
         }
       }
     }
@@ -1449,6 +1624,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       object: slotResult.slots.object || null
     });
 
+    interactionRef.slots = {
+      context: slotResult.slots.context || null,
+      object: slotResult.slots.object || null,
+      surface: slotResult.slots.surface || null
+    };
+
     if (slotResult.missing === "context") {
       sessionContext.state = "NEEDS_CONTEXT";
       logInfo("FLOW", getFlowLogPayload(intent, slotResult.slots, null, "missing_context"));
@@ -1461,10 +1642,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         };
         saveSession(sessionId, sessionContext);
         logResponseSummary("question", { products: 0 });
-        return {
+        return endInteraction(interactionRef, {
           type: "question",
           message: "Este vorba despre interior (cotiera), corect?"
-        };
+        }, {
+          decision: { action: "clarification", flowId: null, missingSlot: "context" },
+          outputType: "question"
+        });
       }
 
       if (contextHint === "exterior") {
@@ -1474,20 +1658,26 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         };
         saveSession(sessionId, sessionContext);
         logResponseSummary("question", { products: 0 });
-        return {
+        return endInteraction(interactionRef, {
           type: "question",
           message: "Este vorba despre exterior, corect?"
-        };
+        }, {
+          decision: { action: "clarification", flowId: null, missingSlot: "context" },
+          outputType: "question"
+        });
       }
 
       sessionContext.pendingQuestion = null;
       saveSession(sessionId, sessionContext);
       logResponseSummary("question", { products: 0 });
 
-      return {
+      return endInteraction(interactionRef, {
         type: "question",
         message: "Este vorba despre interior sau exterior?"
-      };
+      }, {
+        decision: { action: "clarification", flowId: null, missingSlot: "context" },
+        outputType: "question"
+      });
     }
 
     if (slotResult.missing === "object") {
@@ -1500,10 +1690,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const options = allowedObjects.join(", ");
 
       logResponseSummary("question", { products: 0 });
-      return {
+      return endInteraction(interactionRef, {
         type: "question",
         message: `Ce obiect vrei sa cureti? (${options})`
-      };
+      }, {
+        decision: { action: "clarification", flowId: null, missingSlot: "object" },
+        outputType: "question"
+      });
     }
 
     if (slotResult.missing === "surface") {
@@ -1525,10 +1718,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const options = allowedSurfaces.map(surface => labelMap[surface] || surface).join(", ");
 
       logResponseSummary("question", { products: 0 });
-      return {
+      return endInteraction(interactionRef, {
         type: "question",
         message: `Pe ce suprafata? (${options})`
-      };
+      }, {
+        decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+        outputType: "question"
+      });
     }
 
     sessionContext.state = "READY";
@@ -1554,6 +1750,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       intent = "product_guidance";
       decisionContext.intent = "product_guidance";
     }
+
+    interactionRef.intentType = intent;
+    interactionRef.tags = finalTags;
+
     let strategy = resolveStrategy(
       decisionContext,
       { tags: finalTags, message: userMessage },
@@ -1584,10 +1784,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         steps: Array.isArray(prioritizedFlow.steps) ? prioritizedFlow.steps.length : 0,
         products: Array.isArray(flowResult.products) ? flowResult.products.length : 0
       });
-      return {
+      return endInteraction(interactionRef, {
         reply: flowResult.reply,
         products: flowResult.products || []
-      };
+      }, {
+        decision: {
+          action: "flow",
+          flowId: prioritizedFlow.flowId || null,
+          missingSlot: null
+        },
+        outputType: "reply",
+        products: summarizeProductsForLog(flowResult.products || [])
+      });
     }
 
     // PRIORITY OVERRIDE: Safety / guidance strategies bypass product search ranking
@@ -1642,14 +1850,26 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
       emit("ai_response", { response: reply });
       logResponseSummary("knowledge", { products: safetyProducts.length });
-      return { reply, products: safetyProducts };
+      return endInteraction(interactionRef, { reply, products: safetyProducts }, {
+        decision: {
+          action: decisionContext.isSafety ? "safety" : "knowledge",
+          flowId: null,
+          missingSlot: null
+        },
+        outputType: safetyProducts.length > 0 ? "recommendation" : "reply",
+        products: summarizeProductsForLog(safetyProducts)
+      });
     }
 
     // Handle support intents before any product/LLM logic
     if (["order_status", "order_update", "order_cancel"].includes(intent)) {
       info(SOURCE, `Routing to support flow: ${intent}`);
       const supportResponse = await supportService.handle(intent, userMessage, session);
-      return supportResponse;
+      return endInteraction(interactionRef, supportResponse, {
+        decision: { action: "support", flowId: null, missingSlot: null },
+        outputType: "reply",
+        products: []
+      });
     }
 
     const guidanceProducts = Array.isArray(sessionActiveProducts)
@@ -1676,7 +1896,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       emit("ai_response", { response: reply });
       logResponseSummary("knowledge", { products: 0 });
-      return { reply, products: [] };
+      return endInteraction(interactionRef, { reply, products: [] }, {
+        decision: { action: "knowledge", flowId: null, missingSlot: null },
+        outputType: "reply"
+      });
     }
 
     // Handle greeting separately
@@ -1692,10 +1915,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       updateSessionWithProducts(sessionId, productsForGreeting, "guidance");
 
       emit("ai_response", { response: greetingRules.response || "Salut! Cu ce te pot ajuta?" });
-      return {
+      return endInteraction(interactionRef, {
         reply: greetingRules.response || "Salut! Cu ce te pot ajuta?",
         products: productsForGreeting
-      };
+      }, {
+        decision: { action: "greeting", flowId: null, missingSlot: null },
+        outputType: productsForGreeting.length > 0 ? "recommendation" : "reply",
+        products: summarizeProductsForLog(productsForGreeting)
+      });
     }
 
     // Step 4: Build context for decision making
@@ -1721,6 +1948,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     // Step 5: Make high-level decision about next action
     const decision = decideNextAction(context);
+    interactionRef.decision = {
+      action: decision.action === "guide" ? "knowledge" : "recommend",
+      flowId: null,
+      missingSlot: null
+    };
 
     // BRANCHING LOGIC BASED ON DECISION
     if (decision.action === "guide") {
@@ -1739,7 +1971,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       emit("ai_response", { response: reply });
       logResponseSummary("knowledge", { products: 0 });
-      return { reply, products: [] };
+      return endInteraction(interactionRef, { reply, products: [] }, {
+        decision: { action: "knowledge", flowId: null, missingSlot: null },
+        outputType: "reply"
+      });
 
     } else {
       logInfo("FLOW", getFlowLogPayload(intent, sessionContext.slots || {}, null));
@@ -1754,7 +1989,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const clarificationResponse = generateFallbackResponse(userMessage, settings, availableProductTags);
         updateSessionWithProducts(sessionId, [], "guidance");
         logResponseSummary("guidance", { products: 0 });
-        return clarificationResponse;
+        return endInteraction(interactionRef, clarificationResponse, {
+          decision: { action: "clarification", flowId: null, missingSlot: null },
+          outputType: "reply"
+        });
       }
 
       // Step 7: Search for products based on detected tags
@@ -1776,7 +2014,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           const helpfulQuestion = settings.fallback_message;
           updateSessionWithProducts(sessionId, [], "guidance");
           logResponseSummary("guidance", { products: 0 });
-          return { reply: helpfulQuestion, products: [] };
+          return endInteraction(interactionRef, { reply: helpfulQuestion, products: [] }, {
+            decision: { action: "clarification", flowId: null, missingSlot: null },
+            outputType: "reply"
+          });
         }
         // cleaning is known but no products matched — fall through to fallback
         found = applyFallbackProducts(products);
@@ -1808,7 +2049,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       emit("products_recommended", { products: found, tags: detectedTags });
       emit("ai_response", { response: reply });
       logResponseSummary("product_search", { products: found.length });
-      return { reply, products: found };
+      interactionRef.decision = {
+        action: "recommend",
+        flowId: null,
+        missingSlot: null
+      };
+      return endInteraction(interactionRef, { reply, products: found }, {
+        outputType: "recommendation",
+        products: summarizeProductsForLog(found)
+      });
     }
 
   } catch (err) {
@@ -1817,6 +2066,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     // Emergency fallback - never crash the flow
     const fallbackResponse = generateFallbackResponse(userMessage, config.defaultSettings, []);
     logResponseSummary("guidance", { products: 0 });
+    if (interactionRef) {
+      return endInteraction(interactionRef, fallbackResponse, {
+        decision: { action: "error", flowId: null, missingSlot: null },
+        outputType: "reply"
+      });
+    }
     return fallbackResponse;
   }
 }
