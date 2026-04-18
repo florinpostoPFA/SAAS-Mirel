@@ -22,7 +22,7 @@ const {
   getConversions,
   getTimeline
 } = require("./services/trackingService");
-const { logInfo, error: logError } = require("./services/logger");
+const { logInfo, error: logError, warn: logWarn } = require("./services/logger");
 
 
 const rateLimit = require("express-rate-limit");
@@ -36,7 +36,7 @@ app.use(express.static("public"));
 function checkApiKey(req, res, next) {
   const apiKey = req.header("x-api-key");
 
-  if (apiKey !== API_KEY) {
+  if (!API_KEY || !apiKey || apiKey !== API_KEY) {
     return res.status(403).json({ error: "Unauthorized" });
   }
 
@@ -145,6 +145,10 @@ setInterval(() => {
 }, 60 * 60 * 1000); // 1 hour
 
 if (require.main === module) {
+  if (!API_KEY) {
+    logWarn("SERVER", "API_KEY is not configured. Protected routes will reject all requests.");
+  }
+
   app.listen(config.server.port, () => {
     logInfo("SERVER", { event: "startup", port: config.server.port });
   });
