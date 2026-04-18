@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const PRODUCTS_ENDPOINT = "http://192.168.0.160:3001/products";
+const PRODUCTS_ENDPOINT = `${process.env.REACT_APP_API_URL}/products`;
 
 function normalizeProduct(product) {
   return {

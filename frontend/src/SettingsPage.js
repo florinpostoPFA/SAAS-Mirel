@@ -24,7 +24,7 @@ export default function SettingsPage() {
   const [cta, setCta] = useState("View Product");
 
   useEffect(() => {
-    fetch("http://192.168.0.160:3001/settings", {
+    fetch(`${process.env.REACT_APP_API_URL}/settings`, {
       headers: {
         "x-api-key": API_KEY
       }
@@ -55,7 +55,7 @@ export default function SettingsPage() {
     const max_questions = parseInt(maxQuestions, 10);
     const greeting_enabled = greetingEnabled;
 
-    fetch("http://192.168.0.160:3001/settings", {
+    fetch(`${process.env.REACT_APP_API_URL}/settings`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
