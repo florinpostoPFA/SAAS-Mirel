@@ -10,19 +10,48 @@ export default function ProductAIDashboard() {
 
   const [input, setInput] = useState("");
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
+    console.log("STEP 1");
+
     if (!input.trim()) return;
 
     const userMessage = { role: "user", content: input };
 
-    // 🔹 Temporary mock response (we'll connect backend next)
-    const assistantMessage = {
-      role: "assistant",
-      content: "Got it — I can help with that. Tell me more."
-    };
-
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
+
+    try {
+      console.log("STEP 2 - before fetch");
+
+      const response = await fetch("https://postosaas.com/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: input }),
+      });
+
+      console.log("STEP 3 - after fetch");
+
+      const data = await response.json();
+
+      const assistantMessage = {
+        role: "assistant",
+        content: data.reply || "No response from server",
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error calling backend:", error);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Error contacting server",
+        },
+      ]);
+    }
   };
 
   return (
