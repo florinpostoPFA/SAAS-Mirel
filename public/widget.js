@@ -1,6 +1,11 @@
 (function () {
   const script = document.currentScript;
   const apiKey = script.getAttribute("data-key");
+  if (!apiKey) {
+    console.error("Missing widget API key: data-key attribute is required.");
+    return;
+  }
+  const API_URL = "/api";
 
   let sessionId = localStorage.getItem("ai_session");
   if (!sessionId) {
@@ -40,7 +45,7 @@
   };
 
   window.trackClick = function(productName) {
-    fetch("http://192.168.0.160:3000/track-click", {
+    fetch(`${API_URL}/track-click`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
@@ -58,11 +63,11 @@
     input.value = "";
 
     try {
-      const res = await fetch("http://192.168.0.160:3000/chat", {
+      const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": "your-secret-key"
+          "x-api-key": apiKey
         },
         body: JSON.stringify({
           api_key: apiKey,
