@@ -33,6 +33,7 @@ app.use(cors({
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "x-api-key"]
 }));
+app.options("*", cors());
 app.use(express.json());
 app.use(express.static("public"));
 
