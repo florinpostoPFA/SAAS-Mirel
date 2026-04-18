@@ -1778,23 +1778,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       logInfo("FLOW_PRIORITY", { applied: true });
       logInfo("DECISION", { type: "flow" });
       const flowResult = executeFlow(prioritizedFlow, products, sessionContext.slots || {});
-      updateSessionWithProducts(sessionId, flowResult.products || [], "guidance");
+      const flowProducts = Array.isArray(flowResult.products) ? flowResult.products : [];
+      updateSessionWithProducts(sessionId, flowProducts, "guidance");
       emit("ai_response", { response: flowResult.reply });
       logResponseSummary("flow", {
         steps: Array.isArray(prioritizedFlow.steps) ? prioritizedFlow.steps.length : 0,
-        products: Array.isArray(flowResult.products) ? flowResult.products.length : 0
+        products: flowProducts.length
       });
       return endInteraction(interactionRef, {
         reply: flowResult.reply,
-        products: flowResult.products || []
+        products: flowProducts
       }, {
         decision: {
           action: "flow",
           flowId: prioritizedFlow.flowId || null,
           missingSlot: null
         },
-        outputType: "reply",
-        products: summarizeProductsForLog(flowResult.products || [])
+        outputType: flowProducts.length > 0 ? "recommendation" : "reply",
+        products: summarizeProductsForLog(flowProducts)
       });
     }
 
