@@ -23,7 +23,7 @@ export default function ProductAIDashboard() {
     try {
       console.log("STEP 2 - before fetch");
 
-      const response = await fetch("https://postosaas.com/chat", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
