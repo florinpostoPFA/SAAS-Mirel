@@ -31,9 +31,8 @@ const API_KEY = process.env.API_KEY;
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"]
+  allowedHeaders: ["Content-Type", "x-api-key"]
 }));
-app.options("/*", cors());
 app.use(express.json());
 app.use(express.static("public"));
 
