@@ -33,8 +33,16 @@ app.use(cors({
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "x-api-key"]
 }));
-app.options("*", cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,x-api-key");
+    return res.sendStatus(204);
+  }
+  next();
+});
 app.use(express.static("public"));
 
 function checkApiKey(req, res, next) {
