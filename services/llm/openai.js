@@ -3,6 +3,11 @@ const { debug, error: logError } = require("../logger");
 
 const SOURCE = "OpenAI";
 
+function logStructured(tag, payload) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] [INFO] [${tag}] ${JSON.stringify(payload)}`);
+}
+
 async function ask(prompt) {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -18,6 +23,7 @@ async function ask(prompt) {
 
   try {
     debug(SOURCE, "Calling OpenAI API", { model: "gpt-4o-mini" });
+    logStructured("LLM_PROMPT", { prompt });
     
     const res = await axios.post(
       "https://api.openai.com/v1/chat/completions",
@@ -46,6 +52,7 @@ async function ask(prompt) {
       throw new Error("Empty response from OpenAI API");
     }
 
+    logStructured("LLM_RESPONSE", { response: content });
     debug(SOURCE, "OpenAI API response received", { chars: content.length });
     return content;
   } catch (err) {

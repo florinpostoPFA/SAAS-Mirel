@@ -20,7 +20,7 @@ const { resolveFlow, resolveFlowCandidate, resolveFlowCandidates } = require("./
 const { executeFlow } = require("./flowExecutor");
 const { normalizeDecision } = require("./decisionNormalizer");
 const { detectQueryType } = require("./queryTypeService");
-const { routeRequest } = require("./router");
+const { routeRequest, areSlotsComplete, getMissingSlot: getRouterMissingSlot } = require("./router");
 const { findRelevantKnowledge } = require("./knowledgeService");
 const fallbackProductsCatalog = require("../data/products.json");
 const productRoles = require("../data/product_roles.json");
@@ -841,7 +841,7 @@ function createOptimizedPrompt(message, products, settings, detectedTags, strate
   } catch (err) {
     error(SOURCE, "Prompt building failed", { error: err.message });
     // Return a minimal fallback prompt
-    return `User: ${message}\n\nPlease provide a helpful response about car detailing products.`;
+    return `You MUST respond ONLY in Romanian. Do not use English.\n\nUtilizator: ${message}\n\nOfera un raspuns util despre produse de auto detailing.`;
   }
 }
 
@@ -1198,7 +1198,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
   }
 
   const queryType = detectQueryType(userMessage);
+  const isSafetyEnforced = queryType === "safety";
   logInfo("ROUTING", { queryType });
+
+  if (isSafetyEnforced) {
+    logInfo("ENFORCED_SAFETY", { message: userMessage });
+  }
 
   if (!Array.isArray(products) || products.length === 0) {
     products = Array.isArray(fallbackProductsCatalog) ? fallbackProductsCatalog : [];
@@ -1291,16 +1296,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const slotResult = processSlots(userMessage, "selection", sessionContext);
         sessionContext.slots = slotResult.slots;
         saveSession(sessionId, sessionContext);
-        const routingDecision = routeRequest({
-          queryType,
-          slots: slotResult?.slots || sessionContext?.slots || {}
-        });
         interactionRef.decision = {
-          action: routingDecision.action,
-          reason: routingDecision.reason,
-          missingSlot: routingDecision.missingSlot || null
+          action: slotResult.missing ? "clarification" : "selection",
+          reason: slotResult.missing ? "missing_" + slotResult.missing : "slots_complete",
+          missingSlot: slotResult.missing || null
         };
-        logInfo("ROUTER_DECISION", routingDecision);
+        logInfo("ROUTER_DECISION", interactionRef.decision);
         if (slotResult.missing) {
           const slotSnapshot = {
             context: slotResult.slots?.context || null,
@@ -1483,21 +1484,54 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
+    const selectionPreview = queryType === "selection"
+      ? processSlots(userMessage, "selection", sessionContext)
+      : null;
+    const localRoutingDecision = routeRequest({
+      queryType,
+      slots: selectionPreview?.slots || sessionContext?.slots || {}
+    });
+
     // SELECTION (strict slot logic, no fallback/knowledge)
-    if (queryType === "selection") {
+    if (
+      !isSafetyEnforced &&
+      queryType === "selection" &&
+      localRoutingDecision.action === "selection"
+    ) {
       const slotResult = processSlots(userMessage, "selection", sessionContext);
+      const currentSlots = slotResult?.slots || sessionContext?.slots || {};
+      const missing = getRouterMissingSlot(currentSlots);
+
+      if (!areSlotsComplete(currentSlots)) {
+        interactionRef.decision = {
+          action: "clarification",
+          reason: "missing_" + missing,
+          missingSlot: missing
+        };
+
+        logInfo("ENFORCED_CLARIFICATION", {
+          queryType,
+          missingSlot: missing
+        });
+
+        return endInteraction(interactionRef, {
+          type: "question",
+          message: missing === "context"
+            ? "Interior sau exterior?"
+            : missing === "object"
+              ? "La ce parte a mașinii te referi?"
+              : "Este material textil, piele sau plastic?"
+        });
+      }
+
       sessionContext.slots = slotResult.slots;
       saveSession(sessionId, sessionContext);
-      const routingDecision = routeRequest({
-        queryType,
-        slots: slotResult?.slots || sessionContext?.slots || {}
-      });
       interactionRef.decision = {
-        action: routingDecision.action,
-        reason: routingDecision.reason,
-        missingSlot: routingDecision.missingSlot || null
+        action: "selection",
+        reason: "slots_complete",
+        missingSlot: null
       };
-      logInfo("ROUTER_DECISION", routingDecision);
+      logInfo("ROUTER_DECISION", interactionRef.decision);
 
       if (slotResult.missing) {
         const slotSnapshot = {
@@ -1661,7 +1695,33 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       surface: slotResult.slots.surface || null
     };
 
-    if (slotResult.missing === "context") {
+    let shouldHandleClarification = false;
+    let shouldAllowSelection = false;
+    let shouldAllowProcedural = false;
+    let shouldAllowKnowledge = false;
+    let shouldForceSafety = false;
+
+    switch (routingDecision.action) {
+      case "clarification":
+        shouldHandleClarification = true;
+        break;
+      case "selection":
+        shouldAllowSelection = true;
+        break;
+      case "procedural":
+        shouldAllowProcedural = true;
+        break;
+      case "knowledge":
+        shouldAllowKnowledge = true;
+        break;
+      case "safety":
+        shouldForceSafety = true;
+        break;
+      default:
+        break;
+    }
+
+    if (shouldHandleClarification && slotResult.missing === "context") {
       sessionContext.state = "NEEDS_CONTEXT";
       logInfo("FLOW", getFlowLogPayload(intent, slotResult.slots, null, "missing_context"));
 
@@ -1711,7 +1771,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    if (slotResult.missing === "object") {
+    if (shouldHandleClarification && slotResult.missing === "object") {
       sessionContext.state = "NEEDS_OBJECT";
       sessionContext.originalIntent = sessionContext.originalIntent || intent;
       saveSession(sessionId, sessionContext);
@@ -1730,7 +1790,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    if (slotResult.missing === "surface") {
+    if (shouldHandleClarification && slotResult.missing === "surface") {
       sessionContext.state = "NEEDS_SURFACE";
       sessionContext.originalIntent = sessionContext.originalIntent || intent;
       saveSession(sessionId, sessionContext);
@@ -1798,22 +1858,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       strategy = "guidance";
     }
 
-    const prioritizedFlow = resolveFlow({
-      intent,
-      slots: sessionContext.slots || {}
-    });
+    const resolvedPrioritizedFlow = shouldAllowProcedural && !shouldForceSafety
+      ? resolveFlow({
+          intent,
+          slots: sessionContext.slots || {}
+        })
+      : null;
 
-    logInfo("FLOW", getFlowLogPayload(intent, sessionContext.slots || {}, prioritizedFlow));
+    logInfo("FLOW", getFlowLogPayload(intent, sessionContext.slots || {}, resolvedPrioritizedFlow));
 
-    if (prioritizedFlow) {
+    if (resolvedPrioritizedFlow) {
       logInfo("FLOW_PRIORITY", { applied: true });
       logInfo("DECISION", { type: "flow" });
-      const flowResult = executeFlow(prioritizedFlow, products, sessionContext.slots || {});
+      const flowResult = executeFlow(resolvedPrioritizedFlow, products, sessionContext.slots || {});
       const flowProducts = Array.isArray(flowResult.products) ? flowResult.products : [];
       updateSessionWithProducts(sessionId, flowProducts, "guidance");
       emit("ai_response", { response: flowResult.reply });
       logResponseSummary("flow", {
-        steps: Array.isArray(prioritizedFlow.steps) ? prioritizedFlow.steps.length : 0,
+        steps: Array.isArray(resolvedPrioritizedFlow.steps) ? resolvedPrioritizedFlow.steps.length : 0,
         products: flowProducts.length
       });
       return endInteraction(interactionRef, {
@@ -1822,7 +1884,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }, {
         decision: {
           action: "flow",
-          flowId: prioritizedFlow.flowId || null,
+          flowId: resolvedPrioritizedFlow.flowId || null,
           missingSlot: null
         },
         outputType: flowProducts.length > 0 ? "recommendation" : "reply",
@@ -1831,8 +1893,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     // PRIORITY OVERRIDE: Safety / guidance strategies bypass product search ranking
-    if (decisionContext.isSafety || strategy === "guidance") {
-      const fallbackReason = decisionContext.isSafety ? "safety_mode" : "guidance_strategy";
+    if (shouldForceSafety || decisionContext.isSafety || (shouldAllowKnowledge && strategy === "guidance")) {
+      const fallbackReason = shouldForceSafety || decisionContext.isSafety ? "safety_mode" : "guidance_strategy";
       logInfo("FLOW", getFlowLogPayload(intent, sessionContext.slots || {}, null, fallbackReason));
       logInfo("DECISION", { type: "knowledge", fallbackReason });
 
@@ -1841,7 +1903,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           ? message
           : JSON.stringify(message || "");
 
-      const guidanceType = decisionContext.isSafety
+      const guidanceType = shouldForceSafety || decisionContext.isSafety
         ? "safety"
         : detectGuidanceType(safeMessage);
 
@@ -1859,6 +1921,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.state === "READY";
       const explicitProductRequest = isExplicitProductRequest(userMessage);
       const shouldInjectProducts =
+        shouldForceSafety ||
         decisionContext.isSafety ||
         !isFirstGuidanceAfterClarification ||
         explicitProductRequest;
@@ -1869,7 +1932,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         safetyProducts = enforceProductLimit(safetyProducts, settings.max_products || 3);
       }
 
-      const effectiveStrategy = decisionContext.isSafety ? "safety" : strategy;
+      const effectiveStrategy = shouldForceSafety || decisionContext.isSafety ? "safety" : strategy;
       const prompt = createOptimizedPrompt(userMessage, safetyProducts, settings, finalTags, effectiveStrategy, language, guidanceType, knowledgeContext, sessionContext.slots || {});
       const reply = await askLLM(prompt);
 
@@ -1884,7 +1947,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       logResponseSummary("knowledge", { products: safetyProducts.length });
       return endInteraction(interactionRef, { reply, products: safetyProducts }, {
         decision: {
-          action: decisionContext.isSafety ? "safety" : "knowledge",
+          action: shouldForceSafety || decisionContext.isSafety ? "safety" : "knowledge",
           flowId: null,
           missingSlot: null
         },
@@ -1911,7 +1974,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const isShortFollowUpWithProducts = hasActiveProducts && isShortFollowUpMessage(userMessage);
     const shouldUseGuidance = intent === "product_guidance" || isShortFollowUpWithProducts;
 
-    if (shouldUseGuidance) {
+    if (shouldAllowKnowledge && shouldUseGuidance) {
       const guidanceTags = finalTags;
       let knowledgeContext = "";
       if (hasRequiredKnowledgeSlots(userMessage, sessionContext.slots || {})) {
@@ -1958,138 +2021,144 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     // Step 4: Build context for decision making
-    const context = {
-      intent,
-      queryType,
-      activeProducts: sessionActiveProducts,
-      session: sessionContext,
-      message: userMessage,
-      availableTags: availableProductTags
-    };
+    if (
+      routingDecision.action !== "selection" &&
+      routingDecision.action !== "safety" &&
+      routingDecision.action !== "clarification"
+    ) {
+      const context = {
+        intent,
+        queryType,
+        activeProducts: sessionActiveProducts,
+        session: sessionContext,
+        message: userMessage,
+        availableTags: availableProductTags
+      };
 
-    if (isNewSearch(userMessage)) {
-      sessionContext.activeProducts = [];
-      sessionContext.tags = [];
-      sessionContext.intent = null;
-      sessionContext.state = "IDLE";
-      saveSession(sessionId, sessionContext);
+      if (isNewSearch(userMessage)) {
+        sessionContext.activeProducts = [];
+        sessionContext.tags = [];
+        sessionContext.intent = null;
+        sessionContext.state = "IDLE";
+        saveSession(sessionId, sessionContext);
 
-      context.activeProducts = sessionContext.activeProducts;
-      context.session = sessionContext;
-    }
-
-    // Step 5: Make high-level decision about next action
-    const decision = decideNextAction(context);
-    interactionRef.decision = {
-      action: decision.action === "guide" ? "knowledge" : "recommend",
-      flowId: null,
-      missingSlot: null
-    };
-
-    // BRANCHING LOGIC BASED ON DECISION
-    if (decision.action === "guide") {
-      logInfo("DECISION", { type: "knowledge", fallbackReason: "decision_service_guide" });
-
-      let knowledgeContext = "";
-      if (hasRequiredKnowledgeSlots(userMessage, sessionContext.slots || {})) {
-        const knowledgeResults = getRelevantKnowledge(userMessage, knowledgeBase, finalTags, sessionContext.slots || {});
-        knowledgeContext = knowledgeResults.map(k => k.content).join("\n");
+        context.activeProducts = sessionContext.activeProducts;
+        context.session = sessionContext;
       }
 
-      const prompt = createOptimizedPrompt(userMessage, [], settings, finalTags, "guidance", language, "general", knowledgeContext, sessionContext.slots || {});
-      const reply = await askLLM(prompt);
+      // Step 5: Make high-level decision about next action
+      const decision = decideNextAction(context);
+      interactionRef.decision = {
+        action: decision.action === "guide" ? "knowledge" : "recommend",
+        flowId: null,
+        missingSlot: null
+      };
 
-      updateSessionWithProducts(sessionId, [], "guidance");
+      // BRANCHING LOGIC BASED ON DECISION
+      if (decision.action === "guide") {
+        logInfo("DECISION", { type: "knowledge", fallbackReason: "decision_service_guide" });
 
-      emit("ai_response", { response: reply });
-      logResponseSummary("knowledge", { products: 0 });
-      return endInteraction(interactionRef, { reply, products: [] }, {
-        decision: { action: "knowledge", flowId: null, missingSlot: null },
-        outputType: "reply"
-      });
+        let knowledgeContext = "";
+        if (hasRequiredKnowledgeSlots(userMessage, sessionContext.slots || {})) {
+          const knowledgeResults = getRelevantKnowledge(userMessage, knowledgeBase, finalTags, sessionContext.slots || {});
+          knowledgeContext = knowledgeResults.map(k => k.content).join("\n");
+        }
 
-    } else {
-      logInfo("FLOW", getFlowLogPayload(intent, sessionContext.slots || {}, null));
-      logInfo("DECISION", { type: "product_search" });
+        const prompt = createOptimizedPrompt(userMessage, [], settings, finalTags, "guidance", language, "general", knowledgeContext, sessionContext.slots || {});
+        const reply = await askLLM(prompt);
 
-      // Step 6: Detect intent (tags) from user message
-      const detectedTags = finalTags;
-
-      // Check if clarification is needed (no tags detected)
-      if (detectedTags.length === 0) {
-        logInfo("DECISION", { type: "product_search", fallbackReason: "no_tags" });
-        const clarificationResponse = generateFallbackResponse(userMessage, settings, availableProductTags);
         updateSessionWithProducts(sessionId, [], "guidance");
-        logResponseSummary("guidance", { products: 0 });
-        return endInteraction(interactionRef, clarificationResponse, {
-          decision: { action: "clarification", flowId: null, missingSlot: null },
+
+        emit("ai_response", { response: reply });
+        logResponseSummary("knowledge", { products: 0 });
+        return endInteraction(interactionRef, { reply, products: [] }, {
+          decision: { action: "knowledge", flowId: null, missingSlot: null },
           outputType: "reply"
         });
-      }
 
-      // Step 7: Search for products based on detected tags
-      let found = findRelevantProducts(detectedTags, products, settings.max_products || 3);
+      } else {
+        logInfo("FLOW", getFlowLogPayload(intent, sessionContext.slots || {}, null));
+        logInfo("DECISION", { type: "product_search" });
 
-      // Step 8: Apply fallback if no products found
-      found = found.length > 0 ? found : applyFallbackProducts(products);
+        // Step 6: Detect intent (tags) from user message
+        const detectedTags = finalTags;
 
-      // If no products found, retry with broader tags
-      if (found.length === 0) {
-        const retryTags = ["cleaning", "interior"];
-        found = findRelevantProducts(retryTags, products, settings.max_products || 3);
-      }
-
-      // If still no products, ask only when intent is unclear AND cleaning is not already known
-      if (found.length === 0) {
-        if (!detectedTags.includes("cleaning")) {
-          logInfo("DECISION", { type: "product_search", fallbackReason: "no_products_non_cleaning" });
-          const helpfulQuestion = settings.fallback_message;
+        // Check if clarification is needed (no tags detected)
+        if (detectedTags.length === 0) {
+          logInfo("DECISION", { type: "product_search", fallbackReason: "no_tags" });
+          const clarificationResponse = generateFallbackResponse(userMessage, settings, availableProductTags);
           updateSessionWithProducts(sessionId, [], "guidance");
           logResponseSummary("guidance", { products: 0 });
-          return endInteraction(interactionRef, { reply: helpfulQuestion, products: [] }, {
+          return endInteraction(interactionRef, clarificationResponse, {
             decision: { action: "clarification", flowId: null, missingSlot: null },
             outputType: "reply"
           });
         }
-        // cleaning is known but no products matched — fall through to fallback
-        found = applyFallbackProducts(products);
+
+        // Step 7: Search for products based on detected tags
+        let found = findRelevantProducts(detectedTags, products, settings.max_products || 3);
+
+        // Step 8: Apply fallback if no products found
+        found = found.length > 0 ? found : applyFallbackProducts(products);
+
+        // If no products found, retry with broader tags
+        if (found.length === 0) {
+          const retryTags = ["cleaning", "interior"];
+          found = findRelevantProducts(retryTags, products, settings.max_products || 3);
+        }
+
+        // If still no products, ask only when intent is unclear AND cleaning is not already known
+        if (found.length === 0) {
+          if (!detectedTags.includes("cleaning")) {
+            logInfo("DECISION", { type: "product_search", fallbackReason: "no_products_non_cleaning" });
+            const helpfulQuestion = settings.fallback_message;
+            updateSessionWithProducts(sessionId, [], "guidance");
+            logResponseSummary("guidance", { products: 0 });
+            return endInteraction(interactionRef, { reply: helpfulQuestion, products: [] }, {
+              decision: { action: "clarification", flowId: null, missingSlot: null },
+              outputType: "reply"
+            });
+          }
+          // cleaning is known but no products matched — fall through to fallback
+          found = applyFallbackProducts(products);
+        }
+
+        // Step 9: Apply ranking to maximize conversion
+        const rankingContext = { tags: detectedTags, priceRange: null };
+        found = applyRanking(found, rankingContext, settings);
+
+        // Step 10: Enforce product limits BEFORE sending to LLM
+        found = enforceProductLimit(found, settings.max_products || 3);
+
+        // Step 12: Build prompt with strategy
+        const prompt = createOptimizedPrompt(userMessage, found, settings, detectedTags, strategy, language, "general", "", sessionContext.slots || {});
+
+        // Step 13: Query LLM
+        const reply = await askLLM(prompt);
+
+        // Step 14: Track impressions for analytics
+        trackProductImpressions(found, sessionId);
+
+        // Step 15: Update session with newly recommended products
+        const responseType = found.length > 0 ? "recommendation" : "guidance";
+        updateSessionWithProducts(sessionId, found, responseType);
+
+        sessionContext.state = "IDLE";
+        saveSession(sessionId, sessionContext);
+
+        emit("products_recommended", { products: found, tags: detectedTags });
+        emit("ai_response", { response: reply });
+        logResponseSummary("product_search", { products: found.length });
+        interactionRef.decision = {
+          action: "recommend",
+          flowId: null,
+          missingSlot: null
+        };
+        return endInteraction(interactionRef, { reply, products: found }, {
+          outputType: "recommendation",
+          products: summarizeProductsForLog(found)
+        });
       }
-
-      // Step 9: Apply ranking to maximize conversion
-      const rankingContext = { tags: detectedTags, priceRange: null };
-      found = applyRanking(found, rankingContext, settings);
-
-      // Step 10: Enforce product limits BEFORE sending to LLM
-      found = enforceProductLimit(found, settings.max_products || 3);
-
-      // Step 12: Build prompt with strategy
-      const prompt = createOptimizedPrompt(userMessage, found, settings, detectedTags, strategy, language, "general", "", sessionContext.slots || {});
-
-      // Step 13: Query LLM
-      const reply = await askLLM(prompt);
-
-      // Step 14: Track impressions for analytics
-      trackProductImpressions(found, sessionId);
-
-      // Step 15: Update session with newly recommended products
-      const responseType = found.length > 0 ? "recommendation" : "guidance";
-      updateSessionWithProducts(sessionId, found, responseType);
-
-      sessionContext.state = "IDLE";
-      saveSession(sessionId, sessionContext);
-
-      emit("products_recommended", { products: found, tags: detectedTags });
-      emit("ai_response", { response: reply });
-      logResponseSummary("product_search", { products: found.length });
-      interactionRef.decision = {
-        action: "recommend",
-        flowId: null,
-        missingSlot: null
-      };
-      return endInteraction(interactionRef, { reply, products: found }, {
-        outputType: "recommendation",
-        products: summarizeProductsForLog(found)
-      });
     }
 
   } catch (err) {

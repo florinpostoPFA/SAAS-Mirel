@@ -35,7 +35,7 @@ function Landing() {
         <div className="text-indigo-400">
           <span className="font-semibold">Turbo</span>
           <p className="text-white mt-1">
-            Hi, I’m Turbo. I can help you explore options, compare them, and make better decisions.
+            Salut, sunt Turbo. Te pot ajuta sa explorezi optiuni, sa le compari si sa iei decizii mai bune.
           </p>
         </div>
 

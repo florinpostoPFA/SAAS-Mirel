@@ -1,5 +1,7 @@
 const config = require("../config");
 
+const ROMANIAN_ONLY_INSTRUCTION = "You MUST respond ONLY in Romanian. Do not use English.";
+
 /**
  * Get role description based on tone
  */
@@ -84,12 +86,7 @@ function buildHardRulesSection(settings, strategy = "direct", language = "en") {
   lines.push("HARD RULES:");
   lines.push("- ONLY use the products listed in the PRODUCTS section below");
   lines.push("- NEVER invent or hallucinate products, features, or prices");
-
-  if (language === "ro") {
-    lines.push("- IMPORTANT: Raspunde STRICT in limba romana.");
-  } else if (language === "en") {
-    lines.push("- IMPORTANT: Answer STRICTLY in English.");
-  }
+  lines.push(`- IMPORTANT: ${ROMANIAN_ONLY_INSTRUCTION}`);
 
   if (strategy === "guidance") {
     lines.push("- NEVER recommend new products");
@@ -210,9 +207,8 @@ function buildGuidancePrompt(products, userMessage, tags = [], language = "en", 
     lines.push("## USER QUESTION");
     lines.push(userMessage || "");
     lines.push("");
-    const safetyLangLabel = language === "ro" ? "Romanian" : "English";
-    lines.push(`You MUST respond ONLY in ${safetyLangLabel}. Do NOT switch languages.`);
-    lines.push(`Final answer MUST be entirely in ${safetyLangLabel}.`);
+    lines.push(ROMANIAN_ONLY_INSTRUCTION);
+    lines.push("Final answer MUST be entirely in Romanian.");
     return lines.join("\n");
   }
 
@@ -284,16 +280,14 @@ function buildGuidancePrompt(products, userMessage, tags = [], language = "en", 
   lines.push("## USER QUESTION");
   lines.push(userMessage || "");
   lines.push("");
-  const langLabel = language === "ro" ? "Romanian" : "English";
-  lines.push(`You MUST respond ONLY in ${langLabel}. Do NOT switch languages. Do NOT include words from another language.`);
-  lines.push(`Final answer MUST be entirely in ${langLabel}.`);
+  lines.push(`${ROMANIAN_ONLY_INSTRUCTION} Do NOT switch languages. Do NOT include words from another language.`);
+  lines.push("Final answer MUST be entirely in Romanian.");
 
   return lines.join("\n");
 }
 
 function buildInformationalPrompt(userMessage, language = "en", knowledgeContext = "") {
   const lines = [];
-  const langLabel = language === "ro" ? "Romanian" : "English";
 
   lines.push("You are an auto detailing expert.");
   lines.push("");
@@ -321,8 +315,8 @@ function buildInformationalPrompt(userMessage, language = "en", knowledgeContext
   lines.push("## USER QUESTION");
   lines.push(userMessage || "");
   lines.push("");
-  lines.push(`You MUST respond ONLY in ${langLabel}. Do NOT switch languages.`);
-  lines.push(`Final answer MUST be entirely in ${langLabel}.`);
+  lines.push(`${ROMANIAN_ONLY_INSTRUCTION} Do NOT switch languages.`);
+  lines.push("Final answer MUST be entirely in Romanian.");
 
   return lines.join("\n");
 }
@@ -341,11 +335,8 @@ function buildPrompt({ products = [], settings = {}, userMessage, detectedTags =
     return buildGuidancePrompt(products, userMessage, detectedTags, language, guidanceType, knowledgeContext, resolvedObject);
   }
 
-  const languageLabel = language === "ro" ? "Romanian" : "English";
-  const languageInstruction =
-    language === "ro"
-      ? "Raspunde STRICT in limba romana. Nu folosi engleza."
-      : "Answer STRICTLY in English.";
+  const languageLabel = "Romanian";
+  const languageInstruction = "Raspunde STRICT in limba romana. Nu folosi engleza.";
 
   const sections = [];
 
@@ -355,10 +346,8 @@ function buildPrompt({ products = [], settings = {}, userMessage, detectedTags =
   sections.push(`${languageInstruction}`);
   sections.push("");
 
-  if (language === "ro") {
-    sections.push("You are assisting a Romanian customer in an auto detailing shop.");
-    sections.push("");
-  }
+  sections.push("You are assisting a Romanian customer in an auto detailing shop.");
+  sections.push("");
 
   sections.push("You are an AI assistant for an AUTO DETAILING shop.");
   sections.push("");

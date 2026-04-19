@@ -4,7 +4,7 @@ export default function ProductAIDashboard() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hi, I’m Turbo. How can I help you today?"
+      content: "Salut, sunt Turbo. Cu ce te pot ajuta astazi?"
     }
   ]);
 
@@ -37,7 +37,7 @@ export default function ProductAIDashboard() {
 
       const assistantMessage = {
         role: "assistant",
-        content: data.reply || "No response from server",
+        content: data.reply || "Nu am putut genera un raspuns.",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -48,7 +48,7 @@ export default function ProductAIDashboard() {
         ...prev,
         {
           role: "assistant",
-          content: "Error contacting server",
+          content: "A aparut o eroare.",
         },
       ]);
     }
