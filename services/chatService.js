@@ -20,6 +20,7 @@ const { resolveFlow, resolveFlowCandidate, resolveFlowCandidates } = require("./
 const { executeFlow } = require("./flowExecutor");
 const { normalizeDecision } = require("./decisionNormalizer");
 const { detectQueryType } = require("./queryTypeService");
+const { routeRequest } = require("./router");
 const { findRelevantKnowledge } = require("./knowledgeService");
 const fallbackProductsCatalog = require("../data/products.json");
 const productRoles = require("../data/product_roles.json");
@@ -1290,6 +1291,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const slotResult = processSlots(userMessage, "selection", sessionContext);
         sessionContext.slots = slotResult.slots;
         saveSession(sessionId, sessionContext);
+        const routingDecision = routeRequest({
+          queryType,
+          slots: slotResult?.slots || sessionContext?.slots || {}
+        });
+        interactionRef.decision = {
+          action: routingDecision.action,
+          reason: routingDecision.reason,
+          missingSlot: routingDecision.missingSlot || null
+        };
+        logInfo("ROUTER_DECISION", routingDecision);
         if (slotResult.missing) {
           const slotSnapshot = {
             context: slotResult.slots?.context || null,
@@ -1477,6 +1488,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const slotResult = processSlots(userMessage, "selection", sessionContext);
       sessionContext.slots = slotResult.slots;
       saveSession(sessionId, sessionContext);
+      const routingDecision = routeRequest({
+        queryType,
+        slots: slotResult?.slots || sessionContext?.slots || {}
+      });
+      interactionRef.decision = {
+        action: routingDecision.action,
+        reason: routingDecision.reason,
+        missingSlot: routingDecision.missingSlot || null
+      };
+      logInfo("ROUTER_DECISION", routingDecision);
 
       if (slotResult.missing) {
         const slotSnapshot = {
@@ -1618,6 +1639,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       ["NEEDS_CONTEXT", "NEEDS_OBJECT", "NEEDS_SURFACE"].includes(previousState) &&
       slotResult.missing === null;
     sessionContext.slots = slotResult.slots;
+    const routingDecision = routeRequest({
+      queryType,
+      slots: slotResult?.slots || sessionContext?.slots || {}
+    });
+    interactionRef.decision = {
+      action: routingDecision.action,
+      reason: routingDecision.reason,
+      missingSlot: routingDecision.missingSlot || null
+    };
+    logInfo("ROUTER_DECISION", routingDecision);
     logInfo("SLOTS", {
       context: slotResult.slots.context || null,
       surface: slotResult.slots.surface || null,
