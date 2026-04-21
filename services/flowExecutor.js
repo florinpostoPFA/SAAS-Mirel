@@ -1,5 +1,6 @@
 const productRoles = require("../data/product_roles.json");
 const knowledgeFlow = require("../data/knowledge_flow.json");
+const config = require("../config");
 const { logInfo } = require("./logger");
 
 function normalizeText(value) {
@@ -170,8 +171,41 @@ function limitStepProducts(products) {
   return uniqueProducts(products).slice(0, 2);
 }
 
+function getFlowRegistry(currentFlow) {
+  const configuredFlows = config?.flows && typeof config.flows === "object"
+    ? config.flows
+    : {};
+
+  const registry = {
+    ...configuredFlows
+  };
+
+  const currentFlowId = currentFlow?.flowId || currentFlow?.id;
+  if (currentFlowId && typeof currentFlowId === "string") {
+    registry[currentFlowId] = currentFlow;
+  }
+
+  return registry;
+}
+
 function executeFlow(flow, products, slots = {}) {
   const safeFlow = flow && typeof flow === "object" ? flow : {};
+  const flowId = safeFlow.flowId || safeFlow.id || null;
+  const flowRegistry = getFlowRegistry(safeFlow);
+
+  console.log("STAGE:EXECUTE_FLOW", {
+    flowId,
+    availableFlows: Object.keys(flowRegistry || {})
+  });
+
+  if (!flowId || typeof flowId !== "string") {
+    throw new Error("Invalid flowId: must be string");
+  }
+
+  if (!flowRegistry[flowId]) {
+    throw new Error("Flow not found: " + flowId);
+  }
+
   const steps = Array.isArray(safeFlow.steps) ? safeFlow.steps : [];
   const lines = [];
   const allProducts = [];

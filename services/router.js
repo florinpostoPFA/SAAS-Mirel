@@ -1,4 +1,16 @@
-function getMissingSlot(slots) {
+function getMissingSlot(slots, message) {
+  const msg = String(message || "").toLowerCase();
+  const isBugIntent =
+    msg.includes("insect") ||
+    msg.includes("insecte") ||
+    msg.includes("bug");
+
+  if (isBugIntent) {
+    if (!slots || !slots.context) return "context";
+    if (slots.context === "exterior" && !slots.object) return "area";
+    if (!slots.surface) return "surface";
+  }
+
   if (!slots || !slots.context) return "context";
   if (!slots.object) return "object";
   if (!slots.surface) return "surface";
@@ -9,7 +21,7 @@ function areSlotsComplete(slots) {
   return getMissingSlot(slots) === null;
 }
 
-function routeRequest({ queryType, slots }) {
+function routeRequest({ queryType, slots, message }) {
   if (queryType === "safety") {
     return {
       action: "safety",
@@ -18,7 +30,7 @@ function routeRequest({ queryType, slots }) {
   }
 
   if (queryType === "selection") {
-    const missing = getMissingSlot(slots);
+    const missing = getMissingSlot(slots, message);
 
     if (missing) {
       return {

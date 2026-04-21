@@ -1,0 +1,33 @@
+{
+  "flowId": "bug_removal_quick",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["exterior"],
+    "objects": ["parbriz"],
+    "surfaces": ["glass"]
+  },
+  "title": "Indepartare insecte (rapid)",
+  "steps": [
+    {
+      "id": "apply_solution",
+      "title": "Aplicare solutie insecte",
+      "goal": "Inmoaie si dizolva reziduurile de insecte.",
+      "knowledgeIds": ["insect_remover_utilizare"],
+      "roles": ["bug_remover"]
+    },
+    {
+      "id": "wipe",
+      "title": "Stergere usoara",
+      "goal": "Indeparteaza reziduurile fara frecare agresiva.",
+      "knowledgeIds": [],
+      "roles": ["microfiber"]
+    },
+    {
+      "id": "escalation",
+      "title": "Daca urmele persista",
+      "goal": "Pentru urme persistente, poate fi necesara corectie.",
+      "knowledgeIds": ["arsuri_insecte_corectie"],
+      "roles": []
+    }
+  ]
+}

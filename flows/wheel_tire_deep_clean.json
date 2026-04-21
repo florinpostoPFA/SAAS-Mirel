@@ -1,0 +1,32 @@
+{
+  "flowId": "wheel_tire_deep_clean",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["exterior"],
+    "objects": ["jante"]
+  },
+  "title": "Curatare jante si anvelope",
+  "steps": [
+    {
+      "id": "wheel_clean",
+      "title": "Curatare jante",
+      "goal": "Indeparteaza contaminarea de pe jante in siguranta.",
+      "knowledgeIds": ["curatare_jante_indicator_rosu"],
+      "roles": ["wheel_cleaner"]
+    },
+    {
+      "id": "tire_clean",
+      "title": "Curatare anvelope",
+      "goal": "Elimina murdaria si vechiul dressing.",
+      "knowledgeIds": ["tire_rubber_cleaner_utilizare"],
+      "roles": ["tire_cleaner"]
+    },
+    {
+      "id": "tire_protect",
+      "title": "Protectie anvelope",
+      "goal": "Aplica dressing pentru protectie si aspect.",
+      "knowledgeIds": ["dressing_anvelope"],
+      "roles": ["tire_dressing"]
+    }
+  ]
+}

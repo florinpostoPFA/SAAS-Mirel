@@ -2,8 +2,9 @@
   "flowId": "interior_clean_basic",
   "type": "micro",
   "triggers": {
-    "intents": ["product_guidance"],
-    "contexts": ["interior"]
+    "contexts": ["interior"],
+    "surfaces": ["textile", "leather", "plastic"],
+    "objects": ["scaun", "cotiera", "mocheta", "plafon"]
   },
   "title": "Curatare interior masina (ghid rapid)",
   "steps": [
