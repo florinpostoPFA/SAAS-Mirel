@@ -1,5 +1,7 @@
 const greetingKeywords = ["salut", "hello", "hi", "hey"];
 const guidanceKeywords = ["cum", "folosesc", "fac", "procedez", "pasii", "plan"];
+const farewellKeywords = ["la revedere", "pa", "bye"];
+const dissatisfactionKeywords = ["nu e bine", "nu ajuta", "nu imi place", "gresit"];
 
 // Recommendation: explicit phrases — checked before order to avoid "recomanda" → "comanda" false positive
 const recommendKeywords = ["recomanda", "recomandă", "ce produs", "ce imi recomanzi", "suggest", "recommend"];
@@ -32,6 +34,14 @@ function detectIntent(message, sessionId) {
   // Greeting: short message with a greeting word
   if (words.length <= 2 && words.some(word => greetingKeywords.includes(word))) {
     return { type: "greeting", confidence: "high" };
+  }
+
+  if (farewellKeywords.some(keyword => normalized.includes(keyword))) {
+    return { type: "farewell", confidence: 0.9 };
+  }
+
+  if (dissatisfactionKeywords.some(keyword => normalized.includes(keyword))) {
+    return { type: "dissatisfaction", confidence: 0.9 };
   }
 
   // Recommend: checked FIRST before order to prevent "recomanda" → order false positive
