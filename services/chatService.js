@@ -605,26 +605,32 @@ function endInteraction(interactionRef, result, patch = {}) {
   return finalResult;
 }
 
-function formatSelectionResponse(products = []) {
-  const safeProducts = Array.isArray(products) ? products : [];
+function formatSelectionResponse(products = [], slots = {}) {
+  const safeProducts = Array.isArray(products)
+    ? products.slice(0, MAX_SELECTION_PRODUCTS)
+    : [];
 
   if (safeProducts.length === 0) {
     return "Nu am gasit produse potrivite in lista disponibila.";
   }
 
-  const lines = ["Iata produsele potrivite din lista disponibila:"];
+  const solutions = safeProducts.filter(product => !isAccessoryProduct(product)).slice(0, 2);
+  const accessories = safeProducts.filter(product => isAccessoryProduct(product)).slice(0, 1);
+  const stableSolutions = solutions.length > 0 ? solutions : safeProducts.slice(0, 2);
 
-  safeProducts.forEach((product, index) => {
-    const shortDescription = String(product?.short_description || product?.description || "").trim();
-    const reason = shortDescription
-      ? shortDescription.split(/[.!?]/)[0].trim()
-      : "Se potriveste cu cererea ta.";
+  const lines = ["Iata recomandarile potrivite:", "", "• Soluție:"];
 
-    lines.push("");
-    lines.push(`${index + 1}. ${product?.name || "Produs"}`);
-    lines.push(`Descriere: ${shortDescription || "Fara descriere scurta disponibila."}`);
-    lines.push(`Motiv: ${reason || "Se potriveste cu cererea ta."}`);
+  stableSolutions.forEach((product) => {
+    lines.push(`- ${product?.name || "Produs"} ${buildMicroExplanation(product, slots)}`.trim());
   });
+
+  if (accessories.length > 0) {
+    lines.push("");
+    lines.push("• Accesoriu:");
+    accessories.forEach((product) => {
+      lines.push(`- ${product?.name || "Produs"} ${buildMicroExplanation(product, slots)}`.trim());
+    });
+  }
 
   return lines.join("\n");
 }
@@ -652,14 +658,31 @@ function buildMinimalFlowReply(flowDefinition, flowResult) {
   return lines.join("\n");
 }
 
+function extractObjectOverrides(message) {
+  const text = String(message || "").toLowerCase();
+
+  if (text.includes("bancheta din spate") || text.includes("bancheta")) {
+    return {
+      object: "scaun",
+      context: "interior"
+    };
+  }
+
+  return {
+    object: null,
+    context: null
+  };
+}
+
 function extractSlotsFromMessage(message) {
   const text = String(message || "").toLowerCase();
-  const interiorContextTerms = ["mocheta", "scaun", "bord", "cotiera", "interior"];
+  const objectOverride = extractObjectOverrides(text);
+  const interiorContextTerms = ["mocheta", "scaun", "bancheta", "bord", "cotiera", "interior"];
   const exteriorContextTerms = ["jante", "exterior", "caroserie", "caroseria"];
 
   const OBJECT_KEYWORDS = {
     cotiera: ["cotiera", "armrest"],
-    scaun: ["scaun", "seat"],
+    scaun: ["scaun", "seat", "bancheta", "bancheta din spate"],
     plafon: ["plafon", "headliner", "ceiling"],
     volan: ["volan", "steering wheel"],
     bord: ["bord", "dashboard"],
@@ -671,19 +694,22 @@ function extractSlotsFromMessage(message) {
     tapiterie: ["tapiterie", "upholstery"]
   };
 
-  let object = null;
-  for (const [key, keywords] of Object.entries(OBJECT_KEYWORDS)) {
-    if (keywords.some(k => text.includes(k))) {
-      object = key;
-      break;
+  let object = objectOverride.object || null;
+  if (!object) {
+    for (const [key, keywords] of Object.entries(OBJECT_KEYWORDS)) {
+      if (keywords.some(k => text.includes(k))) {
+        object = key;
+        break;
+      }
     }
   }
 
   return {
     context:
-      interiorContextTerms.some(term => text.includes(term)) ? "interior" :
+      objectOverride.context ||
+      (interiorContextTerms.some(term => text.includes(term)) ? "interior" :
       exteriorContextTerms.some(term => text.includes(term)) ? "exterior" :
-      null,
+      null),
 
     surface:
       text.includes("piele") ? "leather" :
@@ -702,9 +728,10 @@ function extractSlotsFromMessage(message) {
 
 function extractSlotsForSafetyQuery(message) {
   const msg = String(message || "").toLowerCase();
+  const objectOverride = extractObjectOverrides(msg);
 
-  let context = null;
-  let object = null;
+  let context = objectOverride.context || null;
+  let object = objectOverride.object || null;
   let surface = null;
 
   // CONTEXT
@@ -1068,6 +1095,20 @@ function detectContextHint(message) {
   return null;
 }
 
+function inferWheelsSurfaceFromObject(slots) {
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const object = String(safeSlots.object || "").toLowerCase();
+
+  if (!safeSlots.surface && (object === "wheels" || object === "jante")) {
+    return {
+      ...safeSlots,
+      surface: "wheels"
+    };
+  }
+
+  return safeSlots;
+}
+
 /**
  * Generate fallback response when no products found
  */
@@ -1098,24 +1139,319 @@ function enforceProductLimit(products, maxLimit) {
   return products;
 }
 
+const MAX_SELECTION_PRODUCTS = 3;
+const ACCESSORY_TAGS = ["microfiber", "brush", "drying_towel", "tool", "wash_mitt", "bucket"];
+const HARD_FILTER_RULES = {
+  "interior|textile": {
+    allow: ["textile", "cleaner", "stain_remover", "upholstery_cleaner", "textile_cleaner", "microfiber", "brush"],
+    requiredAny: ["stain_remover", "textile_cleaner", "upholstery_cleaner"],
+    requiredAllCombos: [["textile", "cleaner"]],
+    exclude: [
+      "polish", "clay", "wax", "exterior_cleaner", "exterior", "paint", "leather",
+      "fragrance", "scent", "odorizant", "air_freshener", "odor", "deodorant", "parfum"
+    ]
+  },
+  "interior|leather": {
+    allow: ["leather", "leather_cleaner", "leather_conditioner", "interior_cleaner", "cleaner", "microfiber"],
+    requiredAny: ["leather_cleaner", "leather_conditioner"],
+    requiredAllCombos: [["leather", "cleaner"]],
+    exclude: [
+      "textile", "polish", "wax", "paint",
+      "fragrance", "scent", "odorizant", "air_freshener", "odor", "deodorant", "parfum"
+    ]
+  },
+  "interior|plastic": {
+    allow: ["plastic", "interior_cleaner", "cleaner", "microfiber", "brush"],
+    exclude: ["polish", "wax", "paint", "exterior"]
+  },
+  "exterior|paint": {
+    allow: ["paint", "shampoo", "prewash", "bug_remover", "microfiber", "drying_towel", "cleaner"],
+    requiredAny: ["shampoo", "prewash", "bug_remover"],
+    requiredAllCombos: [["paint", "cleaner"]],
+    exclude: ["textile", "leather", "interior"]
+  },
+  "exterior|glass": {
+    allow: ["glass", "glass_cleaner", "microfiber"],
+    exclude: ["textile", "leather", "interior", "polish"]
+  },
+  "exterior|wheels": {
+    allow: ["wheels", "wheel_cleaner", "brush", "microfiber"],
+    exclude: ["textile", "leather", "interior"]
+  }
+};
+
+function normalizeProductTags(product) {
+  return Array.isArray(product?.tags)
+    ? product.tags.map(tag => String(tag || "").toLowerCase()).filter(Boolean)
+    : [];
+}
+
+function isAccessoryProduct(product) {
+  const tags = normalizeProductTags(product);
+  return tags.some(tag => ACCESSORY_TAGS.includes(tag));
+}
+
+function matchesAnyProductTag(product, tagsToMatch = []) {
+  const normalizedTags = normalizeProductTags(product);
+  const safeTagsToMatch = Array.isArray(tagsToMatch)
+    ? tagsToMatch.map(tag => String(tag || "").toLowerCase()).filter(Boolean)
+    : [];
+
+  if (safeTagsToMatch.length === 0) {
+    return false;
+  }
+
+  return safeTagsToMatch.some(tag => normalizedTags.includes(tag));
+}
+
+function matchesAllProductTags(product, tagsToMatch = []) {
+  const normalizedTags = normalizeProductTags(product);
+  const safeTagsToMatch = Array.isArray(tagsToMatch)
+    ? tagsToMatch.map(tag => String(tag || "").toLowerCase()).filter(Boolean)
+    : [];
+
+  if (safeTagsToMatch.length === 0) {
+    return false;
+  }
+
+  return safeTagsToMatch.every(tag => normalizedTags.includes(tag));
+}
+
+function isFragranceOrOdorProduct(product) {
+  const tags = normalizeProductTags(product);
+  const name = String(product?.name || "").toLowerCase();
+  const fragranceTags = ["fragrance", "scent", "odorizant", "air_freshener", "odor", "deodorant", "parfum"];
+  const fragranceKeywords = [
+    "odorizant",
+    "parfum",
+    "scent",
+    "air re-fresher",
+    "air refresher",
+    "air freshener",
+    "new car scent",
+    "deodorant"
+  ];
+
+  if (tags.some(tag => fragranceTags.includes(tag))) {
+    return true;
+  }
+
+  return fragranceKeywords.some(keyword => name.includes(keyword));
+}
+
+function applyHardFilter(candidates, slots) {
+  const safeCandidates = Array.isArray(candidates) ? candidates : [];
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const key = `${safeSlots.context || ""}|${safeSlots.surface || ""}`;
+  const rule = HARD_FILTER_RULES[key] || null;
+
+  if (!rule) {
+    return {
+      products: safeCandidates,
+      meta: {
+        applied: false,
+        key,
+        allow: [],
+        exclude: [],
+        beforeCount: safeCandidates.length,
+        afterCount: safeCandidates.length
+      }
+    };
+  }
+
+  const allow = Array.isArray(rule.allow) ? rule.allow : [];
+  const exclude = Array.isArray(rule.exclude) ? rule.exclude : [];
+  const requiredAny = Array.isArray(rule.requiredAny) ? rule.requiredAny : [];
+  const requiredAllCombos = Array.isArray(rule.requiredAllCombos)
+    ? rule.requiredAllCombos.filter(combo => Array.isArray(combo) && combo.length > 0)
+    : [];
+
+  const allowExcludeFiltered = safeCandidates.filter(product => {
+    const matchesAllow = allow.length === 0 || matchesAnyProductTag(product, allow);
+    const matchesExclude = matchesAnyProductTag(product, exclude);
+    return matchesAllow && !matchesExclude;
+  });
+
+  const fragranceFiltered = allowExcludeFiltered.filter(product => {
+    if ((key === "interior|textile" || key === "interior|leather") && isFragranceOrOdorProduct(product)) {
+      logInfo("HARD_FILTER_FRAGRANCE_EXCLUDE", {
+        key,
+        productName: product?.name || null,
+        tags: normalizeProductTags(product)
+      });
+      return false;
+    }
+    return true;
+  });
+
+  const allowsAccessoryBypass = allow.some(tag => ACCESSORY_TAGS.includes(String(tag || "").toLowerCase()));
+  const hasRequiredConstraint = requiredAny.length > 0 || requiredAllCombos.length > 0;
+
+  const requiredFiltered = hasRequiredConstraint
+    ? fragranceFiltered.filter(product => {
+        const matchesRequiredAny = requiredAny.length > 0 && matchesAnyProductTag(product, requiredAny);
+        const matchesRequiredAllCombo = requiredAllCombos.length > 0 && requiredAllCombos.some(combo => matchesAllProductTags(product, combo));
+        const matchesAccessoryGate = allowsAccessoryBypass && isAccessoryProduct(product);
+        return matchesRequiredAny || matchesRequiredAllCombo || matchesAccessoryGate;
+      })
+    : fragranceFiltered;
+
+  const filtered = requiredFiltered;
+
+  return {
+    products: filtered,
+    meta: {
+      applied: true,
+      key,
+      allow,
+      requiredAny,
+      requiredAllCombos,
+      allowsAccessoryBypass,
+      exclude,
+      beforeCount: safeCandidates.length,
+      afterAllowExcludeCount: allowExcludeFiltered.length,
+      afterRequiredCount: requiredFiltered.length,
+      afterCount: filtered.length
+    }
+  };
+}
+
+function isGenericProduct(product) {
+  const tags = normalizeProductTags(product);
+  const description = String(product?.short_description || product?.description || "").trim();
+  const name = String(product?.name || "").trim().toLowerCase();
+
+  if (isAccessoryProduct(product) && tags.length >= 1) {
+    return false;
+  }
+
+  if (tags.length < 2) {
+    return true;
+  }
+
+  if (!description || description.length < 25) {
+    return true;
+  }
+
+  if (/^(fara descriere(?: scurta disponibila)?|descriere scurta disponibila|produs universal)$/i.test(description)) {
+    return true;
+  }
+
+  if ((name === "produs" || name === "solutie") && tags.length < 3) {
+    return true;
+  }
+
+  return false;
+}
+
+function buildMicroExplanation(product, slots = {}) {
+  const tags = normalizeProductTags(product);
+  const description = String(product?.short_description || product?.description || "").trim();
+
+  if (tags.includes("stain_remover")) return "→ pentru pete dificile pe textile, fara sa afecteze materialul";
+  if (tags.includes("textile_cleaner") || tags.includes("upholstery_cleaner") || (tags.includes("textile") && tags.includes("cleaner"))) {
+    return "→ pentru curatare sigura a textilelor din interior";
+  }
+  if (tags.includes("leather_cleaner") || (tags.includes("leather") && tags.includes("cleaner"))) {
+    return "→ pentru curatare eficienta a pielii, fara sa o usuce";
+  }
+  if (tags.includes("leather_conditioner") || (tags.includes("leather") && tags.includes("protection"))) {
+    return "→ pentru hidratare si protectie dupa curatare";
+  }
+  if (tags.includes("brush")) return "→ ajuta la desprinderea murdariei din fibre";
+  if (tags.includes("microfiber")) return "→ pentru stergere fara scame si fara zgarieturi";
+  if (tags.includes("shampoo")) return "→ pentru spalare sigura a vopselei la exterior";
+  if (tags.includes("prewash") || tags.includes("snow_foam")) return "→ pentru a inmuia murdaria inainte de contact";
+  if (tags.includes("bug_remover")) return "→ pentru indepartarea insectelor fara frecare agresiva";
+  if (tags.includes("drying_towel")) return "→ pentru uscare rapida, fara urme";
+
+  if (slots?.surface === "textile" && tags.includes("textile")) {
+    return "→ pentru curatare sigura a textilelor din interior";
+  }
+
+  if (slots?.surface === "leather" && tags.includes("leather")) {
+    return "→ pentru curatare eficienta a pielii, fara sa o usuce";
+  }
+
+  if (slots?.surface === "paint" && tags.includes("paint")) {
+    return "→ pentru spalare sigura a vopselei la exterior";
+  }
+
+  if (description && description.length > 35) {
+    const fragment = description.split(/[.!?]/)[0].trim();
+    if (fragment && fragment.length > 20) {
+      return `→ ${fragment.slice(0, 110)}`;
+    }
+  }
+
+  return "";
+}
+
+function returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots = null) {
+  const reply = "Nu sunt sigur ce produs se potrivește perfect aici, dar te pot ghida pas cu pas dacă vrei.";
+  const failSafeDecision = {
+    ...(selectionDecision || {}),
+    action: "knowledge",
+    flowId: null,
+    missingSlot: null
+  };
+  interactionRef.slots = selectionSlots || interactionRef.slots || null;
+  updateSessionWithProducts(sessionId, [], "guidance");
+  emit("ai_response", { response: reply });
+  logResponseSummary("knowledge", { products: 0 });
+  return endInteraction(interactionRef, { reply, products: [] }, {
+    decision: failSafeDecision,
+    outputType: "reply",
+    products: []
+  });
+}
+
 function filterProducts(products, slots) {
   if (!products || !Array.isArray(products)) return [];
 
   const safeSlots = slots && typeof slots === "object" ? slots : {};
 
   return products.filter(product => {
-    const tags = Array.isArray(product?.tags)
-      ? product.tags.map(tag => String(tag || "").toLowerCase())
-      : [];
+    const tags = normalizeProductTags(product);
+    const isAccessory = isAccessoryProduct(product);
 
     // CONTEXT FILTER
     if (safeSlots.context === "interior" && tags.includes("exterior")) return false;
     if (safeSlots.context === "exterior" && tags.includes("interior")) return false;
 
+    if (isAccessory) {
+      return true;
+    }
+
     // SURFACE FILTER (STRICT)
-    if (safeSlots.surface === "textile" && !tags.includes("textile")) return false;
-    if (safeSlots.surface === "leather" && !tags.includes("leather")) return false;
-    if (safeSlots.surface === "paint" && !tags.includes("paint")) return false;
+    if (
+      safeSlots.surface === "textile" &&
+      !(
+        (tags.includes("textile") && tags.includes("cleaner")) ||
+        tags.includes("textile_cleaner") ||
+        tags.includes("upholstery_cleaner") ||
+        tags.includes("stain_remover")
+      )
+    ) return false;
+    if (
+      safeSlots.surface === "leather" &&
+      !(
+        (tags.includes("leather") && tags.includes("cleaner")) ||
+        tags.includes("leather") ||
+        tags.includes("leather_cleaner") ||
+        tags.includes("leather_conditioner")
+      )
+    ) return false;
+    if (
+      safeSlots.surface === "paint" &&
+      !(
+        (tags.includes("paint") && tags.includes("cleaner")) ||
+        tags.includes("paint") ||
+        tags.includes("shampoo") ||
+        tags.includes("prewash") ||
+        tags.includes("bug_remover")
+      )
+    ) return false;
     if (safeSlots.surface === "glass" && !tags.includes("glass")) return false;
     if (safeSlots.surface === "wheels" && !tags.includes("wheels")) return false;
 
@@ -1123,26 +1459,46 @@ function filterProducts(products, slots) {
   });
 }
 
-function buildProductBundle(products) {
+function buildProductBundle(products, options = {}) {
   const safeProducts = Array.isArray(products) ? products : [];
-  const bundle = [];
+  const hardFilterKey = options && typeof options === "object"
+    ? options.hardFilterKey || null
+    : null;
 
-  const hasRoleTag = (product, role) => {
-    const tags = Array.isArray(product?.tags)
-      ? product.tags.map(tag => String(tag || "").toLowerCase())
-      : [];
-    return tags.includes(role);
+  const getBundleRoles = (product) => {
+    const tags = normalizeProductTags(product);
+    if (hardFilterKey === "interior|textile") {
+      return tags.filter(tag => tag !== "cleaner");
+    }
+    return tags;
   };
 
-  const cleaner = safeProducts.find(product => hasRoleTag(product, "cleaner"));
-  const tool = safeProducts.find(product => hasRoleTag(product, "tool"));
-  const microfiber = safeProducts.find(product => hasRoleTag(product, "microfiber"));
+  const seen = new Set();
+  const unique = safeProducts.filter(product => {
+    const key = String(product?.id || product?.name || "");
+    if (!key || seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 
-  if (cleaner) bundle.push(cleaner);
-  if (tool) bundle.push(tool);
-  if (microfiber) bundle.push(microfiber);
+  const solutions = unique.filter(product => {
+    const roles = getBundleRoles(product);
+    const isAccessory = roles.some(tag => ACCESSORY_TAGS.includes(tag));
+    return !isAccessory;
+  }).slice(0, 2);
+  const accessories = unique.filter(product => {
+    const roles = getBundleRoles(product);
+    return roles.some(tag => ACCESSORY_TAGS.includes(tag));
+  }).slice(0, 1);
+  const bundle = [...solutions, ...accessories];
 
-  return bundle.slice(0, 3);
+  if (bundle.length === 0) {
+    return unique.slice(0, MAX_SELECTION_PRODUCTS);
+  }
+
+  return bundle.slice(0, MAX_SELECTION_PRODUCTS);
 }
 
 /**
@@ -2327,10 +2683,41 @@ function requiresSurface(intentType) {
   return intentType === "procedural" || intentType === "selection";
 }
 
+function isCompatibilitySafetyQuery(message) {
+  const msg = String(message || "").toLowerCase();
+  const compatibilityPhrases = ["pot folosi", "pot sa dau", "este sigur", "e ok", "merge"];
+  const materialTokens = ["piele", "textil", "plastic"];
+
+  return (
+    compatibilityPhrases.some(phrase => msg.includes(phrase)) &&
+    msg.includes("apc") &&
+    materialTokens.some(token => msg.includes(token))
+  );
+}
+
+function getCompatibilitySafetyReply(message) {
+  const msg = String(message || "").toLowerCase();
+
+  if (msg.includes("piele")) {
+    return "Pe piele, APC-ul se foloseste doar foarte diluat si testat pe o zona mica. Ideal este un cleaner dedicat pentru piele.";
+  }
+
+  if (msg.includes("textil")) {
+    return "Pe textil, APC-ul poate fi folosit diluat, cu test preliminar si fara sa imbibi excesiv materialul.";
+  }
+
+  if (msg.includes("plastic")) {
+    return "Pe plastic, APC-ul este in general ok daca este diluat corect si sters complet dupa aplicare.";
+  }
+
+  return "Pot sa te ajut cu compatibilitatea produselor, dar spune-mi exact materialul vizat.";
+}
+
 function isSafetyQuery(message) {
   const msg = String(message || "").toLowerCase();
 
   return (
+    isCompatibilitySafetyQuery(msg) ||
     msg.includes("pot sa") ||
     msg.includes("pot folosi") ||
     msg.includes("este sigur") ||
@@ -2381,11 +2768,11 @@ function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   return safeContext;
 }
 
-const NON_CLEANING_GREETINGS = ["salut", "salutare", "buna"];
-const NON_CLEANING_SMALL_TALK = ["ce faci"];
-const NON_CLEANING_DISCOUNT = ["cod de reducere", "reducere"];
-const NON_CLEANING_META = ["o sa inlocuiesti"];
-const NON_CLEANING_PROFANITY = ["prost", "idiot", "dracu", "naiba"];
+const NON_CLEANING_GREETINGS = ["salut", "salutare", "buna", "hello"];
+const NON_CLEANING_SMALL_TALK = ["ce faci", "cum esti"];
+const NON_CLEANING_DISCOUNT = ["cod de reducere", "reducere", "discount"];
+const NON_CLEANING_META = ["o sa inlocuiesti", "vorbesc cu clientii", "baietii"];
+const NON_CLEANING_PROFANITY = ["prost", "idiot", "dracu", "naiba", "dute"];
 
 function normalizeMessageText(message) {
   return String(message || "").toLowerCase().trim();
@@ -2395,7 +2782,7 @@ function messageIncludesAny(text, terms) {
   return terms.some(term => text.includes(term));
 }
 
-function isNonCleaningDomainMessage(message) {
+function shouldResetForNonCleaningMessage(message) {
   const text = normalizeMessageText(message);
 
   if (!text) {
@@ -2409,6 +2796,10 @@ function isNonCleaningDomainMessage(message) {
     messageIncludesAny(text, NON_CLEANING_META) ||
     messageIncludesAny(text, NON_CLEANING_PROFANITY)
   );
+}
+
+function isNonCleaningDomainMessage(message) {
+  return shouldResetForNonCleaningMessage(message);
 }
 
 function getNonCleaningDomainReply(message) {
@@ -2448,7 +2839,8 @@ const SINGLE_TOKEN_SLOT_VALUES = {
     piele: "leather"
   },
   object: {
-    parbriz: "parbriz"
+    parbriz: "parbriz",
+    bancheta: "scaun"
   }
 };
 
@@ -2827,6 +3219,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
   try {
     let sessionContext = getSession(sessionId);
+    logInfo("PENDING_SELECTION_LOADED", {
+      sessionId,
+      pendingSelection: sessionContext?.pendingSelection,
+      missing: sessionContext?.pendingSelectionMissingSlot
+    });
 
     interactionRef = {
       timestamp: new Date().toISOString(),
@@ -2841,16 +3238,28 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       productsCatalog: products
     };
 
-    if (isNonCleaningDomainMessage(userMessage)) {
-      sessionContext.pendingQuestion = null;
-      sessionContext.slots = {};
-      sessionContext.state = "IDLE";
-      saveSession(sessionId, sessionContext);
+    if (shouldResetForNonCleaningMessage(userMessage)) {
+      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
 
       return endInteraction(interactionRef, {
         type: "reply",
         message: getNonCleaningDomainReply(userMessage)
       }, {
+        slots: {},
+        decision: { action: "knowledge", flowId: null, missingSlot: null },
+        outputType: "reply"
+      });
+    }
+
+    if (isCompatibilitySafetyQuery(userMessage)) {
+      interactionRef.queryType = "safety";
+      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
+
+      return endInteraction(interactionRef, {
+        type: "reply",
+        message: getCompatibilitySafetyReply(userMessage)
+      }, {
+        slots: {},
         decision: { action: "knowledge", flowId: null, missingSlot: null },
         outputType: "reply"
       });
@@ -3029,7 +3438,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    let queryType = detectQueryType(routingMessage);
+    const isPendingSelectionContinuation = sessionContext?.pendingSelection === true;
+    let queryType = isPendingSelectionContinuation ? "selection" : detectQueryType(routingMessage);
+
+    // Preserve selection path across clarification turns
+    const SELECTION_WAIT_STATES = ["NEEDS_CONTEXT", "NEEDS_OBJECT", "NEEDS_SURFACE"];
+    if (
+      isPendingSelectionContinuation ||
+      (SELECTION_WAIT_STATES.includes(sessionContext?.state) && sessionContext?.originalIntent === "selection")
+    ) {
+      queryType = "selection";
+      logInfo("QUERY_TYPE_OVERRIDE", {
+        reason: "selection_continuation",
+        state: sessionContext.state,
+        pendingSelection: sessionContext.pendingSelection === true,
+        pendingSelectionMissingSlot: sessionContext.pendingSelectionMissingSlot || null
+      });
+    }
+
     interactionRef.queryType = queryType;
     const isSafetyEnforced = queryType === "safety";
     logInfo("ROUTING", { queryType });
@@ -3160,16 +3586,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         saveSession(sessionId, sessionContext);
         const problemType = sessionContext.problemType || null;
+        const reentrySelectionSlots = inferWheelsSurfaceFromObject(sessionContext.slots || slotResult.slots || {});
+        if (reentrySelectionSlots !== (sessionContext.slots || slotResult.slots || {})) {
+          sessionContext.slots = reentrySelectionSlots;
+        }
+
         const selectionDecision = enforceClarificationContract(resolveAction({
           problemType,
           message: {
             text: userMessage,
             routingDecision: { action: "selection" }
           },
-          slots: sessionContext.slots || slotResult.slots || {},
+          slots: reentrySelectionSlots,
         }));
         const originalSelectionDecision = JSON.stringify(selectionDecision);
-        assertMissingSlotInvariant(selectionDecision, sessionContext.slots || slotResult.slots || {});
+        assertMissingSlotInvariant(selectionDecision, reentrySelectionSlots);
         if (!selectionDecision || !selectionDecision.action) {
           throw new Error("Invalid decision: resolveAction must return action");
         }
@@ -3190,6 +3621,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           };
           if (selectionDecision.missingSlot === "context") {
             sessionContext.state = "NEEDS_CONTEXT";
+            sessionContext.originalIntent = "selection";
+            sessionContext.pendingSelection = true;
+            sessionContext.pendingSelectionMissingSlot = "context";
             saveSession(sessionId, sessionContext);
             return endInteraction(interactionRef, {
               type: "question",
@@ -3204,6 +3638,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           }
           if (selectionDecision.missingSlot === "object") {
             sessionContext.state = "NEEDS_OBJECT";
+            sessionContext.originalIntent = "selection";
+            sessionContext.pendingSelection = true;
+            sessionContext.pendingSelectionMissingSlot = "object";
             saveSession(sessionId, sessionContext);
             const allowedObjects = getAllowedObjects(slotResult.slots);
             return endInteraction(interactionRef, {
@@ -3219,6 +3656,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           }
           if (selectionDecision.missingSlot === "surface") {
             sessionContext.state = "NEEDS_SURFACE";
+            sessionContext.originalIntent = "selection";
+            sessionContext.pendingSelection = true;
+            sessionContext.pendingSelectionMissingSlot = "surface";
             saveSession(sessionId, sessionContext);
             const allowedSurfaces = getAllowedSurfaces(slotResult.slots);
             const labelMap = {
@@ -3506,13 +3946,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       previewAction === "selection"
     ) {
       const slotResult = processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingQuestionAtStart });
-      const currentSlots = { ...(slotResult?.slots || {}) };
+      let currentSlots = { ...(slotResult?.slots || {}) };
+      currentSlots = inferWheelsSurfaceFromObject(currentSlots);
+      slotResult.slots = currentSlots;
       const currentMessageSlots = extractSlotsFromMessage(userMessage);
       const introducesNewObjectOrContext = Boolean(
         (currentMessageSlots.context && currentMessageSlots.context !== (sessionContext.slots || {}).context) ||
         (currentMessageSlots.object && currentMessageSlots.object !== (sessionContext.slots || {}).object)
       );
-      if (introducesNewObjectOrContext && !currentMessageSlots.surface) {
+      const currentObjectNormalized = String(currentSlots.object || "").toLowerCase();
+      const isWheelsObject = currentObjectNormalized === "wheels" || currentObjectNormalized === "jante";
+      if (introducesNewObjectOrContext && !currentMessageSlots.surface && !isWheelsObject) {
         currentSlots.surface = null;
         slotResult.slots.surface = null;
       }
@@ -3548,6 +3992,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           missing === "object" ? "NEEDS_OBJECT" :
           missing === "surface" ? "NEEDS_SURFACE" :
           sessionContext.state;
+        sessionContext.originalIntent = "selection";
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = missing || null;
         saveSession(sessionId, sessionContext);
 
         return endInteraction(interactionRef, {
@@ -3571,6 +4018,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           missingSlot: selectionDecision.missingSlot
         });
 
+        sessionContext.originalIntent = "selection";
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = selectionDecision.missingSlot || null;
+        saveSession(sessionId, sessionContext);
+
         return endInteraction(interactionRef, {
           type: "question",
           message: getClarificationQuestion(selectionDecision.missingSlot, currentSlots)
@@ -3585,12 +4037,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (!slotResult.missing) {
         sessionContext.state = null;
         sessionContext.pendingQuestion = null;
+        delete sessionContext.pendingSelection;
+        delete sessionContext.pendingSelectionMissingSlot;
       }
       saveSession(sessionId, sessionContext);
       interactionRef.decision = selectionDecision;
       logInfo("ROUTER_DECISION", interactionRef.decision);
 
       // All required slots are present, proceed with selection
+      const selectionSlots = sessionContext.slots || slotResult.slots || {};
       const selectionTags = buildFinalTags(coreTags, workingTags, slotResult.slots);
       const msg = userMessage.toLowerCase();
       let role = null;
@@ -3598,22 +4053,72 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (msg.includes("jante")) role = "wheel_cleaner";
       if (msg.includes("geam")) role = "glass_cleaner";
       const roleConfig = role ? productRoles[role] || null : null;
-      let found = roleConfig
+
+      logInfo("SELECTION_DEBUG", {
+        queryType,
+        selectionSlots,
+        selectionTags,
+        role,
+        usedRoleConfig: !!roleConfig,
+        maxProducts: MAX_SELECTION_PRODUCTS
+      });
+
+      const broadCandidates = roleConfig
         ? findProductsByRoleConfig(roleConfig, products)
-        : findRelevantProducts(selectionTags, products, settings.max_products || 3, {
+        : findRelevantProducts(selectionTags, products, MAX_SELECTION_PRODUCTS, {
             strictTagFilter: !(sessionContext.objective?.needsCompletion && isContinuation)
           });
+
+      const hardFilterResult = applyHardFilter(broadCandidates, selectionSlots);
+      logInfo("HARD_FILTER", hardFilterResult.meta);
+      if (hardFilterResult.meta.applied && hardFilterResult.meta.afterCount > 0) {
+        hardFilterResult.products.forEach(product => {
+          const productTags = normalizeProductTags(product);
+          hardFilterResult.meta.exclude.forEach(excludedTag => {
+            if (productTags.includes(String(excludedTag || "").toLowerCase())) {
+              logInfo("HARD_FILTER_RED_FLAG", {
+                key: hardFilterResult.meta.key,
+                productId: product?.id || null,
+                productName: product?.name || null,
+                excludedTag
+              });
+            }
+          });
+        });
+      }
+
+      if (hardFilterResult.meta.applied && hardFilterResult.meta.afterCount === 0) {
+        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
+      }
+
+      let qualityCandidates = hardFilterResult.products.filter(product => !isGenericProduct(product));
+      if (qualityCandidates.length === 0) {
+        const bestSolution = hardFilterResult.products.find(product => !isAccessoryProduct(product));
+        if (bestSolution) {
+          qualityCandidates = [bestSolution];
+        }
+      }
+
+      if (qualityCandidates.length === 0) {
+        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
+      }
+
       const rankingContext = {
         tags: roleConfig?.matchTags || selectionTags,
         priceRange: null
       };
-      found = applyRanking(found, rankingContext, settings);
-      const selectedProducts = enforceProductLimit(found, roleConfig?.maxProducts || settings.max_products || 3);
+      const rankedCandidates = applyRanking(qualityCandidates, rankingContext, settings);
+      const selectedProducts = enforceProductLimit(
+        rankedCandidates,
+        Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS)
+      );
       const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
-      const filteredSelectionProducts = filterProducts(enrichedSelectionProducts, sessionContext.slots || slotResult.slots || {});
-      const selectionBundle = buildProductBundle(filteredSelectionProducts);
+      const filteredSelectionProducts = filterProducts(enrichedSelectionProducts, selectionSlots);
+      const selectionBundle = buildProductBundle(filteredSelectionProducts, {
+        hardFilterKey: hardFilterResult?.meta?.key || null
+      });
       console.log("PRODUCT_FILTER", {
-        slots: sessionContext.slots || slotResult.slots || {},
+        slots: selectionSlots,
         before: enrichedSelectionProducts.length,
         after: filteredSelectionProducts.length
       });
@@ -3621,23 +4126,94 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         selected: selectionBundle.map(product => product?.name || null).filter(Boolean),
         roles: selectionBundle.map(product => product?.tags || [])
       });
-      if (selectionBundle.length < 2) {
-        const reply = getSafeFallbackReply();
-        updateSessionWithProducts(sessionId, [], "guidance");
-        emit("ai_response", { response: reply });
-        logResponseSummary("knowledge", { products: 0 });
-        return endInteraction(interactionRef, { reply, products: [] }, {
-          decision: {
-            action: "knowledge",
-            flowId: null,
-            missingSlot: null,
-            safeFallback: true
-          },
-          outputType: "reply"
+      if (selectionBundle.length === 0) {
+        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
+      }
+      let finalProducts = selectionBundle.slice(0, MAX_SELECTION_PRODUCTS);
+
+      // Defensive: remove excluded-tag products that may have slipped through
+      if (hardFilterResult.meta.applied && hardFilterResult.meta.exclude.length > 0) {
+        finalProducts = finalProducts.filter(product => {
+          const productTags = normalizeProductTags(product);
+          const violatingTags = hardFilterResult.meta.exclude.filter(
+            t => productTags.includes(String(t || "").toLowerCase())
+          );
+          if (violatingTags.length > 0) {
+            logInfo("HARD_FILTER_RED_FLAG", {
+              stage: "pre_format",
+              key: hardFilterResult.meta.key,
+              productId: product?.id || null,
+              productName: product?.name || null,
+              violatingTags
+            });
+            return false;
+          }
+          return true;
         });
       }
-      const finalProducts = selectionBundle.slice(0, 3);
-      const reply = formatSelectionResponse(finalProducts);
+
+      if (finalProducts.length === 0) {
+        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
+      }
+
+      // Final check: remove any non-accessory product that violates the required gate
+      if (
+        (hardFilterResult.meta.requiredAny && hardFilterResult.meta.requiredAny.length > 0) ||
+        (hardFilterResult.meta.requiredAllCombos && hardFilterResult.meta.requiredAllCombos.length > 0)
+      ) {
+        finalProducts = finalProducts.filter(product => {
+          const matchesRequiredAny =
+            Array.isArray(hardFilterResult.meta.requiredAny) &&
+            hardFilterResult.meta.requiredAny.length > 0 &&
+            matchesAnyProductTag(product, hardFilterResult.meta.requiredAny);
+          const matchesRequiredAllCombo =
+            Array.isArray(hardFilterResult.meta.requiredAllCombos) &&
+            hardFilterResult.meta.requiredAllCombos.length > 0 &&
+            hardFilterResult.meta.requiredAllCombos.some(combo => matchesAllProductTags(product, combo));
+          const matchesAccessoryGate =
+            hardFilterResult.meta.allowsAccessoryBypass === true &&
+            isAccessoryProduct(product);
+          if (!matchesRequiredAny && !matchesRequiredAllCombo && !matchesAccessoryGate) {
+            logInfo("HARD_FILTER_REQUIRED_VIOLATION", {
+              key: hardFilterResult.meta.key,
+              productName: product?.name || null,
+              tags: normalizeProductTags(product),
+              requiredAny: hardFilterResult.meta.requiredAny || [],
+              requiredAllCombos: hardFilterResult.meta.requiredAllCombos || [],
+              allowsAccessoryBypass: hardFilterResult.meta.allowsAccessoryBypass === true
+            });
+            return false;
+          }
+          return true;
+        });
+      }
+
+      if (finalProducts.length === 0) {
+        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
+      }
+
+      const solutions = finalProducts.filter(product => !isAccessoryProduct(product));
+      if (solutions.length === 0) {
+        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
+      }
+
+      logInfo("SELECTION_FINAL_TAGS", {
+        name: finalProducts[0]?.name || null,
+        tags: normalizeProductTags(finalProducts[0])
+      });
+
+      logInfo("SELECTION_DEBUG_COUNTS", {
+        broadCount: Array.isArray(broadCandidates) ? broadCandidates.length : null,
+        hardApplied: hardFilterResult?.meta?.applied,
+        hardKey: hardFilterResult?.meta?.key,
+        hardAfterCount: hardFilterResult?.products?.length,
+        qualityAfterCount: qualityCandidates.length,
+        rankedCount: Array.isArray(rankedCandidates) ? rankedCandidates.length : null,
+        finalCount: finalProducts.length,
+        finalNames: finalProducts.map(p => p?.name).filter(Boolean)
+      });
+
+      const reply = formatSelectionResponse(finalProducts, selectionSlots);
       trackProductImpressions(finalProducts, sessionId);
       updateSessionWithProducts(sessionId, finalProducts, "recommendation");
       emit("products_recommended", { products: finalProducts, tags: roleConfig?.matchTags || selectionTags });
@@ -3700,6 +4276,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const storedOriginalIntent = sessionContext.originalIntent;
 
     const slotResult = processSlots(userMessage, intent, sessionContext, { mergeWithSession: hadPendingQuestionAtStart });
+    if (queryType === "selection") {
+      slotResult.slots = inferWheelsSurfaceFromObject(slotResult.slots || {});
+    }
     const wasInClarification = Boolean(previousState && previousState.startsWith("NEEDS"));
     const earlyGuidedRedirectMessage = getGuidedRedirectMessage(userMessage);
     const shouldEarlySafeFallback =
@@ -3973,6 +4552,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           object: sessionContext.slots?.object || null,
           context: sessionContext.slots?.context || null
         };
+        if (queryType === "selection") {
+          sessionContext.originalIntent = "selection";
+          sessionContext.pendingSelection = true;
+          sessionContext.pendingSelectionMissingSlot = "context";
+        }
         saveSession(sessionId, sessionContext);
         logResponseSummary("question", { products: 0 });
         return endInteraction(interactionRef, {
@@ -3992,6 +4576,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           object: sessionContext.slots?.object || null,
           context: sessionContext.slots?.context || null
         };
+        if (queryType === "selection") {
+          sessionContext.originalIntent = "selection";
+          sessionContext.pendingSelection = true;
+          sessionContext.pendingSelectionMissingSlot = "context";
+        }
         saveSession(sessionId, sessionContext);
         logResponseSummary("question", { products: 0 });
         return endInteraction(interactionRef, {
@@ -4008,6 +4597,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         object: sessionContext.slots?.object || null,
         context: sessionContext.slots?.context || null
       };
+      if (queryType === "selection") {
+        sessionContext.originalIntent = "selection";
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = "context";
+      }
       saveSession(sessionId, sessionContext);
       logResponseSummary("question", { products: 0 });
 
@@ -4023,6 +4617,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "object") {
       sessionContext.state = "NEEDS_OBJECT";
       sessionContext.originalIntent = sessionContext.originalIntent || intent;
+      if (queryType === "selection") {
+        sessionContext.originalIntent = "selection";
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = "object";
+      }
       sessionContext.pendingQuestion = {
         slot: "object",
         object: sessionContext.slots?.object || null,
@@ -4047,6 +4646,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "surface") {
       sessionContext.state = "NEEDS_SURFACE";
       sessionContext.originalIntent = sessionContext.originalIntent || intent;
+      if (queryType === "selection") {
+        sessionContext.originalIntent = "selection";
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = "surface";
+      }
       sessionContext.pendingQuestion = {
         slot: "surface",
         object: sessionContext.slots?.object || null,

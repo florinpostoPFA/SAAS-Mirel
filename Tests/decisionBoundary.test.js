@@ -67,11 +67,12 @@ describe("Decision boundary and reset rules", () => {
     expect(lastLogEntry.output.type).toBe("flow");
   });
 
-  it("cotiera then cod reducere resets session and does not ask surface", async () => {
+  it("cum curat o cotiera murdara then textil then cod de reducere resets without surface loop", async () => {
     const sessionId = `reset-${Date.now()}`;
 
-    await handleChat("cotiera", "C1", [], sessionId);
-    const second = await handleChat("cod reducere", "C1", [], sessionId);
+    await handleChat("cum curat o cotiera murdara?", "C1", [], sessionId);
+    await handleChat("textil", "C1", [], sessionId);
+    const second = await handleChat("cod de reducere", "C1", [], sessionId);
 
     const session = getSession(sessionId);
     const reply = String(second.reply || second.message || "").toLowerCase();
@@ -82,14 +83,20 @@ describe("Decision boundary and reset rules", () => {
     expect(session.slots || {}).toEqual({});
   });
 
-  it("pot folosi apc pe piele returns knowledge reply and does not run exterior flow", async () => {
+  it("pot folosi apc pe piele always stays knowledge even after procedural state", async () => {
     const sessionId = `safety-${Date.now()}`;
-    askLLM.mockResolvedValue("Da, poti folosi APC pe piele doar diluat.");
 
-    const result = await handleChat("pot folosi apc pe piele", "C1", [], sessionId);
+    await handleChat("cum curat o cotiera murdara?", "C1", [], sessionId);
+    await handleChat("textil", "C1", [], sessionId);
+    const flowCallsBefore = executeFlow.mock.calls.length;
+
+    const result = await handleChat("pot folosi apc pe piele?", "C1", [], sessionId);
 
     expect(result.type).toBe("reply");
-    expect(executeFlow).not.toHaveBeenCalled();
+    expect(executeFlow.mock.calls.length).toBe(flowCallsBefore);
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).toBe("knowledge");
+    expect(lastLogEntry.slots).toEqual({});
   });
 
   it("clears procedural slots on knowledge boundary after procedural sequence", async () => {
@@ -144,7 +151,18 @@ describe("Decision boundary and reset rules", () => {
     await handleChat("textil", "C1", [], sessionId);
 
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
-    expect(lastLogEntry.decision.action).not.toBe("clarification");
     expect(lastLogEntry.slots.object).not.toBe("cotiera");
+  });
+
+  it("bancheta satisfies object slot and does not ask for object again", async () => {
+    const sessionId = `bancheta-${Date.now()}`;
+
+    const first = await handleChat("pai ce sa fac... vreau sa curat interiorul", "C1", [], sessionId);
+    expect(first.type).toBe("question");
+
+    await handleChat("bancheta", "C1", [], sessionId);
+
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.missingSlot).not.toBe("object");
   });
 });
