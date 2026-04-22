@@ -75,13 +75,6 @@ const OBJECT_SURFACE_MAP = {
   oglinzi: ["glass"],
   tapiterie: ["textile", "leather", "alcantara"]
 };
-const STRONG_OBJECTS = new Set([
-  "wheels",
-  "jante",
-  "anvelope",
-  "parbriz"
-]);
-
 function getFlowLogPayload(intent, slots, flow, reason = null) {
   if (flow) {
     return { matched: flow.flowId || "unknown" };
@@ -218,15 +211,7 @@ function mapFlowMissingSlot(flowId, missingSlot, slots) {
   }
 
   if (missingSlot === "target") {
-    if (flowId === "bug_removal_quick") {
-      return "area";
-    }
-
-    if (flowId === "wheel_tire_deep_clean") {
-      return "object";
-    }
-
-    return slots?.object ? "object" : "area";
+    return "object";
   }
 
   return missingSlot;
@@ -308,7 +293,65 @@ function assertMissingSlotInvariant(decision, slots) {
 
   const value = safeSlots[missingSlot];
   if (value !== null && value !== undefined && String(value).trim() !== "") {
+    console.error("INVARIANT_FAILURE", {
+      decision,
+      slots: safeSlots,
+      message: null
+    });
     throw new Error("INVALID STATE: slot exists but marked missing");
+  }
+}
+
+function throwInvariantFailure(errorMessage, decision, slots, message) {
+  console.error("INVARIANT_FAILURE", {
+    decision,
+    slots,
+    message
+  });
+  throw new Error(errorMessage);
+}
+
+function assertDecisionInvariantsBeforeExecution(decision, slots, message) {
+  const safeDecision = decision && typeof decision === "object" ? decision : {};
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const missingSlot = getMissingSlot(safeSlots);
+
+  if (safeDecision.action === "clarification") {
+    if (!safeDecision.missingSlot) {
+      throwInvariantFailure("INVALID STATE: clarification without missingSlot", safeDecision, safeSlots, message);
+    }
+
+    if (!["context", "object", "surface"].includes(safeDecision.missingSlot)) {
+      throwInvariantFailure("INVALID STATE: invalid missingSlot type", safeDecision, safeSlots, message);
+    }
+
+    if (safeDecision.missingSlot !== missingSlot) {
+      throwInvariantFailure("INVALID STATE: clarification missingSlot mismatch", safeDecision, safeSlots, message);
+    }
+
+    if (safeSlots[safeDecision.missingSlot]) {
+      throwInvariantFailure("INVALID STATE: slot exists but marked missing", safeDecision, safeSlots, message);
+    }
+  }
+
+  if (safeDecision.action === "flow") {
+    if (!safeDecision.flowId || typeof safeDecision.flowId !== "string") {
+      throwInvariantFailure("INVALID STATE: flow without valid flowId", safeDecision, safeSlots, message);
+    }
+  }
+}
+
+function assertDecisionOutputContract(decision, output, slots, message) {
+  const safeDecision = decision && typeof decision === "object" ? decision : {};
+  const safeOutput = output && typeof output === "object" ? output : {};
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+
+  if (safeDecision.action === "flow" && safeOutput.type !== "flow") {
+    throwInvariantFailure("CONTRACT VIOLATION: flow decision but non-flow output", safeDecision, safeSlots, message);
+  }
+
+  if (safeDecision.action === "clarification" && safeOutput.type !== "question") {
+    throwInvariantFailure("CONTRACT VIOLATION: clarification must return question", safeDecision, safeSlots, message);
   }
 }
 
@@ -337,12 +380,6 @@ function ensureClarificationDecision(interactionRef, finalResult, finalOutputTyp
       : sessionContext?.slots && typeof sessionContext.slots === "object"
         ? sessionContext.slots
         : {};
-
-  interactionRef.decision = {
-    ...interactionRef.decision,
-    action: "clarification",
-    missingSlot: interactionRef?.decision?.missingSlot || getMissingSlot(fallbackSlots) || "object"
-  };
   const effectiveSlots =
     interactionRef?.slots && typeof interactionRef.slots === "object"
       ? interactionRef.slots
@@ -369,25 +406,25 @@ function enforceClarificationContract(decision) {
     return decision;
   }
 
-  const normalizedMissingSlot =
-    decision.missingSlot === "area" || decision.missingSlot === "refine_object"
-      ? "object"
-      : decision.missingSlot;
-
-  const normalizedDecision = {
-    ...decision,
-    missingSlot: normalizedMissingSlot || "context"
-  };
-
-  if (!normalizedDecision.missingSlot) {
+  if (!decision.missingSlot) {
+    console.error("INVARIANT_FAILURE", {
+      decision,
+      slots: null,
+      message: null
+    });
     throw new Error("Invalid clarification: missingSlot is required");
   }
 
-  if (!["context", "object", "surface"].includes(normalizedDecision.missingSlot)) {
+  if (!["context", "object", "surface"].includes(decision.missingSlot)) {
+    console.error("INVARIANT_FAILURE", {
+      decision,
+      slots: null,
+      message: null
+    });
     throw new Error("Invalid slot type");
   }
 
-  return normalizedDecision;
+  return decision;
 }
 
 function normalizeDecisionContract(decision) {
@@ -423,14 +460,29 @@ function getStrictOutputType(decision, fallbackOutputType) {
 
 function assertDecisionExecutionConsistency(decision, outputType) {
   if (decision?.action === "flow" && outputType !== "flow") {
+    console.error("INVARIANT_FAILURE", {
+      decision,
+      slots: null,
+      message: null
+    });
     throw new Error("Execution mismatch: flow decision but non-flow output");
   }
 
   if (decision?.action === "clarification" && outputType !== "question") {
+    console.error("INVARIANT_FAILURE", {
+      decision,
+      slots: null,
+      message: null
+    });
     throw new Error("Execution mismatch: clarification decision but wrong output");
   }
 
   if (decision?.action === "recommend" && outputType !== "recommendation") {
+    console.error("INVARIANT_FAILURE", {
+      decision,
+      slots: null,
+      message: null
+    });
     throw new Error("Execution mismatch: recommend decision but wrong output");
   }
 }
@@ -468,7 +520,18 @@ function endInteraction(interactionRef, result, patch = {}) {
 
   ensureClarificationDecision(interactionRef, finalResult, finalOutputType, sessionContext);
   interactionRef.decision = normalizeDecisionContract(interactionRef.decision);
+  assertDecisionInvariantsBeforeExecution(
+    interactionRef.decision,
+    interactionRef.slots,
+    interactionRef.message
+  );
   finalOutputType = getStrictOutputType(interactionRef.decision, finalOutputType);
+  assertDecisionOutputContract(
+    interactionRef.decision,
+    { type: finalOutputType },
+    interactionRef.slots,
+    interactionRef.message
+  );
   assertDecisionExecutionConsistency(interactionRef.decision, finalOutputType);
   logInfo("DECISION_OUTPUT_CONSISTENCY", {
     decision: interactionRef.decision,
@@ -587,6 +650,48 @@ function extractSlotsFromMessage(message) {
 
     object
   };
+}
+
+function extractSlotsForSafetyQuery(message) {
+  const msg = String(message || "").toLowerCase();
+
+  let context = null;
+  let object = null;
+  let surface = null;
+
+  // CONTEXT
+  if (msg.includes("interior")) context = "interior";
+  if (msg.includes("exterior")) context = "exterior";
+
+  // OBJECT
+  if (msg.includes("scaun")) object = "scaun";
+  if (msg.includes("cotiera")) object = "cotiera";
+  if (msg.includes("parbriz")) object = "parbriz";
+  if (msg.includes("mocheta")) object = "mocheta";
+  if (msg.includes("bord")) object = "bord";
+  if (msg.includes("volan")) object = "volan";
+  if (msg.includes("geam") || msg.includes("geamuri")) object = object || "geam";
+
+  // SURFACE
+  if (msg.includes("piele")) surface = "leather";
+  if (msg.includes("alcantara")) surface = "alcantara";
+  if (msg.includes("textil")) surface = "textile";
+  if (msg.includes("plastic")) surface = "plastic";
+  if (msg.includes("vopsea")) surface = "paint";
+  if (msg.includes("sticla") || msg.includes("geam") || msg.includes("parbriz")) surface = surface || "glass";
+
+  // AUTO-INFER CONTEXT from object/surface when not explicit
+  if (!context) {
+    if (object === "scaun" || object === "cotiera" || object === "mocheta" || object === "bord" || object === "volan" ||
+        surface === "leather" || surface === "textile" || surface === "alcantara" || surface === "plastic") {
+      context = "interior";
+    }
+    if (object === "parbriz" || object === "geam" || surface === "glass" || surface === "paint") {
+      context = "exterior";
+    }
+  }
+
+  return { context, object, surface };
 }
 
 function mergeSlots(sessionSlots, newSlots) {
@@ -729,7 +834,7 @@ function isPendingQuestionFulfilled(pendingQuestion, slots) {
     return Boolean(safeSlots.surface);
   }
 
-  if (pendingQuestion.slot === "object" || pendingQuestion.slot === "area") {
+  if (pendingQuestion.slot === "object") {
     return Boolean(safeSlots.object || safeSlots.surface);
   }
 
@@ -842,7 +947,6 @@ function getMissingSlot(slots) {
 
   if (!slotSource.context) return "context";
   if (!slotSource.object) return "object";
-  if (STRONG_OBJECTS.has(String(slotSource.object || "").toLowerCase())) return null;
   if (!slotSource.surface) return "surface";
   return null;
 }
@@ -944,6 +1048,53 @@ function enforceProductLimit(products, maxLimit) {
   }
 
   return products;
+}
+
+function filterProducts(products, slots) {
+  if (!products || !Array.isArray(products)) return [];
+
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+
+  return products.filter(product => {
+    const tags = Array.isArray(product?.tags)
+      ? product.tags.map(tag => String(tag || "").toLowerCase())
+      : [];
+
+    // CONTEXT FILTER
+    if (safeSlots.context === "interior" && tags.includes("exterior")) return false;
+    if (safeSlots.context === "exterior" && tags.includes("interior")) return false;
+
+    // SURFACE FILTER (STRICT)
+    if (safeSlots.surface === "textile" && !tags.includes("textile")) return false;
+    if (safeSlots.surface === "leather" && !tags.includes("leather")) return false;
+    if (safeSlots.surface === "paint" && !tags.includes("paint")) return false;
+    if (safeSlots.surface === "glass" && !tags.includes("glass")) return false;
+    if (safeSlots.surface === "wheels" && !tags.includes("wheels")) return false;
+
+    return true;
+  });
+}
+
+function buildProductBundle(products) {
+  const safeProducts = Array.isArray(products) ? products : [];
+  const bundle = [];
+
+  const hasRoleTag = (product, role) => {
+    const tags = Array.isArray(product?.tags)
+      ? product.tags.map(tag => String(tag || "").toLowerCase())
+      : [];
+    return tags.includes(role);
+  };
+
+  const cleaner = safeProducts.find(product => hasRoleTag(product, "cleaner"));
+  const tool = safeProducts.find(product => hasRoleTag(product, "tool"));
+  const microfiber = safeProducts.find(product => hasRoleTag(product, "microfiber"));
+
+  if (cleaner) bundle.push(cleaner);
+  if (tool) bundle.push(tool);
+  if (microfiber) bundle.push(microfiber);
+
+  return bundle.slice(0, 3);
 }
 
 /**
@@ -1566,7 +1717,7 @@ function isDirectPendingClarificationAnswer(message, pendingQuestion) {
       .some(token => msg.includes(token));
   }
 
-  if (pending.slot === "object" || pending.slot === "area") {
+  if (pending.slot === "object") {
     return ["mocheta", "cotiera", "scaun", "plafon", "parbriz", "jante", "roti", "anvelope", "geam", "vopsea"]
       .some(token => msg.includes(token));
   }
@@ -2128,63 +2279,119 @@ function requiresSurface(intentType) {
   return intentType === "procedural" || intentType === "selection";
 }
 
+function isSafetyQuery(message) {
+  const msg = String(message || "").toLowerCase();
+
+  return (
+    msg.includes("pot sa") ||
+    msg.includes("pot folosi") ||
+    msg.includes("este sigur") ||
+    msg.includes("merge pe") ||
+    msg.includes("compatibil") ||
+    msg.includes("afecteaza")
+  );
+}
+
+function detectProblemType(message) {
+  const msg = String(message || "").toLowerCase();
+
+  if (msg.includes("insect")) return "insects";
+  if (msg.includes("ciment")) return "cement";
+  if (msg.includes("gudron")) return "tar";
+  if (msg.includes("rasina")) return "resin";
+  if (msg.includes("calcar")) return "mineral";
+
+  return null;
+}
+
+function clearProblemType(sessionContext, sessionId) {
+  if (!sessionContext?.problemType) {
+    return;
+  }
+
+  sessionContext.problemType = null;
+  saveSession(sessionId, sessionContext);
+}
+
+function hasStrongSlots(slots) {
+  return Boolean(slots?.object || slots?.surface);
+}
+
+function getGuidedRedirectMessage(message) {
+  const msg = String(message || "").toLowerCase();
+
+  if (
+    msg.includes("miros") ||
+    msg.includes("problema generala") ||
+    msg.includes("nu stiu")
+  ) {
+    return "Te pot ajuta cu curățarea interiorului. Vrei să începem cu scaunele sau mocheta?";
+  }
+
+  return null;
+}
+
+function getSafeFallbackReply() {
+  return "Nu sunt sigur că îți pot da un răspuns corect pentru asta.\nPot să te ajut cu:\n- curățare interior\n- spălare exterior";
+}
+
+function isKnownCleaningEntry(message) {
+  const msg = String(message || "").toLowerCase();
+
+  return [
+    "curat",
+    "curata",
+    "curatare",
+    "spal",
+    "spalare",
+    "decontamin",
+    "insect",
+    "interior",
+    "exterior",
+    "scaun",
+    "mocheta",
+    "cotiera",
+    "parbriz",
+    "jante",
+    "geam",
+    "vopsea",
+    "piele",
+    "textil"
+  ].some(keyword => msg.includes(keyword));
+}
+
 function resolveAction({
-  intent,
-  slots,
-  state,
   message,
-  sessionContext,
-  routingDecision
+  slots,
+  problemType = null
 }) {
-  if (!intent) {
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const resolvedMessage = typeof message === "string"
+    ? message
+    : String(message?.text || "");
+  const routingDecision = message && typeof message === "object"
+    ? message.routingDecision
+    : null;
+  const guidedRedirectMessage = getGuidedRedirectMessage(resolvedMessage);
+  const strongSlotsPresent = hasStrongSlots(safeSlots);
+  const knownCleaningEntry = isKnownCleaningEntry(resolvedMessage);
+
+  if (isSafetyQuery(resolvedMessage)) {
+    console.log("SAFETY_OVERRIDE", {
+      message: resolvedMessage,
+      slots: safeSlots
+    });
     return {
-      action: "clarification",
+      action: "knowledge",
       flowId: null,
       missingSlot: null
     };
   }
 
-  const msg = String(message || "").toLowerCase();
-  const safeSlots = sessionContext?.slots && typeof sessionContext.slots === "object"
-    ? sessionContext.slots
-    : {};
   console.log("SLOT_CHECK_SOURCE", safeSlots);
-  const intentType = typeof intent === "string" ? intent : intent?.type || null;
   let action = routingDecision?.action || null;
 
-  if (
-    msg.includes("cum") ||
-    msg.includes("cum sa") ||
-    msg.includes("vreau sa curat") ||
-    msg.includes("vreau sa spal")
-  ) {
-    action = "procedural";
-  }
-
-  if (
-    msg.includes("pot folosi") ||
-    msg.includes("este sigur") ||
-    msg.includes("afecteaza") ||
-    msg.includes("exista")
-  ) {
-    action = "knowledge";
-  }
-
-  if (
-    msg.includes("nu") &&
-    (msg.includes("interior") || msg.includes("exterior"))
-  ) {
-    action = routingDecision?.action || action;
-  }
-
-  if (
-    (sessionContext?.noRecommendations === true || sessionContext?.allowRecommendations === false) &&
-    action === "selection"
-  ) {
-    action = "knowledge";
-  }
-
-  if (action === "selection" || intentType === "selection") {
+  if (action === "selection") {
     const missingSlot = getRouterMissingSlot(safeSlots);
 
     if (missingSlot) {
@@ -2203,6 +2410,25 @@ function resolveAction({
   }
 
   if (action === "knowledge") {
+    if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
+      return {
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        safeFallback: true,
+        replyOverride: guidedRedirectMessage
+      };
+    }
+
+    if (!problemType && !strongSlotsPresent) {
+      return {
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        safeFallback: true
+      };
+    }
+
     return {
       action: "knowledge",
       flowId: null,
@@ -2219,6 +2445,25 @@ function resolveAction({
   }
 
   if (action === "procedural") {
+    if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
+      return {
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        safeFallback: true,
+        replyOverride: guidedRedirectMessage
+      };
+    }
+
+    if (!problemType && !strongSlotsPresent && !knownCleaningEntry) {
+      return {
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        safeFallback: true
+      };
+    }
+
     const missingSlot = getMissingSlot(safeSlots);
 
     if (missingSlot) {
@@ -2234,11 +2479,30 @@ function resolveAction({
       };
     }
 
-    const flowCandidate = resolveFlow({
+    const flowResolution = resolveFlow({
       intent: "product_guidance",
-      message,
-      slots: safeSlots
+      message: resolvedMessage,
+      slots: safeSlots,
+      problemType
     });
+
+    if (flowResolution && flowResolution.type === "knowledge_override") {
+      return {
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null
+      };
+    }
+
+    const flowCandidates = resolveFlowCandidates({
+      intent: "product_guidance",
+      message: resolvedMessage,
+      slots: safeSlots,
+      problemType
+    });
+    const flowCandidate = Array.isArray(flowCandidates) && flowCandidates.length > 0
+      ? flowCandidates[0]
+      : null;
 
     console.log("FLOW_DECISION", {
       flowCandidate: flowCandidate?.flowId || null,
@@ -2253,25 +2517,21 @@ function resolveAction({
       };
     }
 
-    return {
-      action: "clarification",
-      flowId: null,
-      missingSlot: "object"
-    };
-  }
-
-  if (action === "procedural" || intentType === "product_guidance" || action === "selection") {
-    const nextDecision = decideNextAction({
-      intent: intentType,
-      activeProducts: Array.isArray(sessionContext?.activeProducts) ? sessionContext.activeProducts : [],
-      session: sessionContext || {},
-      state
-    });
+    if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
+      return {
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        safeFallback: true,
+        replyOverride: guidedRedirectMessage
+      };
+    }
 
     return {
-      action: nextDecision.action === "guide" ? "knowledge" : "recommend",
+      action: "knowledge",
       flowId: null,
-      missingSlot: null
+      missingSlot: null,
+      safeFallback: true
     };
   }
 
@@ -2284,7 +2544,7 @@ function resolveAction({
   }
 
   return {
-    action: "clarification",
+    action: "knowledge",
     flowId: null,
     missingSlot: null
   };
@@ -2386,6 +2646,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
   let interactionRef = null;
 
   try {
+    let sessionContext = getSession(sessionId);
+
     interactionRef = {
       timestamp: new Date().toISOString(),
       sessionId,
@@ -2457,7 +2719,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     session.questionCount = session.questionCount || 0;
 
     // Step 2: Load session context from store
-    let sessionContext = getSession(sessionId);
     const sessionActiveProducts = sessionContext.activeProducts || [];
     if (!sessionContext.objective) {
       sessionContext.objective = {
@@ -2616,7 +2877,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
       }
 
-      if (pending.slot === "area" || pending.slot === "object") {
+      if (pending.slot === "object") {
         if (msg.includes("parbriz")) {
           sessionContext.slots.object = "parbriz";
           updated = true;
@@ -2729,14 +2990,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.pendingQuestion = null;
         }
         saveSession(sessionId, sessionContext);
+        const problemType = sessionContext.problemType || null;
         const selectionDecision = enforceClarificationContract(resolveAction({
-          intent: "selection",
+          problemType,
+          message: {
+            text: userMessage,
+            routingDecision: { action: "selection" }
+          },
           slots: sessionContext.slots || slotResult.slots || {},
-          state: sessionContext.state,
-          message: userMessage,
-          sessionContext,
-          routingDecision: { action: "selection" }
         }));
+        const originalSelectionDecision = JSON.stringify(selectionDecision);
         assertMissingSlotInvariant(selectionDecision, sessionContext.slots || slotResult.slots || {});
         if (!selectionDecision || !selectionDecision.action) {
           throw new Error("Invalid decision: resolveAction must return action");
@@ -2744,6 +3007,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         logInfo("DECISION_SOURCE", { source: "resolveAction", decision: selectionDecision });
         interactionRef.decision = selectionDecision;
         logInfo("ROUTER_DECISION", interactionRef.decision);
+        if (JSON.stringify(selectionDecision) !== originalSelectionDecision) {
+          console.warn("DECISION_MUTATION_DETECTED", {
+            before: originalSelectionDecision,
+            after: selectionDecision
+          });
+        }
         if (selectionDecision.action === "clarification") {
           const slotSnapshot = {
             context: slotResult.slots?.context || null,
@@ -2895,12 +3164,26 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     });
     interactionRef.intentType = intent;
 
+    if (!sessionContext.problemType) {
+      const detectedProblemType = detectProblemType(userMessage);
+
+      if (detectedProblemType) {
+        sessionContext.problemType = detectedProblemType;
+        saveSession(sessionId, sessionContext);
+      }
+    }
+
+    console.log("PROBLEM_TYPE_ACTIVE", {
+      message: userMessage,
+      problemType: sessionContext.problemType || null
+    });
+
     if (getIntentConfidenceValue(typeof intentResult === "string" ? null : intentResult?.confidence) < 0.6) {
       return endInteraction(interactionRef, {
         type: "question",
         message: "Poți să-mi dai mai multe detalii ca să înțeleg exact ce ai nevoie?"
       }, {
-        decision: { action: "clarification", flowId: null, missingSlot: null },
+        decision: { action: "clarification", flowId: null, missingSlot: "context" },
         outputType: "question"
       });
     }
@@ -3060,20 +3343,28 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slotResult.slots.surface = null;
       }
 
+      const problemType = sessionContext.problemType || null;
       const selectionDecision = enforceClarificationContract(resolveAction({
-        intent: "selection",
+        problemType,
+        message: {
+          text: userMessage,
+          routingDecision: { action: "selection" }
+        },
         slots: currentSlots,
-        state: sessionContext.state,
-        message: userMessage,
-        sessionContext,
-        routingDecision: { action: "selection" }
       }));
+      const originalSelectionDecision = JSON.stringify(selectionDecision);
       assertMissingSlotInvariant(selectionDecision, currentSlots);
       if (!selectionDecision || !selectionDecision.action) {
         throw new Error("Invalid decision: resolveAction must return action");
       }
       logInfo("DECISION_SOURCE", { source: "resolveAction", decision: selectionDecision });
 
+      if (JSON.stringify(selectionDecision) !== originalSelectionDecision) {
+        console.warn("DECISION_MUTATION_DETECTED", {
+          before: originalSelectionDecision,
+          after: selectionDecision
+        });
+      }
       if (!hasRequiredSelectionSlots(currentSlots)) {
         const missing = selectionDecision.missingSlot;
 
@@ -3144,10 +3435,37 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       };
       found = applyRanking(found, rankingContext, settings);
       const selectedProducts = enforceProductLimit(found, roleConfig?.maxProducts || settings.max_products || 3);
-      const finalProducts = enrichProducts(selectedProducts, products);
+      const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
+      const filteredSelectionProducts = filterProducts(enrichedSelectionProducts, sessionContext.slots || slotResult.slots || {});
+      const selectionBundle = buildProductBundle(filteredSelectionProducts);
+      console.log("PRODUCT_FILTER", {
+        slots: sessionContext.slots || slotResult.slots || {},
+        before: enrichedSelectionProducts.length,
+        after: filteredSelectionProducts.length
+      });
+      console.log("PRODUCT_BUNDLE", {
+        selected: selectionBundle.map(product => product?.name || null).filter(Boolean),
+        roles: selectionBundle.map(product => product?.tags || [])
+      });
+      if (selectionBundle.length < 2) {
+        const reply = getSafeFallbackReply();
+        updateSessionWithProducts(sessionId, [], "guidance");
+        emit("ai_response", { response: reply });
+        logResponseSummary("knowledge", { products: 0 });
+        return endInteraction(interactionRef, { reply, products: [] }, {
+          decision: {
+            action: "knowledge",
+            flowId: null,
+            missingSlot: null,
+            safeFallback: true
+          },
+          outputType: "reply"
+        });
+      }
+      const finalProducts = selectionBundle.slice(0, 3);
       const reply = formatSelectionResponse(finalProducts);
       trackProductImpressions(finalProducts, sessionId);
-      updateSessionWithProducts(sessionId, finalProducts, finalProducts.length > 0 ? "recommendation" : "guidance");
+      updateSessionWithProducts(sessionId, finalProducts, "recommendation");
       emit("products_recommended", { products: finalProducts, tags: roleConfig?.matchTags || selectionTags });
       emit("ai_response", { response: reply });
       logResponseSummary("product_search", { products: finalProducts.length });
@@ -3168,13 +3486,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const proceduralSlots = applyObjectSlotInference(
         mergeSlots(sessionContext.slots || {}, extractSlotsFromMessage(userMessage))
       );
+      const shouldAllowPreviewDisambiguation =
+        hasStrongSlots(proceduralSlots) ||
+        Boolean(sessionContext.problemType) ||
+        isKnownCleaningEntry(userMessage);
       const candidateFlows = resolveFlowCandidates({
         intent,
         message: hasBugIntent ? getFlowResolverMessage(userMessage, sessionContext) : userMessage,
         slots: proceduralSlots
       });
 
-      if (candidateFlows.length > 1) {
+      if (candidateFlows.length > 1 && shouldAllowPreviewDisambiguation) {
         const disambiguation = getFlowDisambiguationQuestion(candidateFlows, proceduralSlots);
 
         if (disambiguation) {
@@ -3190,7 +3512,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             message: disambiguation.message
           }, {
             slots: proceduralSlots,
-            decision: { action: "clarification", flowId: null, missingSlot: null },
+            decision: {
+              action: "clarification",
+              flowId: null,
+              missingSlot: disambiguation.state === "NEEDS_SURFACE" ? "surface" : "context"
+            },
             outputType: "question"
           });
         }
@@ -3198,8 +3524,62 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     const storedOriginalIntent = sessionContext.originalIntent;
+
     const slotResult = processSlots(userMessage, intent, sessionContext, { mergeWithSession: hadPendingQuestionAtStart });
     const wasInClarification = Boolean(previousState && previousState.startsWith("NEEDS"));
+    const earlyGuidedRedirectMessage = getGuidedRedirectMessage(userMessage);
+    const shouldEarlySafeFallback =
+      queryType === "procedural" &&
+      !sessionContext.problemType &&
+      !hasStrongSlots(slotResult.slots || {}) &&
+      !isKnownCleaningEntry(userMessage);
+
+    if (queryType === "procedural" && earlyGuidedRedirectMessage && !sessionContext.problemType && !hasStrongSlots(slotResult.slots || {})) {
+      console.log("SAFE_FALLBACK_TRIGGERED", {
+        message: userMessage,
+        slots: slotResult.slots || {}
+      });
+      const reply = earlyGuidedRedirectMessage;
+      updateSessionWithProducts(sessionId, [], "guidance");
+      clearProblemType(sessionContext, sessionId);
+      emit("ai_response", { response: reply });
+      logResponseSummary("knowledge", { products: 0 });
+
+      return endInteraction(interactionRef, { reply, products: [] }, {
+        slots: slotResult.slots || {},
+        decision: {
+          action: "knowledge",
+          flowId: null,
+          missingSlot: null,
+          safeFallback: true,
+          replyOverride: earlyGuidedRedirectMessage
+        },
+        outputType: "reply"
+      });
+    }
+
+    if (shouldEarlySafeFallback) {
+      console.log("SAFE_FALLBACK_TRIGGERED", {
+        message: userMessage,
+        slots: slotResult.slots || {}
+      });
+      const reply = getSafeFallbackReply();
+      updateSessionWithProducts(sessionId, [], "guidance");
+      clearProblemType(sessionContext, sessionId);
+      emit("ai_response", { response: reply });
+      logResponseSummary("knowledge", { products: 0 });
+
+      return endInteraction(interactionRef, { reply, products: [] }, {
+        slots: slotResult.slots || {},
+        decision: {
+          action: "knowledge",
+          flowId: null,
+          missingSlot: null,
+          safeFallback: true
+        },
+        outputType: "reply"
+      });
+    }
 
     if (queryType === "procedural" && !slotResult.slots.context) {
       slotResult.slots.context = "exterior";
@@ -3217,14 +3597,28 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       ...sessionContext.objective.slots,
       ...slotResult.slots
     };
-    const slotMode = hadPendingQuestionAtStart ? "merge" : "replace";
+    const slotMode = isSafetyQuery(userMessage) ? "override" : hadPendingQuestionAtStart ? "merge" : "replace";
     const beforeSlots = { ...(sessionContext.slots || {}) };
     console.log("SLOT_MODE", {
       mode: slotMode
     });
-    sessionContext.slots = slotMode === "merge"
-      ? mergeSlots(sessionContext.slots || {}, slotResult.slots || {})
-      : (slotResult.slots || {});
+    if (slotMode === "override") {
+      const freshSlots = extractSlotsForSafetyQuery(userMessage);
+      console.log("SAFETY_SLOT_EXTRACTION", {
+        message: userMessage,
+        extracted: freshSlots
+      });
+      console.log("SLOT_OVERRIDE_APPLIED", {
+        previousSlots: beforeSlots,
+        newSlots: freshSlots,
+        finalSlots: freshSlots
+      });
+      sessionContext.slots = freshSlots;
+    } else {
+      sessionContext.slots = slotMode === "merge"
+        ? mergeSlots(sessionContext.slots || {}, slotResult.slots || {})
+        : (slotResult.slots || {});
+    }
     if (isPendingQuestionFulfilled(pendingBeforeSlotUpdate, sessionContext.slots)) {
       sessionContext.pendingQuestion = null;
       console.log("PENDING_CLEARED", {
@@ -3238,6 +3632,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       after: sessionContext.slots
     });
     if (
+      slotMode !== "override" &&
       sessionContext.slots?.context === "exterior" &&
       !sessionContext.slots?.object &&
       !hasPersistedBugIntent(userMessage, sessionContext)
@@ -3269,29 +3664,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       message: userMessage,
       slots: sessionContext.slots
     });
-    if (wasInClarification && !slotResult.missing) {
-      routingDecision.action = queryType === "procedural" ? "procedural" : "selection";
-    }
     if (sessionContext.state && sessionContext.state.startsWith("NEEDS_")) {
       logInfo("FORCE_CONTINUATION_MODE", {
         state: sessionContext.state
       });
-
-      routingDecision.action = sessionContext.originalIntent === "selection"
-        ? "selection"
-        : "procedural";
     }
     sessionContext.activeIntent = routingDecision.action;
     sessionContext.objective.type = routingDecision.action;
     saveSession(sessionId, sessionContext);
+    const problemType = sessionContext.problemType || null;
     const resolvedAction = enforceClarificationContract(resolveAction({
-      intent,
+      problemType,
+      message: {
+        text: userMessage,
+        routingDecision
+      },
       slots: sessionContext.slots || {},
-      state: sessionContext.state,
-      message: userMessage,
-      sessionContext,
-      routingDecision
     }));
+    const originalResolvedAction = JSON.stringify(resolvedAction);
     assertMissingSlotInvariant(resolvedAction, sessionContext.slots || {});
     if (!resolvedAction || !resolvedAction.action) {
       throw new Error("Invalid decision: resolveAction must return action");
@@ -3299,9 +3689,20 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     console.log("DECISION_FINAL", resolvedAction);
     logInfo("DECISION_SOURCE", { source: "resolveAction", decision: resolvedAction });
     console.log("STAGE:RESOLVE", resolvedAction);
+    if (JSON.stringify(resolvedAction) !== originalResolvedAction) {
+      console.warn("DECISION_MUTATION_DETECTED", {
+        before: originalResolvedAction,
+        after: resolvedAction
+      });
+    }
     if (resolvedAction.action === "flow") {
       if (!resolvedAction.flowId || typeof resolvedAction.flowId !== "string") {
-        throw new Error("Invalid flowId: must be string");
+        console.error("INVARIANT_FAILURE", {
+          decision: resolvedAction,
+          slots: sessionContext.slots || {},
+          message: userMessage
+        });
+        throw new Error("INVALID STATE: flow without valid flowId");
       }
     }
     logInfo("FINAL_ACTION", {
@@ -3354,6 +3755,30 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         break;
       default:
         break;
+    }
+
+    if (resolvedAction.action === "knowledge" && resolvedAction.safeFallback) {
+      console.log("SAFE_FALLBACK_TRIGGERED", {
+        message: userMessage,
+        slots: sessionContext.slots || {}
+      });
+
+      const reply = resolvedAction.replyOverride || getSafeFallbackReply();
+      updateSessionWithProducts(sessionId, [], "guidance");
+      clearProblemType(sessionContext, sessionId);
+      emit("ai_response", { response: reply });
+      logResponseSummary("knowledge", { products: 0 });
+
+      return endInteraction(interactionRef, { reply, products: [] }, {
+        decision: {
+          action: "knowledge",
+          flowId: null,
+          missingSlot: null,
+          safeFallback: true,
+          replyOverride: resolvedAction.replyOverride || null
+        },
+        outputType: "reply"
+      });
     }
 
       if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "context") {
@@ -3556,7 +3981,34 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const executedFlowDecision = resolvedAction;
 
         const flowResult = executeFlow(resolvedPrioritizedFlow, products, sessionContext.slots || {});
-        const flowProducts = Array.isArray(flowResult.products) ? flowResult.products : [];
+        const rawFlowProducts = Array.isArray(flowResult.products) ? flowResult.products : [];
+        const filteredFlowProducts = filterProducts(rawFlowProducts, sessionContext.slots || {});
+        const flowBundle = buildProductBundle(filteredFlowProducts);
+        console.log("PRODUCT_FILTER", {
+          slots: sessionContext.slots || {},
+          before: rawFlowProducts.length,
+          after: filteredFlowProducts.length
+        });
+        console.log("PRODUCT_BUNDLE", {
+          selected: flowBundle.map(product => product?.name || null).filter(Boolean),
+          roles: flowBundle.map(product => product?.tags || [])
+        });
+        if (flowBundle.length < 2) {
+          const reply = getSafeFallbackReply();
+          updateSessionWithProducts(sessionId, [], "guidance");
+          emit("ai_response", { response: reply });
+          logResponseSummary("knowledge", { products: 0 });
+          return endInteraction(interactionRef, { reply, products: [] }, {
+            decision: {
+              action: "knowledge",
+              flowId: null,
+              missingSlot: null,
+              safeFallback: true
+            },
+            outputType: "reply"
+          });
+        }
+        const flowProducts = flowBundle.slice(0, 3);
         interactionRef.decision = executedFlowDecision;
         logInfo("FLOW_EXECUTED", {
           flowId,
@@ -3567,6 +4019,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.intentFlags.bug = false;
           saveSession(sessionId, sessionContext);
         }
+        clearProblemType(sessionContext, sessionId);
         updateSessionWithProducts(sessionId, flowProducts, "guidance");
         emit("ai_response", { response: flowResult.reply });
         logResponseSummary("flow", {
@@ -3654,6 +4107,34 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (shouldInjectProducts) {
         safetyProducts = findRelevantProducts(finalTags, products, settings.max_products || 3);
         safetyProducts = enforceProductLimit(safetyProducts, settings.max_products || 3);
+        const filteredSafetyProducts = filterProducts(safetyProducts, sessionContext.slots || {});
+        const safetyBundle = buildProductBundle(filteredSafetyProducts);
+        console.log("PRODUCT_FILTER", {
+          slots: sessionContext.slots || {},
+          before: safetyProducts.length,
+          after: filteredSafetyProducts.length
+        });
+        console.log("PRODUCT_BUNDLE", {
+          selected: safetyBundle.map(product => product?.name || null).filter(Boolean),
+          roles: safetyBundle.map(product => product?.tags || [])
+        });
+        if (safetyBundle.length < 2) {
+          const reply = getSafeFallbackReply();
+          updateSessionWithProducts(sessionId, [], "guidance");
+          clearProblemType(sessionContext, sessionId);
+          emit("ai_response", { response: reply });
+          logResponseSummary("knowledge", { products: 0 });
+          return endInteraction(interactionRef, { reply, products: [] }, {
+            decision: {
+              action: "knowledge",
+              flowId: null,
+              missingSlot: null,
+              safeFallback: true
+            },
+            outputType: "reply"
+          });
+        }
+        safetyProducts = safetyBundle.slice(0, 3);
       }
 
       const effectiveStrategy = isSafetyRoute ? "safety" : strategy;
@@ -3667,6 +4148,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       } else {
         updateSessionWithProducts(sessionId, [], "guidance");
       }
+      clearProblemType(sessionContext, sessionId);
       emit("ai_response", { response: reply });
       logResponseSummary("knowledge", { products: safetyProducts.length });
       return endInteraction(interactionRef, { reply, products: safetyProducts }, {
@@ -3712,6 +4194,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const reply = await askLLM(prompt);
 
       updateSessionWithProducts(sessionId, [], "guidance");
+      clearProblemType(sessionContext, sessionId);
 
       emit("ai_response", { response: reply });
       logResponseSummary("knowledge", { products: 0 });
@@ -3808,7 +4291,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           updateSessionWithProducts(sessionId, [], "guidance");
           logResponseSummary("guidance", { products: 0 });
           return endInteraction(interactionRef, clarificationResponse, {
-            decision: { action: "clarification", flowId: null, missingSlot: null },
+            decision: { action: "knowledge", flowId: null, missingSlot: null },
             outputType: "reply"
           });
         }
@@ -3833,7 +4316,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             updateSessionWithProducts(sessionId, [], "guidance");
             logResponseSummary("guidance", { products: 0 });
             return endInteraction(interactionRef, { reply: helpfulQuestion, products: [] }, {
-              decision: { action: "clarification", flowId: null, missingSlot: null },
+              decision: { action: "knowledge", flowId: null, missingSlot: null },
               outputType: "reply"
             });
           }
@@ -3847,6 +4330,33 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
         // Step 10: Enforce product limits BEFORE sending to LLM
         found = enforceProductLimit(found, settings.max_products || 3);
+        const filteredFound = filterProducts(found, sessionContext.slots || {});
+        const searchBundle = buildProductBundle(filteredFound);
+        console.log("PRODUCT_FILTER", {
+          slots: sessionContext.slots || {},
+          before: found.length,
+          after: filteredFound.length
+        });
+        console.log("PRODUCT_BUNDLE", {
+          selected: searchBundle.map(product => product?.name || null).filter(Boolean),
+          roles: searchBundle.map(product => product?.tags || [])
+        });
+        if (searchBundle.length < 2) {
+          const reply = getSafeFallbackReply();
+          updateSessionWithProducts(sessionId, [], "guidance");
+          emit("ai_response", { response: reply });
+          logResponseSummary("knowledge", { products: 0 });
+          return endInteraction(interactionRef, { reply, products: [] }, {
+            decision: {
+              action: "knowledge",
+              flowId: null,
+              missingSlot: null,
+              safeFallback: true
+            },
+            outputType: "reply"
+          });
+        }
+        found = searchBundle.slice(0, 3);
 
         // Step 12: Build prompt with strategy
         const prompt = createOptimizedPrompt(userMessage, found, settings, detectedTags, strategy, language, "general", "", sessionContext.slots || {});

@@ -1,21 +1,152 @@
 import React, { useState } from "react";
 
+const NEGATIVE_FEEDBACK_REASONS = [
+  "wrong products",
+  "confusing answer",
+  "too many questions",
+  "not helpful",
+];
+
+function sendFeedback(messageId, feedback) {
+  fetch(`${process.env.REACT_APP_API_URL}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messageId,
+      feedback,
+    }),
+  }).catch((error) => {
+    console.error("Error sending feedback:", error);
+  });
+}
+
+/**
+ * @typedef {{
+ *   helpful: boolean,
+ *   reason?: string
+ * }} MessageFeedback
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   text: string,
+ *   feedback?: MessageFeedback,
+ *   showNegativeOptions?: boolean,
+ *   selectedReason?: string,
+ *   customReason?: string,
+ *   role?: "user" | "assistant"
+ * }} ChatMessage
+ */
+
+function createMessageId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default function ProductAIDashboard() {
+  /** @type {[ChatMessage[], React.Dispatch<React.SetStateAction<ChatMessage[]>>]} */
   const [messages, setMessages] = useState([
     {
+      id: createMessageId(),
       role: "assistant",
-      content: "Salut, sunt Turbo. Cu ce te pot ajuta astazi?"
+      text: "Salut, sunt Turbo. Cu ce te pot ajuta astazi?"
     }
   ]);
 
   const [input, setInput] = useState("");
+
+  const onFeedback = (messageId, helpful) => {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId
+          ? helpful
+            ? {
+                ...message,
+                feedback: {
+                  helpful: true,
+                },
+                showNegativeOptions: false,
+              }
+            : {
+                ...message,
+                showNegativeOptions: true,
+              }
+          : message
+      )
+    );
+
+    if (helpful) {
+      sendFeedback(messageId, { helpful: true });
+    }
+  };
+
+  const onNegativeReasonSelect = (messageId, reason) => {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              selectedReason: reason,
+            }
+          : message
+      )
+    );
+  };
+
+  const onNegativeCustomReasonChange = (messageId, value) => {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              customReason: value,
+            }
+          : message
+      )
+    );
+  };
+
+  const onNegativeSubmit = (messageId) => {
+    let feedbackPayload = { helpful: false };
+
+    setMessages((prev) =>
+      prev.map((message) => {
+        if (message.id !== messageId) {
+          return message;
+        }
+
+        const selectedReason = (message.selectedReason || "").trim();
+        const customReason = (message.customReason || "").trim();
+        const reason = selectedReason || customReason;
+
+        feedbackPayload = reason
+          ? { helpful: false, reason }
+          : { helpful: false };
+
+        return {
+          ...message,
+          feedback: feedbackPayload,
+          showNegativeOptions: false,
+        };
+      })
+    );
+
+    sendFeedback(messageId, feedbackPayload);
+  };
 
   const sendMessage = async () => {
     console.log("STEP 1");
 
     if (!input.trim()) return;
 
-    const userMessage = { role: "user", content: input };
+    /** @type {ChatMessage} */
+    const userMessage = {
+      id: createMessageId(),
+      role: "user",
+      text: input,
+    };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
@@ -36,8 +167,9 @@ export default function ProductAIDashboard() {
       const data = await response.json();
 
       const assistantMessage = {
+        id: createMessageId(),
         role: "assistant",
-        content: data.reply || "Nu am putut genera un raspuns.",
+        text: data.reply || "Nu am putut genera un raspuns.",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -47,8 +179,9 @@ export default function ProductAIDashboard() {
       setMessages((prev) => [
         ...prev,
         {
+          id: createMessageId(),
           role: "assistant",
-          content: "A aparut o eroare.",
+          text: "A aparut o eroare.",
         },
       ]);
     }
@@ -73,7 +206,7 @@ export default function ProductAIDashboard() {
 
           {messages.map((msg, index) => (
             <div
-              key={index}
+              key={msg.id || index}
               className={`flex ${
                 msg.role === "user" ? "justify-end" : "justify-start"
               }`}
@@ -85,7 +218,71 @@ export default function ProductAIDashboard() {
                     : "bg-white/10 text-gray-200"
                 }`}
               >
-                {msg.content}
+                {msg.text}
+
+                {msg.role === "assistant" && (
+                  <div className="mt-2 text-xs">
+                    {!msg.feedback ? (
+                      msg.showNegativeOptions ? (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {NEGATIVE_FEEDBACK_REASONS.map((reason) => (
+                              <button
+                                key={reason}
+                                type="button"
+                                onClick={() => onNegativeReasonSelect(msg.id, reason)}
+                                className={`px-2 py-1 rounded transition ${
+                                  msg.selectedReason === reason
+                                    ? "bg-amber-500/30 text-amber-200"
+                                    : "bg-white/10 hover:bg-white/20"
+                                }`}
+                              >
+                                {reason}
+                              </button>
+                            ))}
+                          </div>
+
+                          <input
+                            type="text"
+                            value={msg.customReason || ""}
+                            onChange={(e) => onNegativeCustomReasonChange(msg.id, e.target.value)}
+                            placeholder="What was wrong?"
+                            className="w-full px-2 py-1 rounded bg-black border border-white/20 text-white placeholder-gray-400"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => onNegativeSubmit(msg.id)}
+                            className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition"
+                          >
+                            Submit
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onFeedback(msg.id, true)}
+                            className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition"
+                          >
+                            👍
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onFeedback(msg.id, false)}
+                            className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition"
+                          >
+                            👎
+                          </button>
+                        </div>
+                      )
+                    ) : msg.feedback.helpful ? (
+                      <span className="text-green-300">👍 Thanks!</span>
+                    ) : (
+                      <span className="text-amber-300">👎 Noted</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}

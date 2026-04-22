@@ -43,6 +43,7 @@ function normalizeRequest(input, legacySlots = {}) {
   return {
     intent: request.intent,
     message: request.message,
+    problemType: request.problemType || null,
     slots: request.slots && typeof request.slots === "object"
       ? request.slots
       : {}
@@ -264,6 +265,17 @@ function resolveFlow(input, legacySlots = {}) {
 
   if (forcedFlow) {
     return forcedFlow;
+  }
+
+  if (
+    request.problemType === "cement" &&
+    request.slots?.context === "exterior" &&
+    request.slots?.surface === "paint"
+  ) {
+    return {
+      flowId: null,
+      type: "knowledge_override"
+    };
   }
 
   return getBestMatchingFlow(findMatchingFlows(request, false), request.slots, request.message);
