@@ -225,6 +225,7 @@ function executeFlow(flow, products, slots = {}) {
         : [];
     const knowledgeSnippets = getStepKnowledge(step, slots);
     const stepExplanation = buildStepExplanation(stepGoal, knowledgeSnippets);
+    const safeStepExplanation = stepExplanation || `Executa ${stepTitle} cu tehnica standard de curatare.`;
     const stepProducts = limitStepProducts(
       stepRoles.flatMap(role => resolveProductsForRole(role, products))
     );
@@ -233,7 +234,7 @@ function executeFlow(flow, products, slots = {}) {
       id: step?.id || `step_${stepNumber}`,
       title: stepTitle,
       goal: stepGoal,
-      explanation: stepExplanation,
+      explanation: safeStepExplanation,
       roles: stepRoles,
       products: stepProducts
     });
@@ -244,7 +245,7 @@ function executeFlow(flow, products, slots = {}) {
     lines.push(`Pasul ${stepNumber}: ${stepTitle}`);
     lines.push("");
     lines.push("Ce faci:");
-    lines.push(stepExplanation || stepGoal || "Fara explicatie disponibila.");
+    lines.push(safeStepExplanation);
 
     if (stepProducts.length > 0) {
       lines.push("");

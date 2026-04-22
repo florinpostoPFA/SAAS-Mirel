@@ -147,6 +147,14 @@ function inferOutputType(result) {
   return "unknown";
 }
 
+function getResultTypeFromOutputType(outputType) {
+  if (outputType === "flow") return "flow";
+  if (outputType === "question") return "question";
+  if (outputType === "recommendation") return "recommendation";
+  if (outputType === "reply") return "reply";
+  return null;
+}
+
 const flowRequirements = {
   bug_removal_quick: ["context", "target"],
   interior_clean_basic: ["context", "material"],
@@ -311,6 +319,24 @@ function throwInvariantFailure(errorMessage, decision, slots, message) {
   throw new Error(errorMessage);
 }
 
+class DecisionBoundaryError extends Error {
+  constructor(code, message, details = {}) {
+    super(message);
+    this.name = "DecisionBoundaryError";
+    this.code = code;
+    this.details = details;
+  }
+}
+
+class DecisionFinalityViolation extends Error {
+  constructor(code, message, details = {}) {
+    super(message);
+    this.name = "DecisionFinalityViolation";
+    this.code = code;
+    this.details = details;
+  }
+}
+
 function assertDecisionInvariantsBeforeExecution(decision, slots, message) {
   const safeDecision = decision && typeof decision === "object" ? decision : {};
   const safeSlots = slots && typeof slots === "object" ? slots : {};
@@ -367,36 +393,6 @@ function getProceduralFlowCandidate(intent, message, slots, sessionContext) {
   });
 }
 
-function ensureClarificationDecision(interactionRef, finalResult, finalOutputType, sessionContext) {
-  const isQuestion = finalOutputType === "question" || finalResult?.type === "question";
-
-  if (!isQuestion) {
-    return;
-  }
-
-  const fallbackSlots =
-    interactionRef?.slots && typeof interactionRef.slots === "object"
-      ? interactionRef.slots
-      : sessionContext?.slots && typeof sessionContext.slots === "object"
-        ? sessionContext.slots
-        : {};
-  const effectiveSlots =
-    interactionRef?.slots && typeof interactionRef.slots === "object"
-      ? interactionRef.slots
-      : fallbackSlots;
-
-  if (interactionRef.decision?.missingSlot === "context" && finalResult && typeof finalResult === "object") {
-    finalResult.message = getClarificationQuestion("context", effectiveSlots);
-    finalResult.reply = finalResult.message;
-  }
-
-  if (interactionRef.decision?.missingSlot === "surface" && finalResult && typeof finalResult === "object") {
-    finalResult.message = getClarificationQuestion("surface", effectiveSlots);
-    finalResult.reply = finalResult.message;
-  }
-
-}
-
 function enforceClarificationContract(decision) {
   if (!decision || typeof decision !== "object") {
     return decision;
@@ -427,63 +423,84 @@ function enforceClarificationContract(decision) {
   return decision;
 }
 
-function normalizeDecisionContract(decision) {
-  if (!decision || typeof decision !== "object") {
-    return decision;
+function getBoundarySlotSnapshot(interactionRef, sessionContext) {
+  if (interactionRef?.slots && typeof interactionRef.slots === "object") {
+    return interactionRef.slots;
   }
 
-  const normalizedDecision = { ...decision };
-
-  if (normalizedDecision.flowId && typeof normalizedDecision.flowId === "object") {
-    normalizedDecision.flowId = normalizedDecision.flowId.id || normalizedDecision.flowId.flowId || null;
+  if (sessionContext?.slots && typeof sessionContext.slots === "object") {
+    return sessionContext.slots;
   }
 
-  if (normalizedDecision.flowId != null) {
-    normalizedDecision.flowId = String(normalizedDecision.flowId);
-  }
-
-  return enforceClarificationContract(normalizedDecision);
+  return {};
 }
 
-function getStrictOutputType(decision, fallbackOutputType) {
-  switch (decision?.action) {
-    case "flow":
-      return "flow";
-    case "clarification":
-      return "question";
-    case "recommend":
-      return "recommendation";
-    default:
-      return fallbackOutputType;
-  }
-}
+function forceFlowExecutionAtBoundary(interactionRef, sessionContext) {
+  const decision = interactionRef?.decision && typeof interactionRef.decision === "object"
+    ? interactionRef.decision
+    : {};
+  const flowId = typeof decision.flowId === "string" ? decision.flowId.trim() : "";
+  const flowRegistry = config?.flows && typeof config.flows === "object" ? config.flows : {};
+  const prioritizedFlow = flowRegistry[flowId] || null;
+  const slotSnapshot = getBoundarySlotSnapshot(interactionRef, sessionContext);
+  const availableProducts = Array.isArray(interactionRef?.productsCatalog)
+    ? interactionRef.productsCatalog
+    : Array.isArray(fallbackProductsCatalog)
+      ? fallbackProductsCatalog
+      : [];
 
-function assertDecisionExecutionConsistency(decision, outputType) {
-  if (decision?.action === "flow" && outputType !== "flow") {
-    console.error("INVARIANT_FAILURE", {
-      decision,
-      slots: null,
-      message: null
-    });
-    throw new Error("Execution mismatch: flow decision but non-flow output");
-  }
-
-  if (decision?.action === "clarification" && outputType !== "question") {
-    console.error("INVARIANT_FAILURE", {
-      decision,
-      slots: null,
-      message: null
-    });
-    throw new Error("Execution mismatch: clarification decision but wrong output");
+  if (!flowId) {
+    throw new DecisionBoundaryError(
+      "FLOW_GUARD_INVALID_FLOW_ID",
+      "Flow decision missing valid flowId",
+      { decision, slots: slotSnapshot }
+    );
   }
 
-  if (decision?.action === "recommend" && outputType !== "recommendation") {
-    console.error("INVARIANT_FAILURE", {
-      decision,
-      slots: null,
-      message: null
-    });
-    throw new Error("Execution mismatch: recommend decision but wrong output");
+  if (!prioritizedFlow) {
+    throw new DecisionBoundaryError(
+      "FLOW_GUARD_FLOW_NOT_FOUND",
+      `Flow not found for forced execution: ${flowId}`,
+      { decision, slots: slotSnapshot }
+    );
+  }
+
+  try {
+    const flowResult = executeFlow(prioritizedFlow, availableProducts, slotSnapshot);
+    if (!flowResult || typeof flowResult !== "object") {
+      throw new DecisionFinalityViolation(
+        "FLOW_GUARD_INVALID_EXECUTOR_PAYLOAD",
+        "Flow executor returned invalid payload while enforcing flow finality",
+        { decision, slots: slotSnapshot, flowId }
+      );
+    }
+
+    const rawFlowProducts = Array.isArray(flowResult?.products) ? flowResult.products : [];
+    const filteredFlowProducts = filterProducts(rawFlowProducts, slotSnapshot);
+    const flowBundle = buildProductBundle(filteredFlowProducts);
+    const finalFlowProducts = flowBundle.slice(0, 3);
+    const flowReply = buildMinimalFlowReply(prioritizedFlow, flowResult);
+
+    return {
+      result: {
+        type: "flow",
+        message: flowReply,
+        reply: flowReply,
+        products: finalFlowProducts
+      },
+      outputType: "flow",
+      products: summarizeProductsForLog(finalFlowProducts)
+    };
+  } catch (err) {
+    if (err instanceof DecisionFinalityViolation) {
+      throw err;
+    }
+
+    throw new DecisionBoundaryError(
+      "FLOW_GUARD_EXECUTION_FAILED",
+      `Forced flow execution failed: ${err.message}`,
+      { decision, slots: slotSnapshot }
+    );
   }
 }
 
@@ -494,45 +511,53 @@ function endInteraction(interactionRef, result, patch = {}) {
   if (patch.decision) {
     interactionRef.decision = { ...interactionRef.decision, ...patch.decision };
   }
-  interactionRef.decision = normalizeDecisionContract(interactionRef.decision);
 
   let finalResult = result;
-  let finalOutputType = getStrictOutputType(
-    interactionRef.decision,
-    patch.outputType != null ? patch.outputType : inferOutputType(result)
-  );
+  let finalOutputType = patch.outputType != null ? patch.outputType : inferOutputType(result);
   let finalProducts = patch.products != null ? patch.products : summarizeProductsForLog(result.products);
   const sessionContext = interactionRef?.sessionId ? getSession(interactionRef.sessionId) : null;
 
-  if (
-    sessionContext &&
-    sessionContext.lastUserMessage === interactionRef.message &&
-    sessionContext.lastResponseType === finalOutputType &&
-    !["flow", "clarification", "recommend"].includes(interactionRef?.decision?.action)
-  ) {
-    finalResult = {
-      type: "question",
-      message: "Hai să o luăm altfel. Ce vrei exact să rezolvi?"
-    };
-    finalOutputType = "question";
-    finalProducts = [];
-  }
-
-  ensureClarificationDecision(interactionRef, finalResult, finalOutputType, sessionContext);
-  interactionRef.decision = normalizeDecisionContract(interactionRef.decision);
+  interactionRef.decision = enforceClarificationContract(interactionRef.decision);
   assertDecisionInvariantsBeforeExecution(
     interactionRef.decision,
     interactionRef.slots,
     interactionRef.message
   );
-  finalOutputType = getStrictOutputType(interactionRef.decision, finalOutputType);
+
+  if (interactionRef?.decision?.action === "flow" && finalOutputType !== "flow") {
+    const forcedFlowOutput = forceFlowExecutionAtBoundary(interactionRef, sessionContext);
+    finalResult = forcedFlowOutput.result;
+    finalOutputType = forcedFlowOutput.outputType;
+    finalProducts = forcedFlowOutput.products;
+  }
+
+  if (interactionRef?.decision?.action === "clarification" && finalOutputType !== "question") {
+    throw new DecisionBoundaryError(
+      "CLARIFICATION_GUARD_OUTPUT_MISMATCH",
+      "Clarification decision must render a question output",
+      {
+        decision: interactionRef.decision,
+        outputType: finalOutputType,
+        slots: interactionRef.slots || null,
+        message: interactionRef.message
+      }
+    );
+  }
+
+  const resolvedResultType = getResultTypeFromOutputType(finalOutputType);
+  if (resolvedResultType && finalResult && typeof finalResult === "object" && !finalResult.type) {
+    finalResult = {
+      ...finalResult,
+      type: resolvedResultType
+    };
+  }
+
   assertDecisionOutputContract(
     interactionRef.decision,
     { type: finalOutputType },
     interactionRef.slots,
     interactionRef.message
   );
-  assertDecisionExecutionConsistency(interactionRef.decision, finalOutputType);
   logInfo("DECISION_OUTPUT_CONSISTENCY", {
     decision: interactionRef.decision,
     outputType: finalOutputType
@@ -599,6 +624,29 @@ function formatSelectionResponse(products = []) {
     lines.push(`${index + 1}. ${product?.name || "Produs"}`);
     lines.push(`Descriere: ${shortDescription || "Fara descriere scurta disponibila."}`);
     lines.push(`Motiv: ${reason || "Se potriveste cu cererea ta."}`);
+  });
+
+  return lines.join("\n");
+}
+
+function buildMinimalFlowReply(flowDefinition, flowResult) {
+  const explicitReply = String(flowResult?.reply || "").trim();
+
+  if (explicitReply) {
+    return explicitReply;
+  }
+
+  const flowTitle = String(flowDefinition?.title || flowDefinition?.flowId || "flow");
+  const steps = Array.isArray(flowDefinition?.steps) ? flowDefinition.steps : [];
+
+  if (steps.length === 0) {
+    return `Iata un ghid rapid pentru ${flowTitle}.`;
+  }
+
+  const lines = [`Iata pasii pentru ${flowTitle}:`];
+  steps.forEach((step, index) => {
+    const stepTitle = String(step?.title || `Pas ${index + 1}`);
+    lines.push(`${index + 1}. ${stepTitle}`);
   });
 
   return lines.join("\n");
@@ -2313,6 +2361,138 @@ function clearProblemType(sessionContext, sessionId) {
   saveSession(sessionId, sessionContext);
 }
 
+function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
+  const safeContext = sessionContext && typeof sessionContext === "object"
+    ? sessionContext
+    : {};
+
+  const currentSlots = safeContext.slots && typeof safeContext.slots === "object"
+    ? safeContext.slots
+    : {};
+
+  safeContext.lastProceduralSlots = { ...currentSlots };
+  safeContext.proceduralSlots = {};
+  safeContext.slots = {};
+  safeContext.pendingQuestion = null;
+  safeContext.state = "IDLE";
+
+  saveSession(sessionId, safeContext);
+
+  return safeContext;
+}
+
+const NON_CLEANING_GREETINGS = ["salut", "salutare", "buna"];
+const NON_CLEANING_SMALL_TALK = ["ce faci"];
+const NON_CLEANING_DISCOUNT = ["cod de reducere", "reducere"];
+const NON_CLEANING_META = ["o sa inlocuiesti"];
+const NON_CLEANING_PROFANITY = ["prost", "idiot", "dracu", "naiba"];
+
+function normalizeMessageText(message) {
+  return String(message || "").toLowerCase().trim();
+}
+
+function messageIncludesAny(text, terms) {
+  return terms.some(term => text.includes(term));
+}
+
+function isNonCleaningDomainMessage(message) {
+  const text = normalizeMessageText(message);
+
+  if (!text) {
+    return false;
+  }
+
+  return (
+    messageIncludesAny(text, NON_CLEANING_GREETINGS) ||
+    messageIncludesAny(text, NON_CLEANING_SMALL_TALK) ||
+    messageIncludesAny(text, NON_CLEANING_DISCOUNT) ||
+    messageIncludesAny(text, NON_CLEANING_META) ||
+    messageIncludesAny(text, NON_CLEANING_PROFANITY)
+  );
+}
+
+function getNonCleaningDomainReply(message) {
+  const text = normalizeMessageText(message);
+
+  if (messageIncludesAny(text, NON_CLEANING_DISCOUNT)) {
+    return "Nu am un cod de reducere activ in acest moment, dar te pot ajuta cu recomandari potrivite pentru ce vrei sa cureti.";
+  }
+
+  if (messageIncludesAny(text, NON_CLEANING_SMALL_TALK)) {
+    return "Sunt aici sa te ajut cu solutii de detailing. Spune-mi ce vrei sa cureti.";
+  }
+
+  if (messageIncludesAny(text, NON_CLEANING_PROFANITY)) {
+    return "Pot continua daca imi spui concret ce suprafata sau problema vrei sa rezolvi.";
+  }
+
+  if (messageIncludesAny(text, NON_CLEANING_META)) {
+    return "Sunt aici sa te ajut cu raspunsuri despre detailing auto. Spune-mi ce vrei sa cureti.";
+  }
+
+  if (messageIncludesAny(text, NON_CLEANING_GREETINGS)) {
+    return "Salut! Spune-mi ce vrei sa cureti si te ghidez.";
+  }
+
+  return "Te pot ajuta cu recomandari pentru curatare auto. Spune-mi ce vrei sa cureti.";
+}
+
+const SINGLE_TOKEN_SLOT_VALUES = {
+  context: {
+    interior: "interior",
+    exterior: "exterior"
+  },
+  surface: {
+    vopsea: "paint",
+    textil: "textile",
+    piele: "leather"
+  },
+  object: {
+    parbriz: "parbriz"
+  }
+};
+
+function extractSingleToken(message) {
+  const text = normalizeMessageText(message);
+  if (!text) return null;
+
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length !== 1) {
+    return null;
+  }
+
+  return tokens[0];
+}
+
+function getSingleTokenBindingForPendingQuestion(message, pendingQuestion) {
+  const pending = pendingQuestion && typeof pendingQuestion === "object"
+    ? pendingQuestion
+    : null;
+  if (!pending?.slot) {
+    return null;
+  }
+
+  const token = extractSingleToken(message);
+  if (!token) {
+    return null;
+  }
+
+  const mapForSlot = SINGLE_TOKEN_SLOT_VALUES[pending.slot] || null;
+  if (!mapForSlot || !Object.prototype.hasOwnProperty.call(mapForSlot, token)) {
+    return null;
+  }
+
+  if (pending.slot === "surface") {
+    return { slot: "surface", value: mapForSlot[token] };
+  }
+
+  if (pending.slot === "object") {
+    return { slot: "object", value: mapForSlot[token] };
+  }
+
+  return { slot: "context", value: mapForSlot[token] };
+}
+
 function hasStrongSlots(slots) {
   return Boolean(slots?.object || slots?.surface);
 }
@@ -2657,8 +2837,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       tags: null,
       slots: null,
       decision: { action: null, flowId: null, missingSlot: null },
-      feedback: extractFeedback(typeof message === "object" ? message : null)
+      feedback: extractFeedback(typeof message === "object" ? message : null),
+      productsCatalog: products
     };
+
+    if (isNonCleaningDomainMessage(userMessage)) {
+      sessionContext.pendingQuestion = null;
+      sessionContext.slots = {};
+      sessionContext.state = "IDLE";
+      saveSession(sessionId, sessionContext);
+
+      return endInteraction(interactionRef, {
+        type: "reply",
+        message: getNonCleaningDomainReply(userMessage)
+      }, {
+        decision: { action: "knowledge", flowId: null, missingSlot: null },
+        outputType: "reply"
+      });
+    }
 
     const lowSignalIntent = detectIntent(routingMessage, sessionId);
     const lowSignalConfidence = getIntentConfidenceValue(
@@ -2848,44 +3044,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const pending = sessionContext?.pendingQuestion;
 
     if (pending && pending.slot) {
-      const msg = userMessage.toLowerCase();
-
       let updated = false;
 
       sessionContext.slots = sessionContext.slots || {};
 
-      if (pending.slot === "context") {
-        if (msg.includes("interior")) {
-          sessionContext.slots.context = "interior";
-          updated = true;
-        }
+      const singleTokenBinding = getSingleTokenBindingForPendingQuestion(userMessage, pending);
 
-        if (msg.includes("exterior")) {
-          sessionContext.slots.context = "exterior";
-          updated = true;
-        }
-      }
-
-      if (pending.slot === "surface") {
-        if (msg.includes("textil")) {
-          sessionContext.slots.surface = "textile";
-          updated = true;
-        }
-        if (msg.includes("piele")) {
-          sessionContext.slots.surface = "leather";
-          updated = true;
-        }
-      }
-
-      if (pending.slot === "object") {
-        if (msg.includes("parbriz")) {
-          sessionContext.slots.object = "parbriz";
-          updated = true;
-        }
-        if (msg.includes("vopsea")) {
-          sessionContext.slots.surface = "paint";
-          updated = true;
-        }
+      if (singleTokenBinding) {
+        sessionContext.slots[singleTokenBinding.slot] = singleTokenBinding.value;
+        updated = true;
       }
 
       if (updated) {
@@ -2901,6 +3068,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           slot: pending.slot,
           value: sessionContext.slots
         });
+      } else {
+        sessionContext.pendingQuestion = null;
       }
     }
 
@@ -3127,7 +3296,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     let resolvedEffectiveIntentResult = effectiveIntentResult;
     let intent = typeof effectiveIntentResult === "string" ? effectiveIntentResult : effectiveIntentResult?.type;
 
-    if (isLikelySlotFill(userMessage) && sessionContext.state?.startsWith("NEEDS_")) {
+    if (
+      isLikelySlotFill(userMessage) &&
+      sessionContext.state?.startsWith("NEEDS_") &&
+      sessionContext.pendingQuestion
+    ) {
       logInfo("INTENT_OVERRIDDEN_AS_SLOT_FILL", {
         original: intent
       });
@@ -3283,6 +3456,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     // INFORMATIONAL
     if (queryType === "informational" && previewAction === "knowledge") {
+      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
       const informationalTags = [...new Set(workingTags.filter(Boolean))];
       const knowledgeResults = findRelevantKnowledge(userMessage, knowledgeBase);
 
@@ -3718,6 +3892,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       reason: routingDecision.reason,
       missingSlot: resolvedAction.missingSlot || null
     };
+
+    if (resolvedAction.action === "knowledge" || resolvedAction.action === "safety") {
+      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
+    }
+
     logInfo("ROUTER_DECISION", routingDecision);
     logInfo("SLOTS", {
       context: sessionContext.slots?.context || null,
@@ -3981,9 +4160,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const executedFlowDecision = resolvedAction;
 
         const flowResult = executeFlow(resolvedPrioritizedFlow, products, sessionContext.slots || {});
-        const rawFlowProducts = Array.isArray(flowResult.products) ? flowResult.products : [];
+        const rawFlowProducts = Array.isArray(flowResult?.products) ? flowResult.products : [];
         const filteredFlowProducts = filterProducts(rawFlowProducts, sessionContext.slots || {});
         const flowBundle = buildProductBundle(filteredFlowProducts);
+        const flowReply = buildMinimalFlowReply(resolvedPrioritizedFlow, flowResult);
         console.log("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
           before: rawFlowProducts.length,
@@ -3993,21 +4173,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           selected: flowBundle.map(product => product?.name || null).filter(Boolean),
           roles: flowBundle.map(product => product?.tags || [])
         });
-        if (flowBundle.length < 2) {
-          const reply = getSafeFallbackReply();
-          updateSessionWithProducts(sessionId, [], "guidance");
-          emit("ai_response", { response: reply });
-          logResponseSummary("knowledge", { products: 0 });
-          return endInteraction(interactionRef, { reply, products: [] }, {
-            decision: {
-              action: "knowledge",
-              flowId: null,
-              missingSlot: null,
-              safeFallback: true
-            },
-            outputType: "reply"
-          });
-        }
         const flowProducts = flowBundle.slice(0, 3);
         interactionRef.decision = executedFlowDecision;
         logInfo("FLOW_EXECUTED", {
@@ -4021,15 +4186,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         clearProblemType(sessionContext, sessionId);
         updateSessionWithProducts(sessionId, flowProducts, "guidance");
-        emit("ai_response", { response: flowResult.reply });
+        emit("ai_response", { response: flowReply });
         logResponseSummary("flow", {
           steps: Array.isArray(resolvedPrioritizedFlow.steps) ? resolvedPrioritizedFlow.steps.length : 0,
           products: flowProducts.length
         });
         return endInteraction(interactionRef, {
           type: "flow",
-          message: flowResult.reply,
-          reply: flowResult.reply,
+          message: flowReply,
+          reply: flowReply,
           products: flowProducts
         }, {
           decision: executedFlowDecision,
