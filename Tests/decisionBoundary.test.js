@@ -165,4 +165,37 @@ describe("Decision boundary and reset rules", () => {
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
     expect(lastLogEntry.decision.missingSlot).not.toBe("object");
   });
+
+  it("vreau sa curat pielea defaults context to interior and does not ask context clarification", async () => {
+    const sessionId = `leather-default-${Date.now()}`;
+
+    const first = await handleChat("vreau sa curat pielea", "C1", [], sessionId);
+    const firstMessage = String(first.message || first.reply || "").toLowerCase();
+    const session = getSession(sessionId);
+
+    expect(firstMessage).not.toContain("interior sau exterior");
+    expect(session.slots.context).toBe("interior");
+    expect(session.slots.surface).toBe("leather");
+  });
+
+  it("pending clarification keeps procedural path on cotiera follow-up", async () => {
+    const sessionId = `pending-lock-${Date.now()}`;
+
+    await handleChat("vreau sa curat pielea", "C1", [], sessionId);
+    await handleChat("cotiera", "C1", [], sessionId);
+
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).not.toBe("knowledge");
+    expect(lastLogEntry.decision.missingSlot).not.toBe("surface");
+  });
+
+  it("pending clarification treats interiorul as slot completion, not product_search", async () => {
+    const sessionId = `pending-interior-${Date.now()}`;
+
+    await handleChat("vreau sa curat", "C1", [], sessionId);
+    await handleChat("interiorul", "C1", [], sessionId);
+
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).not.toBe("knowledge");
+  });
 });

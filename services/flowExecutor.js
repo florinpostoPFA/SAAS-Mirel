@@ -100,6 +100,22 @@ function selectFallbackProductsForFlow(products, flowId, slots = {}) {
   };
 }
 
+function selectGenericSafeFallbackProduct(products = []) {
+  const safeProducts = Array.isArray(products) ? products : [];
+  const ranked = safeProducts
+    .map(product => ({
+      product,
+      score: scoreDeterministicFallbackProduct(product, ["cleaner", "glass", "interior", "microfiber"])
+    }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return String(a.product?.name || "").localeCompare(String(b.product?.name || ""));
+    });
+
+  return ranked[0]?.product || null;
+}
+
 function isSurfaceAwareCleaningStep(step) {
   const stepId = normalizeText(step?.id);
 
@@ -418,9 +434,32 @@ function executeFlow(flow, products, slots = {}) {
     lines.push("Produse: no matching products");
   }
 
+  let finalProducts = uniqueProducts(allProducts);
+  if (finalProducts.length === 0) {
+    const safeFallback = selectGenericSafeFallbackProduct(products);
+    if (safeFallback) {
+      finalProducts = [safeFallback];
+      lines.push("");
+      lines.push(`Nu am gasit produs exact; recomand ${String(safeFallback?.name || "un cleaner sigur")}.`);
+      logInfo("FLOW_GENERIC_FALLBACK", {
+        flowId,
+        product: safeFallback?.name || null,
+        reason: "no_matching_products"
+      });
+    } else {
+      lines.push("");
+      lines.push("Nu am gasit produs exact pentru acest pas.");
+      logInfo("FLOW_GENERIC_FALLBACK", {
+        flowId,
+        product: null,
+        reason: "no_safe_product_found"
+      });
+    }
+  }
+
   return {
     reply: lines.join("\n"),
-    products: uniqueProducts(allProducts),
+    products: finalProducts,
     steps: structuredSteps
   };
 }

@@ -1,0 +1,28 @@
+{
+  "flowId": "glass_clean_basic",
+  "type": "micro",
+  "requiredSlots": ["context"],
+  "triggers": {
+    "intents": ["product_guidance"],
+    "contexts": ["interior", "exterior"],
+    "objects": ["glass"],
+    "surfaces": ["glass"]
+  },
+  "title": "Curatare geamuri (ghid rapid)",
+  "steps": [
+    {
+      "id": "apply_glass_cleaner",
+      "title": "Aplicare glass cleaner",
+      "goal": "Pulverizeaza moderat pe geam sau pe laveta dedicata.",
+      "knowledgeIds": ["glass_cleaning"],
+      "roles": ["glass_cleaner"]
+    },
+    {
+      "id": "wipe_microfiber",
+      "title": "Stergere cu microfibra",
+      "goal": "Sterge uniform si finiseaza cu partea uscata pentru claritate.",
+      "knowledgeIds": ["glass_cleaning"],
+      "roles": ["microfiber"]
+    }
+  ]
+}

@@ -23,6 +23,11 @@
     "matchTags": ["glass_cleaner"],
     "matchText": ["geam"]
   },
+  "microfiber": {
+    "matchTags": ["microfiber", "drying_towel"],
+    "matchText": ["microfibra", "laveta", "prosop"],
+    "maxProducts": 1
+  },
   "wheel_cleaner": {
     "matchTags": ["wheel_cleaner"],
     "matchText": ["jante"]

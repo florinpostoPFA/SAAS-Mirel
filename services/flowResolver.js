@@ -40,23 +40,119 @@ function normalizeRequest(input, legacySlots = {}) {
     ? input
     : { intent: input, slots: legacySlots };
 
+  const rawSlots = request.slots && typeof request.slots === "object"
+    ? request.slots
+    : {};
+  const canonicalObject = canonicalizeObjectValue(rawSlots.object);
+
   return {
     intent: request.intent,
     message: request.message,
     problemType: request.problemType || null,
-    slots: request.slots && typeof request.slots === "object"
-      ? request.slots
-      : {}
+    slots: {
+      ...rawSlots,
+      object: canonicalObject,
+      surface: rawSlots.surface || (canonicalObject === "glass" ? "glass" : rawSlots.surface)
+    }
   };
 }
 
 const flowKeywords = {
-  bug_removal_quick: ["insecte", "musculite", "bug", "insects"],
+  bug_removal_quick: ["insecte", "musca", "gandaci", "buguri", "urme de insecte", "insecte pe parbriz"],
+  glass_clean_basic: ["sticla", "geam", "geamuri", "parbriz"],
   wheel_tire_deep_clean: ["jante", "roti", "anvelope"],
   interior_clean_basic: ["scaun", "cotiera", "interior"]
 };
 
+const glassAliases = ["sticla", "geam", "geamuri", "parbriz", "glass", "windshield"];
+const explicitInsectSignals = ["insecte", "musca", "gandaci", "buguri", "urme de insecte", "insecte pe parbriz"];
+const TOOL_CARE_KEYWORDS = [
+  "prosop",
+  "prosoape",
+  "laveta",
+  "lavete",
+  "microfibra",
+  "microfibre",
+  "microfiber",
+  "intretinere accesorii",
+  "accesorii"
+];
+const CLEANING_DOMAIN_TOKENS = [
+  "scaun",
+  "volan",
+  "cotiera",
+  "piele",
+  "textil",
+  "plastic",
+  "vopsea",
+  "geam",
+  "parbriz",
+  "jante",
+  "roti",
+  "anvelope",
+  "caroserie",
+  "mocheta",
+  "tapiterie",
+  "bord"
+];
+
+function canonicalizeObjectValue(value) {
+  const normalized = normalizeValue(value);
+  if (!normalized) {
+    return null;
+  }
+
+  if (glassAliases.includes(normalized)) {
+    return "glass";
+  }
+
+  return normalized;
+}
+
+function hasExplicitInsectSignal(message) {
+  const msg = normalizeValue(message);
+  if (!msg) {
+    return false;
+  }
+
+  return explicitInsectSignals.some(keyword => msg.includes(keyword));
+}
+
+function hasToolCareKeywords(message) {
+  const msg = normalizeValue(message);
+  if (!msg) {
+    return false;
+  }
+
+  return TOOL_CARE_KEYWORDS.some(keyword => msg.includes(keyword));
+}
+
+function hasCleaningDomainSignal(message, slots = {}) {
+  const msg = normalizeValue(message);
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const object = normalizeValue(safeSlots.object);
+  const surface = normalizeValue(safeSlots.surface);
+
+  if (CLEANING_DOMAIN_TOKENS.some(keyword => msg.includes(keyword))) {
+    return true;
+  }
+
+  if (["scaun", "volan", "cotiera", "piele", "mocheta", "tapiterie", "bord", "jante", "caroserie", "glass"].includes(object)) {
+    return true;
+  }
+
+  if (["leather", "textile", "alcantara", "plastic", "paint", "glass", "wheels"].includes(surface)) {
+    return true;
+  }
+
+  return false;
+}
+
 const objectAliasGroups = {
+  glass: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
+  sticla: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
+  geam: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
+  geamuri: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
   wheels: ["wheels", "jante", "roti", "anvelope"],
   jante: ["wheels", "jante", "roti", "anvelope"],
   roti: ["wheels", "jante", "roti", "anvelope"],
@@ -105,6 +201,10 @@ function getFlowSpecificityScore(flow, slots, message) {
       message: msg
     });
     score += 5;
+  }
+
+  if (flow?.flowId === "bug_removal_quick" && hasExplicitInsectSignal(message)) {
+    score += 20;
   }
 
   if (triggerObjects.length > 0 && slotObject && matchesObjectTrigger(triggerObjects, slotObject)) {
@@ -163,8 +263,7 @@ function resolveSpecializedFlowOverride(message) {
     return null;
   }
 
-  const hasTowelToken = ["laveta", "lavete", "prosop", "prosoape", "microfibra", "microfibre"]
-    .some(token => msg.includes(token));
+  const hasTowelToken = hasToolCareKeywords(msg);
   const hasCareToken = ["spal", "curat", "usuc"]
     .some(token => msg.includes(token));
 
@@ -221,13 +320,66 @@ function matchesSlotTrigger(flow, slotName, triggerValues, slotValue, allowParti
 function findMatchingFlows(request, allowPartial = false) {
   const flowEntries = Object.entries(config.flows || {});
   const matches = [];
-  const slotObject = normalizeValue(request?.slots?.object);
+  const slotObject = canonicalizeObjectValue(request?.slots?.object);
+  const hasInsectSignal = hasExplicitInsectSignal(request?.message);
 
   for (const [, flow] of flowEntries) {
     const triggers = flow?.triggers || {};
     const flowId = normalizeValue(flow?.flowId);
 
-    if (slotObject === "parbriz" && flowId === "exterior_wash_beginner") {
+    if (flowId === "tool_care_towel") {
+      const hasToolCareSignal = hasToolCareKeywords(request?.message);
+      const hasCleaningSignal = hasCleaningDomainSignal(request?.message, request?.slots || {});
+
+      if (!hasToolCareSignal) {
+        logInfo("FLOW_EXCLUDED", {
+          flowId,
+          reason: "missing_explicit_tool_care_keywords"
+        });
+        continue;
+      }
+
+      if (hasCleaningSignal) {
+        logInfo("FLOW_EXCLUDED", {
+          flowId,
+          reason: "cleaning_domain_or_surface_object_signal"
+        });
+        continue;
+      }
+    }
+
+    if ((slotObject === "parbriz" || slotObject === "glass") && flowId === "exterior_wash_beginner") {
+      continue;
+    }
+
+    if (flowId === "bug_removal_quick") {
+      if (!hasInsectSignal) {
+        if (slotObject === "glass") {
+          logInfo("FLOW_GUARD", {
+            flowId,
+            canonicalObject: slotObject,
+            blocked: true,
+            reason: "glass_without_explicit_insect_signal"
+          });
+        }
+        continue;
+      }
+
+      logInfo("FLOW_GUARD", {
+        flowId,
+        canonicalObject: slotObject,
+        blocked: false,
+        reason: "explicit_insect_signal"
+      });
+    }
+
+    if (flowId === "glass_clean_basic" && hasInsectSignal) {
+      logInfo("FLOW_GUARD", {
+        flowId,
+        canonicalObject: slotObject,
+        blocked: true,
+        reason: "explicit_insect_signal_prefers_bug_removal"
+      });
       continue;
     }
 
@@ -270,6 +422,14 @@ function findMatchingFlows(request, allowPartial = false) {
         flowId: flow?.flowId,
         matched: true,
         slots: request.slots || {}
+      });
+      logInfo("FLOW_MATCH_REASON", {
+        flowId: flow?.flowId,
+        canonicalObject: slotObject || null,
+        context: normalizeValue(request?.slots?.context) || null,
+        reason: flowId === "bug_removal_quick"
+          ? "explicit_insect_signal"
+          : "trigger_match"
       });
       matches.push(flow);
     }
@@ -335,6 +495,12 @@ function resolveFlowCandidates(input, legacySlots = {}) {
   }
 
   const candidates = findMatchingFlows(request, true);
+
+  logInfo("FLOW_CANDIDATES", {
+    message: request.message || null,
+    slots: request.slots || {},
+    candidates: candidates.map(flow => flow?.flowId).filter(Boolean)
+  });
 
   return candidates
     .map(flow => ({
