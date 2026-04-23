@@ -1142,6 +1142,59 @@ function mergePendingClarificationSlots(previousSlots, parsedSlots) {
   };
 }
 
+function getPendingClarificationSlots(sessionContext) {
+  const scoped = sessionContext?.pendingClarification?.pendingSlots;
+  if (scoped && typeof scoped === "object") {
+    return scoped;
+  }
+  const legacy = sessionContext?.pendingSlots;
+  if (legacy && typeof legacy === "object") {
+    return legacy;
+  }
+  return {};
+}
+
+function setPendingClarificationSlots(sessionContext, slots) {
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  sessionContext.pendingClarification = sessionContext.pendingClarification || {};
+  sessionContext.pendingClarification.pendingSlots = safeSlots;
+  // Backward-compatibility with previous field.
+  sessionContext.pendingSlots = safeSlots;
+}
+
+function clearPendingClarificationSlots(sessionContext) {
+  if (sessionContext?.pendingClarification && typeof sessionContext.pendingClarification === "object") {
+    sessionContext.pendingClarification.pendingSlots = null;
+  }
+  sessionContext.pendingSlots = null;
+}
+
+function seedPendingClarificationAtEmission(sessionContext, missingSlot) {
+  const normalizedMissing = String(missingSlot || "").toLowerCase();
+  const state = normalizedMissing
+    ? `NEEDS_${normalizedMissing.toUpperCase()}`
+    : null;
+  const pendingSlots = {
+    context: sessionContext?.slots?.context ?? null,
+    object: sessionContext?.slots?.object ?? null,
+    surface: sessionContext?.slots?.surface ?? null
+  };
+
+  sessionContext.pendingClarification = {
+    active: true,
+    state,
+    pendingSlots
+  };
+  // Backward compatibility with previous field.
+  sessionContext.pendingSlots = pendingSlots;
+
+  logInfo("CLARIFICATION_SEEDED_PENDING_SLOTS", {
+    state,
+    missingSlot: normalizedMissing || null,
+    pendingSlots
+  });
+}
+
 function hasRequiredSelectionSlots(slots) {
   return (
     slots &&
@@ -3280,7 +3333,7 @@ function resetSessionAfterAbuse(sessionContext, sessionId) {
 
   safeContext.slots = {};
   safeContext.pendingQuestion = null;
-  safeContext.pendingSlots = null;
+  clearPendingClarificationSlots(safeContext);
   safeContext.pendingSelection = false;
   safeContext.pendingSelectionMissingSlot = null;
   safeContext.state = "IDLE";
@@ -6130,10 +6183,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.pendingSelection = true;
         sessionContext.pendingSelectionMissingSlot = "surface";
       }
-      sessionContext.pendingSlots = mergePendingClarificationSlots(
-        sessionContext.pendingSlots || sessionContext.slots || {},
-        slotResult.slots || {}
-      );
       sessionContext.pendingQuestion = {
         slot: "surface",
         object: sessionContext.slots?.object || null,
