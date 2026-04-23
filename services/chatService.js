@@ -40,7 +40,9 @@ const OBJECT_MATCH_TERMS = {
   oglinzi: ["oglinda", "oglinzi", "mirror", "mirrors"],
   volan: ["volan", "steering wheel"],
   mocheta: ["mocheta", "carpet", "floor mat", "floor mats"],
-  tapiterie: ["tapiterie", "upholstery"]
+  tapiterie: ["tapiterie", "upholstery"],
+  jante: ["jante", "jante", "wheels", "roti", "anvelope"],
+  caroserie: ["caroserie", "caroseria", "carrosserie", "body"]
 };
 const OBJECT_SLOT_INFERENCE = {
   oglinda: { context: "exterior", surface: "glass" },
@@ -74,6 +76,23 @@ const OBJECT_SURFACE_MAP = {
   parbriz: ["glass"],
   oglinzi: ["glass"],
   tapiterie: ["textile", "leather", "alcantara"]
+};
+const SLOT_DOMAIN_RULES = {
+  scaun:     { context: "interior", allowedSurfaces: ["textile", "leather", "alcantara"] },
+  bancheta:  { context: "interior", allowedSurfaces: ["textile", "leather", "alcantara"] },
+  bord:      { context: "interior", allowedSurfaces: ["plastic"] },
+  consola:   { context: "interior", allowedSurfaces: ["plastic"] },
+  mocheta:   { context: "interior", allowedSurfaces: ["textile"] },
+  volan:     { context: "interior", allowedSurfaces: ["leather", "alcantara", "plastic"] },
+  cotiera:   { context: "interior", allowedSurfaces: ["textile", "leather", "alcantara", "plastic"] },
+  tapiterie: { context: "interior", allowedSurfaces: ["textile", "leather", "alcantara"] },
+  plafon:    { context: "interior", allowedSurfaces: ["textile", "alcantara"] },
+  caroserie: { context: "exterior", allowedSurfaces: ["paint"] },
+  jante:     { context: "exterior", allowedSurfaces: ["wheels"] },
+  geam:      { context: "exterior", allowedSurfaces: ["glass"] },
+  parbriz:   { context: "exterior", allowedSurfaces: ["glass"] },
+  oglinzi:   { context: "exterior", allowedSurfaces: ["glass"] },
+  oglinda:   { context: "exterior", allowedSurfaces: ["glass"] }
 };
 function getFlowLogPayload(intent, slots, flow, reason = null) {
   if (flow) {
@@ -314,7 +333,8 @@ function throwInvariantFailure(errorMessage, decision, slots, message) {
   console.error("INVARIANT_FAILURE", {
     decision,
     slots,
-    message
+    message,
+    computedMissingSlot: getMissingSlot(slots && typeof slots === "object" ? slots : {})
   });
   throw new Error(errorMessage);
 }
@@ -343,13 +363,19 @@ function assertDecisionInvariantsBeforeExecution(decision, slots, message) {
   const missingSlot = getMissingSlot(safeSlots);
 
   if (safeDecision.action === "clarification") {
-    if (!safeDecision.missingSlot) {
-      throwInvariantFailure("INVALID STATE: clarification without missingSlot", safeDecision, safeSlots, message);
-    }
+     // Allow missingSlot=null for validator-triggered invalid combinations
+     if (safeDecision.missingSlot === null && missingSlot === null) {
+       // All slots defined but combination is invalid - this is OK
+       return;
+     }
 
-    if (!["context", "object", "surface"].includes(safeDecision.missingSlot)) {
-      throwInvariantFailure("INVALID STATE: invalid missingSlot type", safeDecision, safeSlots, message);
-    }
+     if (!safeDecision.missingSlot) {
+       throwInvariantFailure("INVALID STATE: clarification without missingSlot", safeDecision, safeSlots, message);
+     }
+
+     if (!["context", "object", "surface"].includes(safeDecision.missingSlot)) {
+       throwInvariantFailure("INVALID STATE: invalid missingSlot type", safeDecision, safeSlots, message);
+     }
 
     if (safeDecision.missingSlot !== missingSlot) {
       throwInvariantFailure("INVALID STATE: clarification missingSlot mismatch", safeDecision, safeSlots, message);
@@ -402,25 +428,36 @@ function enforceClarificationContract(decision) {
     return decision;
   }
 
-  if (!decision.missingSlot) {
-    console.error("INVARIANT_FAILURE", {
-      decision,
-      slots: null,
-      message: null
-    });
-    throw new Error("Invalid clarification: missingSlot is required");
-  }
+   // Allow missingSlot=null for validator-triggered invalid combinations
+   // where all slots are defined but the combination is invalid
+   const isValidatorTriggered = decision.missingSlot === null;
+   
+   if (!isValidatorTriggered && !decision.missingSlot) {
+     console.error("INVARIANT_FAILURE", {
+       decision,
+       slots: null,
+       message: null
+     });
+     throw new Error("Invalid clarification: missingSlot is required");
+   }
 
-  if (!["context", "object", "surface"].includes(decision.missingSlot)) {
-    console.error("INVARIANT_FAILURE", {
-      decision,
-      slots: null,
-      message: null
-    });
-    throw new Error("Invalid slot type");
-  }
+   if (!isValidatorTriggered && !["context", "object", "surface"].includes(decision.missingSlot)) {
+     console.error("INVARIANT_FAILURE", {
+       decision,
+       slots: null,
+       message: null
+     });
+     throw new Error("Invalid slot type");
+   }
 
   return decision;
+}
+
+function getMissingSlotFromPendingState(state) {
+  if (state === "NEEDS_CONTEXT") return "context";
+  if (state === "NEEDS_OBJECT") return "object";
+  if (state === "NEEDS_SURFACE") return "surface";
+  return null;
 }
 
 function getBoundarySlotSnapshot(interactionRef, sessionContext) {
@@ -552,23 +589,30 @@ function endInteraction(interactionRef, result, patch = {}) {
   }
 
   // P0a - HARD GUARD: clarification decisions must have contract-complete missingSlot
+  // Exception: validator-triggered invalid combinations can have missingSlot=null when all slots are defined
   if (interactionRef?.decision?.action === "clarification") {
     interactionRef.slots = interactionRef.slots ?? {};
     const previousMissingSlot = interactionRef.decision.missingSlot;
-    const resolvedMissingSlot = previousMissingSlot ?? getMissingSlot(interactionRef.slots) ?? "context";
+    const computedMissing = getMissingSlot(interactionRef.slots);
+     // If missingSlot is undefined (not provided), compute it
+     // If missingSlot is null (explicitly provided by validator), keep null
+     let resolvedMissingSlot;
+     if (previousMissingSlot === undefined) {
+       resolvedMissingSlot = computedMissing || "context";
+       logInfo("CLARIFICATION_HARD_GUARD_TRIGGERED", {
+         reason: "missing_missingSlot",
+         missingSlot: resolvedMissingSlot,
+         decision: { ...interactionRef.decision, missingSlot: resolvedMissingSlot },
+         slots: interactionRef.slots
+       });
+     } else {
+       resolvedMissingSlot = previousMissingSlot;
+     }
+   
     interactionRef.decision = {
       ...interactionRef.decision,
       missingSlot: resolvedMissingSlot
     };
-
-    if (!previousMissingSlot) {
-      logInfo("CLARIFICATION_HARD_GUARD_TRIGGERED", {
-        reason: "missing_missingSlot",
-        missingSlot: resolvedMissingSlot,
-        decision: interactionRef.decision,
-        slots: interactionRef.slots
-      });
-    }
   }
 
   try {
@@ -804,8 +848,8 @@ function extractObjectOverrides(message) {
 function extractSlotsFromMessage(message) {
   const text = String(message || "").toLowerCase();
   const objectOverride = extractObjectOverrides(text);
-  const interiorContextTerms = ["mocheta", "scaun", "bancheta", "bord", "cotiera", "interior"];
-  const exteriorContextTerms = ["jante", "exterior", "caroserie", "caroseria"];
+  const interiorContextTerms = ["interior", "interioara", "interioare", "in interior", "inauntru", "din interior"];
+  const exteriorContextTerms = ["exterior", "exterioara", "exterioare", "in exterior", "afara", "din afara"];
 
   const OBJECT_KEYWORDS = {
     cotiera: ["cotiera", "armrest"],
@@ -818,7 +862,9 @@ function extractSlotsFromMessage(message) {
     parbriz: ["parbriz", "windshield"],
     oglinzi: ["oglinzi", "oglinda", "mirrors", "mirror"],
     mocheta: ["mocheta", "carpet", "floor mat", "floor mats"],
-    tapiterie: ["tapiterie", "upholstery"]
+    tapiterie: ["tapiterie", "upholstery"],
+    jante: ["jante", "roti", "anvelope"],
+    caroserie: ["caroserie", "caroseria", "carrosserie", "body"]
   };
 
   let object = objectOverride.object || null;
@@ -831,19 +877,24 @@ function extractSlotsFromMessage(message) {
     }
   }
 
+  const hasInteriorContext = interiorContextTerms.some(term => text.includes(term));
+  const hasExteriorContext = exteriorContextTerms.some(term => text.includes(term));
+
+  let inferredContext = null;
+  if (hasInteriorContext && !hasExteriorContext) inferredContext = "interior";
+  if (hasExteriorContext && !hasInteriorContext) inferredContext = "exterior";
+
   return {
     context:
       objectOverride.context ||
-      (interiorContextTerms.some(term => text.includes(term)) ? "interior" :
-      exteriorContextTerms.some(term => text.includes(term)) ? "exterior" :
-      null),
+      inferredContext,
 
     surface:
       text.includes("piele") ? "leather" :
       text.includes("alcantara") ? "alcantara" :
       text.includes("textil") ? "textile" :
       text.includes("plastic") ? "plastic" :
-      text.includes("jante") ? "wheels" :
+      (!object && text.includes("jante")) ? "wheels" :
       text.includes("geamuri") || text.includes("geam") ? "glass" :
       text.includes("vopsea") ? "paint" :
       text.includes("sticla") ? "glass" :
@@ -862,10 +913,10 @@ function extractSlotsForSafetyQuery(message) {
   let surface = null;
 
   // CONTEXT
-  if (msg.includes("interior")) context = "interior";
-  if (msg.includes("exterior")) context = "exterior";
+  if (msg.includes("interior") || msg.includes("interioara") || msg.includes("interioare") || msg.includes("in interior")) context = "interior";
+  if (msg.includes("exterior") || msg.includes("exterioara") || msg.includes("exterioare") || msg.includes("in exterior")) context = "exterior";
 
-  // OBJECT
+  // OBJECT (check these BEFORE surfaces to avoid "jante" being mapped to "wheels" surface)
   if (msg.includes("scaun")) object = "scaun";
   if (msg.includes("cotiera")) object = "cotiera";
   if (msg.includes("parbriz")) object = "parbriz";
@@ -873,6 +924,8 @@ function extractSlotsForSafetyQuery(message) {
   if (msg.includes("bord")) object = "bord";
   if (msg.includes("volan")) object = "volan";
   if (msg.includes("geam") || msg.includes("geamuri")) object = object || "geam";
+  if (msg.includes("jante") || msg.includes("roti") || msg.includes("anvelope")) object = object || "jante";
+  if (msg.includes("caroserie") || msg.includes("carrosserie")) object = object || "caroserie";
 
   // SURFACE
   if (msg.includes("piele")) surface = "leather";
@@ -888,7 +941,7 @@ function extractSlotsForSafetyQuery(message) {
         surface === "leather" || surface === "textile" || surface === "alcantara" || surface === "plastic") {
       context = "interior";
     }
-    if (object === "parbriz" || object === "geam" || surface === "glass" || surface === "paint") {
+    if (object === "parbriz" || object === "geam" || object === "jante" || object === "caroserie" || surface === "glass" || surface === "paint") {
       context = "exterior";
     }
   }
@@ -1204,11 +1257,11 @@ function detectContextHint(message) {
   const text = String(message || "").toLowerCase();
 
   const interiorObjects = [
-    "cotiera", "scaun", "bord", "volan", "tapiterie", "mocheta", "interior"
+    "cotiera", "scaun", "bord", "volan", "tapiterie", "mocheta", "interior", "interioara", "interioare", "in interior"
   ];
 
   const exteriorObjects = [
-    "caroserie", "caroseria", "jante", "roti", "vopsea", "exterior"
+    "caroserie", "caroseria", "jante", "roti", "vopsea", "exterior", "exterioara", "exterioare", "in exterior"
   ];
 
   if (interiorObjects.some(w => text.includes(w))) {
@@ -2875,6 +2928,16 @@ function clearProblemType(sessionContext, sessionId) {
   saveSession(sessionId, sessionContext);
 }
 
+function consumeValidationInfo(sessionContext, sessionId) {
+  if (sessionContext && sessionContext.validationInfoMessage) {
+    const msg = sessionContext.validationInfoMessage;
+    sessionContext.validationInfoMessage = null;
+    saveSession(sessionId, sessionContext);
+    return msg;
+  }
+  return null;
+}
+
 function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   const safeContext = sessionContext && typeof sessionContext === "object"
     ? sessionContext
@@ -3299,6 +3362,257 @@ function getSafetyViolationReply() {
   return "Pot sa te ajut cu intrebari legate de curatarea masinii sau produse. Ce vrei sa cureti?";
 }
 
+/**
+ * ROUTING PURITY: Detect knowledge-style questions that should NOT enter procedural slot-filling
+ * Examples: "cat dureaza...", "cum...", "ce este...", "de ce...", etc.
+ */
+function isKnowledgeQuestion(message) {
+  const text = String(message || "").toLowerCase().trim();
+  const knowledgePatterns = [
+    /^cat\s+(dureaza|cost|e|este)/,  // cat dureaza? cat e?
+    /^cum\s+/,                        // cum se curata? cum...?
+    /^ce\s+(este|e)\s+/,             // ce este acesta? ce e...?
+    /^de\s+ce/,                       // de ce?
+    /^care\s+(e|este)/,               // care e diferenta?
+    /^care\s+sunt\s+/,               // care sunt avantajele?
+    /^ce\s+diferenta/,                // ce diferenta?
+    /^ce\s+se\s+intampla/,            // ce se intampla?
+    /^cum\s+se\s+curata/,             // cum se curata?
+    /^care\s+(sunt|e|este)\s+diferentele/, // care sunt diferentele?
+  ];
+  return knowledgePatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * ROUTING PURITY: Check if message contains explicit interior intent that should NOT be overridden
+ */
+function hasExplicitInteriorIntent(message) {
+  const text = String(message || "").toLowerCase().trim();
+  const interiorKeywords = [
+    "interior", "interioara", "interioare", "in interior",
+    "scaun", "scaune", "mocheta", "tapiterie", "cotiera",
+    "bord", "plafon", "oglinda interior", "parbriz interior"
+  ];
+  return interiorKeywords.some(keyword => text.includes(keyword));
+}
+
+/**
+ * ROUTING PURITY: Detect negations/corrections that should not trigger new flow selection
+ * Examples: "nu avem", "nu e", "fara", "n-avem"
+ */
+function isNegationCorrection(message) {
+  const text = String(message || "").toLowerCase().trim();
+  const negationPatterns = [
+    /\bnu\s+(avem|e|este|am)/,  // nu avem, nu e, nu este, nu am
+    /\bfara\s+/,                 // fara...
+    /\bn-avem/,                   // n-avem
+  ];
+  return negationPatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * ROUTING PURITY: Create canonical routing decision object for logging
+ */
+function createCanonicalRoutingDecision({
+  queryType,
+  action,
+  reason,
+  slots = {},
+  flowId = null,
+  missingSlot = null,
+  pendingSelectionState = null
+}) {
+  return {
+    queryType,
+    action,
+    reason,
+    slots: {
+      context: slots.context || null,
+      surface: slots.surface || null,
+      object: slots.object || null
+    },
+    flowId,
+    missingSlot,
+    pendingSelectionState
+  };
+}
+
+/**
+ * ROUTING PURITY: Detect explicit context from message before any defaults
+ * Prevents procedural defaults from overriding explicit interior/exterior intent
+ * Returns: "interior", "exterior", or null (if ambiguous or not detected)
+ */
+function detectExplicitContext(message) {
+  const s = String(message || "").toLowerCase();
+  
+  const hasInterior =
+    s.includes("interior") || 
+    s.includes("interioara") || 
+    s.includes("interioare") || 
+    s.includes("in interior");
+  
+  const hasExterior =
+    s.includes("exterior") || 
+    s.includes("exterioara") || 
+    s.includes("exterioare") || 
+    s.includes("in exterior");
+  
+  // Clear winner: only interior keywords found
+  if (hasInterior && !hasExterior) return "interior";
+  
+  // Clear winner: only exterior keywords found
+  if (hasExterior && !hasInterior) return "exterior";
+  
+  // Ambiguous (both found) or neither found
+  return null;
+}
+
+function detectStrongContextOverride(message) {
+  const text = String(message || "").toLowerCase();
+
+  if (text.includes("jante")) {
+    return {
+      context: "exterior",
+      object: "jante",
+      surface: "wheels",
+      reason: "strong_keyword_jante"
+    };
+  }
+
+  if (text.includes("bord")) {
+    return {
+      context: "interior",
+      object: null,
+      surface: null,
+      reason: "strong_keyword_bord"
+    };
+  }
+
+  if (text.includes("scaun")) {
+    return {
+      context: "interior",
+      object: null,
+      surface: null,
+      reason: "strong_keyword_scaun"
+    };
+  }
+
+  return null;
+}
+
+function isWheelsObjectLike(slots) {
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const object = String(safeSlots.object || "").toLowerCase();
+  return object === "wheels" || object === "jante" || safeSlots.surface === "wheels";
+}
+
+/**
+ * Deterministic slot combination validator.
+ * Returns { status: "VALID"|"INVALID"|"CORRECTABLE", correctedSlots?, userMessage?, ask?, reasonCode }
+ */
+function validateCombination(context, object, surface) {
+  const rule = object ? SLOT_DOMAIN_RULES[object] : null;
+
+  if (!rule) {
+    // Object unknown or not in domain rules – skip validation, let routing handle it
+    return { status: "VALID", reasonCode: "OBJ_UNKNOWN_SKIP_VALIDATION" };
+  }
+
+  const correctedSlots = {};
+  let reasonCode = null;
+
+  // 1. Context unknown → infer from rule
+  const effectiveContext = context || null;
+  if (!effectiveContext) {
+    correctedSlots.context = rule.context;
+    reasonCode = "OBJ_INFERRED_CONTEXT";
+    if (object === "jante") {
+      return {
+        status: "CORRECTABLE",
+        correctedSlots,
+        userMessage: "Jantele sunt la exterior. Te ajut cu curatarea lor.",
+        reasonCode
+      };
+    }
+  }
+
+  // 2. Context conflicts with object's canonical domain → CORRECTABLE with correction message
+  const resolvedContext = correctedSlots.context || effectiveContext;
+  if (resolvedContext && resolvedContext !== rule.context) {
+    correctedSlots.context = rule.context;
+    reasonCode = "CONTEXT_CONFLICT_WITH_OBJECT";
+    // Apply the implied single surface too (e.g. jante → wheels)
+    if (rule.allowedSurfaces.length === 1) {
+      correctedSlots.surface = rule.allowedSurfaces[0];
+    }
+    let userMessage;
+    if (object === "jante" && resolvedContext === "interior") {
+      userMessage = "Jantele sunt la exterior. Te ajut cu curatarea lor.";
+    } else if ((object === "scaun" || object === "bancheta") && resolvedContext === "exterior") {
+      userMessage = "Scaunele sunt la interior. Te ajut cu curatarea lor.";
+      if (!surface) {
+        correctedSlots.surface = "textile";
+      }
+    } else if (object === "bord" && resolvedContext === "exterior") {
+      userMessage = "Bordul este la interior. Te ajut cu curatarea lui.";
+    } else if (object === "mocheta" && resolvedContext === "exterior") {
+      userMessage = "Mocheta este la interior. Te ajut cu curatarea ei.";
+    } else if (object === "caroserie" && resolvedContext === "interior") {
+      userMessage = "Caroseria este la exterior. Te ajut cu curatarea ei.";
+    } else {
+      // Generic conflict correction – silent auto-fix, no user message
+      userMessage = null;
+    }
+    return {
+      status: "CORRECTABLE",
+      correctedSlots,
+      userMessage: userMessage || undefined,
+      reasonCode
+    };
+  }
+
+  // 3. Surface unknown + object implies exactly one surface → infer silently
+  const effectiveSurface = surface || null;
+  if (!effectiveSurface && rule.allowedSurfaces.length === 1) {
+    correctedSlots.surface = rule.allowedSurfaces[0];
+    if (!reasonCode) reasonCode = "OBJ_INFERRED_SURFACE";
+  }
+
+  // 4. Surface provided but not in allowed list → INVALID with targeted clarification
+  if (effectiveSurface && !rule.allowedSurfaces.includes(effectiveSurface)) {
+    reasonCode = "SURFACE_NOT_ALLOWED_FOR_OBJECT";
+    let ask;
+    if (object === "scaun" || object === "bancheta" || object === "tapiterie") {
+      ask = { question: "Scaunele nu sunt din vopsea. Sunt textile sau piele?", choices: ["textile", "piele"] };
+    } else if (object === "geam" || object === "parbriz") {
+      ask = { question: "Geamurile nu sunt din piele. Sunt din sticla?", choices: ["da", "nu"] };
+    } else if (object === "jante") {
+      ask = { question: "Jantele nu sunt din textile. Sunt suprafata de roti?", choices: ["da", "nu"] };
+    } else if (object === "mocheta") {
+      ask = { question: "Mocheta este din material textil. Vrei sa continui cu curatarea ei?", choices: ["da", "nu"] };
+    } else if (object === "bord" || object === "consola") {
+      ask = { question: "Bordul este din plastic. Vrei sa continui cu curatarea lui?", choices: ["da", "nu"] };
+    } else if (object === "caroserie") {
+      ask = { question: "Caroseria are suprafata de vopsea. Vrei sa continui cu tratamentul ei?", choices: ["da", "nu"] };
+    } else {
+      const allowed = rule.allowedSurfaces.join(", ");
+      ask = { question: `Suprafata indicata nu este valida pentru ${object}. Suprafete permise: ${allowed}. Poti confirma suprafata corecta?` };
+    }
+    return {
+      status: "INVALID",
+      ask,
+      reasonCode,
+      correctedSlots: Object.keys(correctedSlots).length > 0 ? correctedSlots : undefined
+    };
+  }
+
+  if (Object.keys(correctedSlots).length === 0) {
+    return { status: "VALID", reasonCode: "VALID" };
+  }
+
+  return { status: "CORRECTABLE", correctedSlots, reasonCode };
+}
+
 function overrideIntent(message, detectedIntent) {
   const msg = String(message || "").toLowerCase().trim();
   const safeIntent = detectedIntent && typeof detectedIntent === "object"
@@ -3459,8 +3773,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const lowSignalConfidence = getIntentConfidenceValue(
       typeof lowSignalIntent === "string" ? null : lowSignalIntent?.confidence
     );
+    const lowSignalSlots = extractSlotsFromMessage(userMessage);
 
-    if (isLowSignal(userMessage, lowSignalConfidence)) {
+    if (isLowSignal(userMessage, lowSignalConfidence) && !hasStrongSlots(lowSignalSlots)) {
       sessionContext.slots = {};
       sessionContext.state = "IDLE";
       sessionContext.pendingQuestion = null;
@@ -3478,7 +3793,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         decision: {
           action: "clarification",
           flowId: null,
-          missingSlot: null
+          missingSlot: "context"
         },
         outputType: "question"
       });
@@ -4064,6 +4379,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
+    // ROUTING PURITY: Knowledge questions gate
+    // If user message is a knowledge/information question, route to knowledge handler, not procedural slot-filling
+    if (queryType === "procedural" && isKnowledgeQuestion(userMessage)) {
+      logInfo("KNOWLEDGE_GATE_APPLIED", {
+        reason: "knowledge_pattern_matched",
+        original_queryType: "procedural",
+        new_queryType: "informational"
+      });
+      queryType = "informational";
+      interactionRef.queryType = queryType;
+    }
+
     // ROUTING LAYER (before slots)
     const selectionPreview = queryType === "selection"
       ? processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingQuestionAtStart })
@@ -4426,6 +4753,95 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const proceduralSlots = applyObjectSlotInference(
         mergeSlots(sessionContext.slots || {}, extractSlotsFromMessage(userMessage))
       );
+      const hadNoContextBeforePreviewInference = !proceduralSlots.context;
+      applyObjectContextInferenceInPlace(proceduralSlots);
+      let previewCorrectionMessage = null;
+
+      // Run deterministic validation before preview disambiguation.
+      // This prevents impossible or corrected combinations from bypassing validator logic.
+      {
+        const _previewVc = validateCombination(
+          proceduralSlots.context,
+          proceduralSlots.object,
+          proceduralSlots.surface
+        );
+        const previewUserMessage = _previewVc.userMessage || null;
+
+        if (_previewVc.correctedSlots) {
+          Object.assign(proceduralSlots, _previewVc.correctedSlots);
+        }
+
+        // Re-run once after safe corrections so single-surface objects can settle.
+        const _previewVc2 = _previewVc.correctedSlots
+          ? validateCombination(
+              proceduralSlots.context,
+              proceduralSlots.object,
+              proceduralSlots.surface
+            )
+          : _previewVc;
+
+        if (_previewVc2.correctedSlots) {
+          Object.assign(proceduralSlots, _previewVc2.correctedSlots);
+        }
+
+        const previewValidation = {
+          ..._previewVc2,
+          userMessage: _previewVc2.userMessage || previewUserMessage || undefined
+        };
+
+        if (!previewValidation.userMessage && hadNoContextBeforePreviewInference && proceduralSlots.object === "jante") {
+          previewValidation.userMessage = "Jantele sunt la exterior. Te ajut cu curatarea lor.";
+        }
+
+        if (previewValidation.userMessage) {
+          previewCorrectionMessage = previewValidation.userMessage;
+          sessionContext.validationInfoMessage = previewValidation.userMessage;
+        }
+
+        logInfo("SLOT_VALIDATION_RESULT_PREVIEW", {
+          inputs: {
+            context: proceduralSlots.context,
+            object: proceduralSlots.object,
+            surface: proceduralSlots.surface
+          },
+          status: previewValidation.status,
+          reasonCode: previewValidation.reasonCode,
+          correctedSlots: previewValidation.correctedSlots || null,
+          askPresent: Boolean(previewValidation.ask || previewValidation.userMessage)
+        });
+
+        if (previewValidation.status === "INVALID") {
+          sessionContext.slots = proceduralSlots;
+          saveSession(sessionId, sessionContext);
+          const questionText = previewValidation.ask
+            ? previewValidation.ask.question
+            : (previewValidation.userMessage || "Nu am putut determina combinatia corecta. Poti reformula?");
+          return endInteraction(interactionRef, {
+            type: "question",
+            message: questionText
+          }, {
+            slots: sessionContext.slots,
+            decision: { action: "clarification", flowId: null, missingSlot: null },
+            outputType: "question"
+          });
+        }
+
+        if (previewValidation.status === "CORRECTABLE") {
+          if (previewValidation.ask) {
+            sessionContext.slots = proceduralSlots;
+            saveSession(sessionId, sessionContext);
+            return endInteraction(interactionRef, {
+              type: "question",
+              message: previewValidation.ask.question
+            }, {
+              slots: sessionContext.slots,
+              decision: { action: "clarification", flowId: null, missingSlot: null },
+              outputType: "question"
+            });
+          }
+        }
+      }
+
       const shouldAllowPreviewDisambiguation =
         hasStrongSlots(proceduralSlots) ||
         Boolean(sessionContext.problemType) ||
@@ -4436,7 +4852,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slots: proceduralSlots
       });
 
-      if (candidateFlows.length > 1 && shouldAllowPreviewDisambiguation) {
+      if (candidateFlows.length > 1 && shouldAllowPreviewDisambiguation && !previewCorrectionMessage) {
         const disambiguation = getFlowDisambiguationQuestion(candidateFlows, proceduralSlots);
 
         if (disambiguation) {
@@ -4455,7 +4871,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             decision: {
               action: "clarification",
               flowId: null,
-              missingSlot: disambiguation.state === "NEEDS_SURFACE" ? "surface" : "context"
+              missingSlot: getMissingSlot(proceduralSlots) || "context"
             },
             outputType: "question"
           });
@@ -4524,9 +4940,63 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
+    // ROUTING PURITY: Apply explicit context before any defaulting.
     if (queryType === "procedural" && !slotResult.slots.context) {
-      slotResult.slots.context = "exterior";
-      logInfo("SLOT_INFERENCE", { context: "exterior", reason: "default_for_procedural" });
+      const explicitContext = detectExplicitContext(userMessage);
+      
+      if (explicitContext !== null) {
+        slotResult.slots.context = explicitContext;
+        logInfo("SLOT_INFERENCE_EXPLICIT_CONTEXT", {
+          context: explicitContext,
+          message: userMessage
+        });
+        logInfo("SLOT_INFERENCE", { 
+          context: explicitContext, 
+          reason: "explicit_context_keyword"
+        });
+      } else {
+        const strongContextOverride = detectStrongContextOverride(userMessage);
+
+        if (strongContextOverride) {
+          slotResult.slots.context = strongContextOverride.context;
+          if (!slotResult.slots.object && strongContextOverride.object) {
+            slotResult.slots.object = strongContextOverride.object;
+          }
+          if (!slotResult.slots.surface && strongContextOverride.surface) {
+            slotResult.slots.surface = strongContextOverride.surface;
+          }
+          logInfo("SLOT_INFERENCE", {
+            context: strongContextOverride.context,
+            reason: strongContextOverride.reason
+          });
+        } else {
+          slotResult.slots.context = null;
+          logInfo("SLOT_INFERENCE", { 
+            context: null,
+            reason: "default_unknown" 
+          });
+        }
+      }
+    }
+
+    const explicitContext = queryType === "procedural"
+      ? detectExplicitContext(userMessage)
+      : null;
+
+    // ROUTING PURITY: Guard rule - explicit interior must never degrade to exterior.
+    if (explicitContext === "interior" && slotResult.slots.context === "exterior") {
+      console.warn("ROUTING_PURITY_VIOLATION", {
+        message: userMessage,
+        currentContext: slotResult.slots.context,
+        explicitContext,
+        fix: "correcting_to_interior"
+      });
+      slotResult.slots.context = "interior";
+      logInfo("ROUTING_PURITY_CORRECTED", {
+        violation: "explicit_interior_overridden_to_exterior",
+        message: userMessage,
+        correctedContext: "interior"
+      });
     }
     if (isHardReset(userMessage)) {
       sessionContext.slots = {};
@@ -4585,6 +5055,98 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     applyObjectContextInferenceInPlace(sessionContext.slots);
 
+    // --- Deterministic slot validation ---
+    {
+      const _vc = validateCombination(
+        sessionContext.slots.context,
+        sessionContext.slots.object,
+        sessionContext.slots.surface
+      );
+      logInfo("SLOT_VALIDATION_RESULT", {
+        inputs: {
+          context: sessionContext.slots.context,
+          object: sessionContext.slots.object,
+          surface: sessionContext.slots.surface
+        },
+        status: _vc.status,
+        reasonCode: _vc.reasonCode,
+        correctedSlots: _vc.correctedSlots || null,
+        askPresent: Boolean(_vc.ask || _vc.userMessage)
+      });
+
+      if (_vc.status !== "VALID") {
+        // Apply any safe slot corrections first
+        if (_vc.correctedSlots) {
+          Object.assign(sessionContext.slots, _vc.correctedSlots);
+        }
+
+        if (_vc.status === "INVALID") {
+          // Do not proceed to normal routing
+          saveSession(sessionId, sessionContext);
+          const invalidDecision = createCanonicalRoutingDecision({
+            queryType,
+            action: "clarification",
+            reason: _vc.reasonCode,
+            slots: sessionContext.slots,
+            flowId: null,
+            missingSlot: null,
+            pendingSelectionState: null
+          });
+          logInfo("ROUTING_DECISION", invalidDecision);
+          logInfo("EXECUTION_PATH", { action: "clarification", flowId: null });
+          const questionText = _vc.ask
+            ? _vc.ask.question
+            : (_vc.userMessage || "Nu am putut determina combinatia corecta. Poti reformula?");
+          return endInteraction(interactionRef, {
+            type: "question",
+            message: questionText
+          }, {
+            slots: sessionContext.slots,
+            decision: { action: "clarification", flowId: null, missingSlot: null },
+            outputType: "question"
+          });
+        }
+
+        if (_vc.status === "CORRECTABLE") {
+          if (_vc.ask) {
+            // Partially resolved – still needs one more clarification
+            saveSession(sessionId, sessionContext);
+            const correctableDecision = createCanonicalRoutingDecision({
+              queryType,
+              action: "clarification",
+              reason: _vc.reasonCode,
+              slots: sessionContext.slots,
+              flowId: null,
+              missingSlot: null,
+              pendingSelectionState: null
+            });
+            logInfo("ROUTING_DECISION", correctableDecision);
+            logInfo("EXECUTION_PATH", { action: "clarification", flowId: null });
+            return endInteraction(interactionRef, {
+              type: "question",
+              message: _vc.ask.question
+            }, {
+              slots: sessionContext.slots,
+              decision: { action: "clarification", flowId: null, missingSlot: null },
+              outputType: "question"
+            });
+          }
+
+          if (_vc.userMessage) {
+            // Informational correction only. No confirmation. Do not block routing.
+            logInfo("SLOT_VALIDATION_INFO_MESSAGE", {
+              reasonCode: _vc.reasonCode,
+              message: _vc.userMessage
+            });
+            sessionContext.validationInfoMessage = _vc.userMessage;
+            saveSession(sessionId, sessionContext);
+          }
+          // Fall through to normal routing (correctedSlots already applied above)
+        }
+      }
+    }
+    // --- End slot validation ---
+
     console.log("SLOT_CHECK_SOURCE", sessionContext.slots);
     slotResult.missing = getMissingSlot(sessionContext.slots);
 
@@ -4629,13 +5191,104 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     if (!resolvedAction || !resolvedAction.action) {
       throw new Error("Invalid decision: resolveAction must return action");
     }
+
+    // ROUTING PURITY: Pending clarification isolation
+    // If in a NEEDS_* state (awaiting clarification), only allow:
+    // 1. Clarification continuation, or
+    // 2. Handling the completed slot (state cleared above)
+    // Do not re-route through full flow matching on follow-ups
+    if (previousState && previousState.startsWith("NEEDS_")) {
+      const pendingSlotFilled = slotResult.missing === null && completedSlotFollowUp;
+      if (!pendingSlotFilled && slotResult.missing) {
+        logInfo("PENDING_CLARIFICATION_ISOLATION_ENFORCED", {
+          previousState,
+          action: resolvedAction.action,
+          missingSlot: slotResult.missing,
+          message: "Clarification remains required because data is still missing"
+        });
+        resolvedAction.action = "clarification";
+        resolvedAction.flowId = null;
+        resolvedAction.missingSlot = slotResult.missing;
+      } else if (pendingSlotFilled) {
+        logInfo("PENDING_CLARIFICATION_SATISFIED", {
+          previousState,
+          slotFilled: slotResult.missing === null
+        });
+      }
+    }
+
+    // ROUTING PURITY: Correction handling must be driven by recomputed missing data.
+    let mutationComputedMissingSlot = null;
+    if (previousState && previousState.startsWith("NEEDS_") && isNegationCorrection(userMessage)) {
+      const decisionBeforeCorrection = { ...resolvedAction };
+      mutationComputedMissingSlot = getMissingSlot(sessionContext.slots || {});
+      logInfo("CORRECTION_DETECTED", {
+        message: userMessage,
+        previousState,
+        action: "recompute_missing_slot",
+        computedMissingSlot: mutationComputedMissingSlot
+      });
+      if (resolvedAction.action === "flow" || resolvedAction.action === "selection") {
+        const normalizedMissingSlot = mutationComputedMissingSlot;
+
+        if (normalizedMissingSlot) {
+          resolvedAction.action = "clarification";
+          resolvedAction.flowId = null;
+          resolvedAction.missingSlot = normalizedMissingSlot;
+        } else {
+          resolvedAction.action = decisionBeforeCorrection.action;
+          resolvedAction.flowId = decisionBeforeCorrection.flowId || null;
+          resolvedAction.missingSlot = decisionBeforeCorrection.missingSlot || null;
+        }
+
+        console.warn("DECISION_MUTATION_DETECTED", {
+          before: decisionBeforeCorrection,
+          after: resolvedAction,
+          computedMissingSlot: mutationComputedMissingSlot
+        });
+      }
+    }
+
+    if (resolvedAction.action === "clarification") {
+      const computedMissingSlot = getMissingSlot(sessionContext.slots || {});
+      const normalizedMissingSlot = computedMissingSlot || null;
+
+      if (normalizedMissingSlot) {
+        resolvedAction.flowId = null;
+        resolvedAction.missingSlot = normalizedMissingSlot;
+      } else if (resolvedAction.flowId) {
+        resolvedAction.action = "flow";
+        resolvedAction.missingSlot = null;
+      } else if (routingDecision.action === "selection") {
+        resolvedAction.action = "selection";
+        resolvedAction.missingSlot = null;
+      } else if (routingDecision.action === "procedural") {
+        resolvedAction.action = "procedural";
+        resolvedAction.missingSlot = null;
+      }
+    }
+
+    // Create canonical routing decision for logging (fulfills requirement)
+    const canonicalRoutingDecision = createCanonicalRoutingDecision({
+      queryType,
+      action: resolvedAction.action,
+      reason: routingDecision.reason,
+      slots: sessionContext.slots || {},
+      flowId: resolvedAction.flowId || null,
+      missingSlot: resolvedAction.missingSlot || null,
+      pendingSelectionState: sessionContext.pendingSelection === true ? sessionContext.pendingSelectionMissingSlot : null
+    });
+
+    logInfo("ROUTING_DECISION", canonicalRoutingDecision);
+
     console.log("DECISION_FINAL", resolvedAction);
     logInfo("DECISION_SOURCE", { source: "resolveAction", decision: resolvedAction });
     console.log("STAGE:RESOLVE", resolvedAction);
     if (JSON.stringify(resolvedAction) !== originalResolvedAction) {
       console.warn("DECISION_MUTATION_DETECTED", {
         before: originalResolvedAction,
-        after: resolvedAction
+        after: resolvedAction,
+        computedMissingSlot: mutationComputedMissingSlot ?? getMissingSlot(sessionContext.slots || {})
       });
     }
     if (resolvedAction.action === "flow") {
@@ -4678,6 +5331,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       object: sessionContext.slots?.object || null,
       surface: sessionContext.slots?.surface || null
     };
+
+    // Log execution path (fulfills requirement for single execution path per request)
+    logInfo("EXECUTION_PATH", {
+      action: resolvedAction.action,
+      flowId: resolvedAction.flowId || null,
+      reason: "routing_decision_finalized"
+    });
 
     let shouldHandleClarification = false;
     let shouldAllowSelection = false;
@@ -4980,15 +5640,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         clearProblemType(sessionContext, sessionId);
         updateSessionWithProducts(sessionId, flowProducts, "guidance");
-        emit("ai_response", { response: flowReply });
+        const _flowPrefix = consumeValidationInfo(sessionContext, sessionId);
+        const prefixedFlowReply = _flowPrefix ? `${_flowPrefix}\n\n${flowReply}` : flowReply;
+        emit("ai_response", { response: prefixedFlowReply });
         logResponseSummary("flow", {
           steps: Array.isArray(resolvedPrioritizedFlow.steps) ? resolvedPrioritizedFlow.steps.length : 0,
           products: flowProducts.length
         });
         return endInteraction(interactionRef, {
           type: "flow",
-          message: flowReply,
-          reply: flowReply,
+          message: prefixedFlowReply,
+          reply: prefixedFlowReply,
           products: flowProducts
         }, {
           decision: executedFlowDecision,
@@ -5108,9 +5770,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         updateSessionWithProducts(sessionId, [], "guidance");
       }
       clearProblemType(sessionContext, sessionId);
-      emit("ai_response", { response: reply });
+      const _safetyPrefix = consumeValidationInfo(sessionContext, sessionId);
+      const prefixedSafetyReply = _safetyPrefix ? `${_safetyPrefix}\n\n${reply}` : reply;
+      emit("ai_response", { response: prefixedSafetyReply });
       logResponseSummary("knowledge", { products: safetyProducts.length });
-      return endInteraction(interactionRef, { reply, products: safetyProducts }, {
+      return endInteraction(interactionRef, { reply: prefixedSafetyReply, products: safetyProducts }, {
         decision: {
           action: isSafetyRoute ? "safety" : "knowledge",
           flowId: null,
@@ -5155,9 +5819,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       updateSessionWithProducts(sessionId, [], "guidance");
       clearProblemType(sessionContext, sessionId);
 
-      emit("ai_response", { response: reply });
+      const _kgPrefix = consumeValidationInfo(sessionContext, sessionId);
+      const prefixedKgReply = _kgPrefix ? `${_kgPrefix}\n\n${reply}` : reply;
+      emit("ai_response", { response: prefixedKgReply });
       logResponseSummary("knowledge", { products: 0 });
-      return endInteraction(interactionRef, { reply, products: [] }, {
+      return endInteraction(interactionRef, { reply: prefixedKgReply, products: [] }, {
         decision: { action: "knowledge", flowId: null, missingSlot: null },
         outputType: "reply"
       });
@@ -5229,9 +5895,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
         updateSessionWithProducts(sessionId, [], "guidance");
 
-        emit("ai_response", { response: reply });
+        const _kdPrefix = consumeValidationInfo(sessionContext, sessionId);
+        const prefixedKdReply = _kdPrefix ? `${_kdPrefix}\n\n${reply}` : reply;
+        emit("ai_response", { response: prefixedKdReply });
         logResponseSummary("knowledge", { products: 0 });
-        return endInteraction(interactionRef, { reply, products: [] }, {
+        return endInteraction(interactionRef, { reply: prefixedKdReply, products: [] }, {
           decision: resolvedAction,
           outputType: "reply"
         });
@@ -5331,12 +5999,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         updateSessionWithProducts(sessionId, found, responseType);
 
         sessionContext.state = "IDLE";
+        const _psPrefix = consumeValidationInfo(sessionContext, sessionId);
+        const prefixedPsReply = _psPrefix ? `${_psPrefix}\n\n${reply}` : reply;
         saveSession(sessionId, sessionContext);
 
         emit("products_recommended", { products: found, tags: detectedTags });
-        emit("ai_response", { response: reply });
+        emit("ai_response", { response: prefixedPsReply });
         logResponseSummary("product_search", { products: found.length });
-        return endInteraction(interactionRef, { reply, products: found }, {
+        return endInteraction(interactionRef, { reply: prefixedPsReply, products: found }, {
           decision: resolvedAction,
           outputType: "recommendation",
           products: summarizeProductsForLog(found)

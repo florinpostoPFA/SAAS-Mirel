@@ -1,0 +1,1384 @@
+[dotenv@17.3.1] injecting env (7) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[2026-04-23T12:51:35.047Z] [INFO] [SERVER] {"event":"startup","port":3001}
+[2026-04-23T12:52:05.697Z] [INFO] [CHAT] {"sessionId":"session-lapmu17ul","message":"Jantele mele sunt foarte murdare. Cum le curat in interior?"}
+[2026-04-23T12:52:05.699Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-lapmu17ul"}
+[2026-04-23T12:52:05.702Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:05.704Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":true}
+PROBLEM_TYPE_ACTIVE {
+  message: 'Jantele mele sunt foarte murdare. Cum le curat in interior?',
+  problemType: null
+}
+[2026-04-23T12:52:05.714Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"jante","surface":"wheels"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jantele mele sunt foarte murdare. cum le curat in interior?'
+}
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: null, object: 'jante' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'interior', surface: null, object: 'jante' }
+}
+[2026-04-23T12:52:05.721Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"interior","object":"jante","surface":null},"status":"CORRECTABLE","reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","correctedSlots":{"context":"exterior","surface":"wheels"},"askPresent":true}
+[2026-04-23T12:52:05.721Z] [INFO] [SLOT_VALIDATION_INFO_MESSAGE] {"reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","message":"Jantele sunt la exterior. Te ajut cu curatarea lor."}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'wheels', object: 'jante' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'wheels', object: 'jante' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'wheels', object: 'jante' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'wheels', object: 'jante' }
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_SCORING { flowId: 'exterior_wash_beginner', score: 1 }
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jantele mele sunt foarte murdare. cum le curat in interior?'
+}
+FLOW_SCORING { flowId: 'wheel_tire_deep_clean', score: 16 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL wheel_tire_deep_clean
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jantele mele sunt foarte murdare. cum le curat in interior?'
+}
+FLOW_DECISION { flowCandidate: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:05.732Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"exterior","surface":"wheels","object":"jante"},"flowId":"wheel_tire_deep_clean","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:05.733Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"wheel_tire_deep_clean","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:05.734Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"exterior","surface":"wheels","object":"jante"},"flowId":"wheel_tire_deep_clean","missingSlot":null}
+[2026-04-23T12:52:05.734Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:05.734Z] [INFO] [SLOTS] {"context":"exterior","surface":"wheels","object":"jante"}
+[2026-04-23T12:52:05.735Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"wheel_tire_deep_clean","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'wheel_tire_deep_clean',
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'wheel_tire_deep_clean', type: 'string' }
+FLOW_SELECTED { flowId: 'wheel_tire_deep_clean', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'wheel_tire_deep_clean',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:05.739Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"wheel_clean","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:05.857Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"tire_clean","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:05.858Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"wheel_tire_deep_clean","stepId":"tire_clean","strictCount":0,"fallbackCount":0,"selectedCount":0,"reason":null}
+[2026-04-23T12:52:05.858Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"tire_protect","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:05.858Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"wheel_tire_deep_clean","stepId":"tire_protect","strictCount":0,"fallbackCount":0,"selectedCount":0,"reason":null}
+PRODUCT_FILTER {
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' },
+  before: 1,
+  after: 1
+}
+PRODUCT_BUNDLE {
+  selected: [ 'ADBL Wheel Sword - Perie Jante' ],
+  roles: [ [ 'exterior', 'wheels', 'cleaner' ] ]
+}
+[2026-04-23T12:52:05.860Z] [INFO] [FLOW_EXECUTED] {"flowId":"wheel_tire_deep_clean","slots":{"context":"exterior","surface":"wheels","object":"jante"}}
+[2026-04-23T12:52:05.861Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":1}
+GET_MISSING_SLOT_INPUT { context: 'exterior', object: 'jante', surface: 'wheels' }
+[2026-04-23T12:52:05.862Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"wheel_tire_deep_clean","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:05.864Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"wheel_tire_deep_clean","productsLength":1,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:07.397Z] [INFO] [CHAT] {"sessionId":"session-be5ubvi5q","message":"Exterior scaun, trebuie sa il curat! Cum fac?"}
+[2026-04-23T12:52:07.400Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-be5ubvi5q"}
+[2026-04-23T12:52:07.402Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:07.403Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE {
+  message: 'Exterior scaun, trebuie sa il curat! Cum fac?',
+  problemType: null
+}
+[2026-04-23T12:52:07.417Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"interior","object":"scaun","surface":"textile"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+KEYWORD_MATCH {
+  flowId: 'interior_clean_basic',
+  matched: 'scaun',
+  message: 'exterior scaun, trebuie sa il curat! cum fac?'
+}
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: null, object: 'scaun' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'exterior', surface: null, object: 'scaun' }
+}
+[2026-04-23T12:52:07.419Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"exterior","object":"scaun","surface":null},"status":"CORRECTABLE","reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","correctedSlots":{"context":"interior","surface":"textile"},"askPresent":true}
+[2026-04-23T12:52:07.420Z] [INFO] [SLOT_VALIDATION_INFO_MESSAGE] {"reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","message":"Scaunele sunt la interior. Te ajut cu curatarea lor."}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'scaun' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'scaun' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'scaun' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'scaun' }
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+KEYWORD_MATCH {
+  flowId: 'interior_clean_basic',
+  matched: 'scaun',
+  message: 'exterior scaun, trebuie sa il curat! cum fac?'
+}
+FLOW_SCORING { flowId: 'interior_clean_basic', score: 18 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL interior_clean_basic
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+KEYWORD_MATCH {
+  flowId: 'interior_clean_basic',
+  matched: 'scaun',
+  message: 'exterior scaun, trebuie sa il curat! cum fac?'
+}
+FLOW_DECISION { flowCandidate: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:07.423Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"interior","surface":"textile","object":"scaun"},"flowId":"interior_clean_basic","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:07.424Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:07.424Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"interior","surface":"textile","object":"scaun"},"flowId":"interior_clean_basic","missingSlot":null}
+[2026-04-23T12:52:07.424Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:07.424Z] [INFO] [SLOTS] {"context":"interior","surface":"textile","object":"scaun"}
+[2026-04-23T12:52:07.425Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"interior_clean_basic","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'interior_clean_basic',
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'interior_clean_basic', type: 'string' }
+FLOW_SELECTED { flowId: 'interior_clean_basic', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'interior_clean_basic',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:07.426Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"vacuum","knowledgeUsed":"interior_vacuum","fallbackUsed":false}
+[2026-04-23T12:52:07.584Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"general_clean","knowledgeUsed":"textile_cleaning","fallbackUsed":false}
+[2026-04-23T12:52:07.756Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"finishing","knowledgeUsed":"interior_protect","fallbackUsed":false}
+PRODUCT_FILTER {
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' },
+  before: 3,
+  after: 2
+}
+PRODUCT_BUNDLE {
+  selected: [ 'APC EWOCAR AllClean Concentrate', 'Kit curatare plafon auto' ],
+  roles: [
+    [ 'interior', 'textile', 'plastic', 'cleaner' ],
+    [ 'interior', 'textile', 'cleaner', 'cleaning' ]
+  ]
+}
+[2026-04-23T12:52:07.852Z] [INFO] [FLOW_EXECUTED] {"flowId":"interior_clean_basic","slots":{"context":"interior","surface":"textile","object":"scaun"}}
+[2026-04-23T12:52:07.852Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":2}
+GET_MISSING_SLOT_INPUT { context: 'interior', object: 'scaun', surface: 'textile' }
+[2026-04-23T12:52:07.852Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:07.853Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"interior_clean_basic","productsLength":2,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:09.370Z] [INFO] [CHAT] {"sessionId":"session-w1q428ykg","message":"Bordul din afara, cum se curata?"}
+[2026-04-23T12:52:09.371Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-w1q428ykg"}
+[2026-04-23T12:52:09.374Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:09.375Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Bordul din afara, cum se curata?', problemType: null }
+[2026-04-23T12:52:09.387Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"interior","object":"bord","surface":"plastic"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'plastic', object: 'bord' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'exterior', surface: 'plastic', object: 'bord' }
+}
+[2026-04-23T12:52:09.392Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"exterior","object":"bord","surface":"plastic"},"status":"CORRECTABLE","reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","correctedSlots":{"context":"interior","surface":"plastic"},"askPresent":true}
+[2026-04-23T12:52:09.392Z] [INFO] [SLOT_VALIDATION_INFO_MESSAGE] {"reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","message":"Bordul este la interior. Te ajut cu curatarea lui."}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'plastic', object: 'bord' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'plastic', object: 'bord' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'plastic', object: 'bord' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'plastic', object: 'bord' }
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+FLOW_SCORING { flowId: 'interior_clean_basic', score: 3 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL interior_clean_basic
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+FLOW_DECISION { flowCandidate: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:09.398Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"interior","surface":"plastic","object":"bord"},"flowId":"interior_clean_basic","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:09.398Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:09.398Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"interior","surface":"plastic","object":"bord"},"flowId":"interior_clean_basic","missingSlot":null}
+[2026-04-23T12:52:09.398Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:09.398Z] [INFO] [SLOTS] {"context":"interior","surface":"plastic","object":"bord"}
+[2026-04-23T12:52:09.398Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"interior_clean_basic","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'interior_clean_basic',
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'interior_clean_basic', type: 'string' }
+FLOW_SELECTED { flowId: 'interior_clean_basic', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'interior_clean_basic',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:09.400Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"vacuum","knowledgeUsed":"interior_vacuum","fallbackUsed":false}
+[2026-04-23T12:52:09.521Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"general_clean","knowledgeUsed":"interior_apc","fallbackUsed":false}
+[2026-04-23T12:52:09.684Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"finishing","knowledgeUsed":"interior_protect","fallbackUsed":false}
+PRODUCT_FILTER {
+  slots: { context: 'interior', surface: 'plastic', object: 'bord' },
+  before: 3,
+  after: 3
+}
+PRODUCT_BUNDLE {
+  selected: [ 'APC EWOCAR AllClean Concentrate', 'Kit curatare plafon auto' ],
+  roles: [
+    [ 'interior', 'textile', 'plastic', 'cleaner' ],
+    [ 'interior', 'textile', 'cleaner', 'cleaning' ]
+  ]
+}
+[2026-04-23T12:52:09.786Z] [INFO] [FLOW_EXECUTED] {"flowId":"interior_clean_basic","slots":{"context":"interior","surface":"plastic","object":"bord"}}
+[2026-04-23T12:52:09.786Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":2}
+GET_MISSING_SLOT_INPUT { context: 'interior', object: 'bord', surface: 'plastic' }
+[2026-04-23T12:52:09.786Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:09.786Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"interior_clean_basic","productsLength":2,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:11.301Z] [INFO] [CHAT] {"sessionId":"session-plpzb6kq8","message":"Mocheta in exterior, ce fac?"}
+[2026-04-23T12:52:11.302Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-plpzb6kq8"}
+[2026-04-23T12:52:11.306Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:11.307Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Mocheta in exterior, ce fac?', problemType: null }
+[2026-04-23T12:52:11.318Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"interior","object":"mocheta","surface":"textile"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: null, object: 'mocheta' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'exterior', surface: null, object: 'mocheta' }
+}
+[2026-04-23T12:52:11.319Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"exterior","object":"mocheta","surface":null},"status":"CORRECTABLE","reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","correctedSlots":{"context":"interior","surface":"textile"},"askPresent":true}
+[2026-04-23T12:52:11.319Z] [INFO] [SLOT_VALIDATION_INFO_MESSAGE] {"reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","message":"Mocheta este la interior. Te ajut cu curatarea ei."}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'mocheta' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'mocheta' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'mocheta' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'mocheta' }
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_SCORING { flowId: 'interior_clean_basic', score: 13 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL interior_clean_basic
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_DECISION { flowCandidate: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:11.322Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"interior","surface":"textile","object":"mocheta"},"flowId":"interior_clean_basic","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:11.322Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:11.323Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"interior","surface":"textile","object":"mocheta"},"flowId":"interior_clean_basic","missingSlot":null}
+[2026-04-23T12:52:11.323Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:11.323Z] [INFO] [SLOTS] {"context":"interior","surface":"textile","object":"mocheta"}
+[2026-04-23T12:52:11.323Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"interior_clean_basic","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'interior_clean_basic',
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'interior_clean_basic', type: 'string' }
+FLOW_SELECTED { flowId: 'interior_clean_basic', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'interior_clean_basic',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:11.324Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"vacuum","knowledgeUsed":"interior_vacuum","fallbackUsed":false}
+[2026-04-23T12:52:11.450Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"general_clean","knowledgeUsed":"textile_cleaning","fallbackUsed":false}
+[2026-04-23T12:52:11.618Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"finishing","knowledgeUsed":"interior_protect","fallbackUsed":false}
+PRODUCT_FILTER {
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' },
+  before: 3,
+  after: 2
+}
+PRODUCT_BUNDLE {
+  selected: [ 'APC EWOCAR AllClean Concentrate', 'Kit curatare plafon auto' ],
+  roles: [
+    [ 'interior', 'textile', 'plastic', 'cleaner' ],
+    [ 'interior', 'textile', 'cleaner', 'cleaning' ]
+  ]
+}
+[2026-04-23T12:52:11.710Z] [INFO] [FLOW_EXECUTED] {"flowId":"interior_clean_basic","slots":{"context":"interior","surface":"textile","object":"mocheta"}}
+[2026-04-23T12:52:11.711Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":2}
+GET_MISSING_SLOT_INPUT { context: 'interior', object: 'mocheta', surface: 'textile' }
+[2026-04-23T12:52:11.711Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:11.711Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"interior_clean_basic","productsLength":2,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:13.229Z] [INFO] [CHAT] {"sessionId":"session-i761udpf1","message":"Caroseria din interior trebuie curatata"}
+[2026-04-23T12:52:13.230Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-i761udpf1"}
+[2026-04-23T12:52:13.234Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:13.236Z] [INFO] [INTENT] {"detected":"product_search","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE {
+  message: 'Caroseria din interior trebuie curatata',
+  problemType: null
+}
+[2026-04-23T12:52:13.243Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"caroserie","surface":"paint"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: null, object: 'caroserie' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'interior', surface: null, object: 'caroserie' }
+}
+[2026-04-23T12:52:13.245Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"interior","object":"caroserie","surface":null},"status":"CORRECTABLE","reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","correctedSlots":{"context":"exterior","surface":"paint"},"askPresent":true}
+[2026-04-23T12:52:13.245Z] [INFO] [SLOT_VALIDATION_INFO_MESSAGE] {"reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","message":"Caroseria este la exterior. Te ajut cu curatarea ei."}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'paint', object: 'caroserie' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'paint', object: 'caroserie' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'paint', object: 'caroserie' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'paint', object: 'caroserie' }
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_SCORING { flowId: 'exterior_wash_beginner', score: 1 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL exterior_wash_beginner
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_DECISION { flowCandidate: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:13.249Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"exterior","surface":"paint","object":"caroserie"},"flowId":"exterior_wash_beginner","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:13.249Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"exterior_wash_beginner","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:13.249Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"exterior","surface":"paint","object":"caroserie"},"flowId":"exterior_wash_beginner","missingSlot":null}
+[2026-04-23T12:52:13.250Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:13.250Z] [INFO] [SLOTS] {"context":"exterior","surface":"paint","object":"caroserie"}
+[2026-04-23T12:52:13.250Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"exterior_wash_beginner","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'exterior_wash_beginner',
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'exterior_wash_beginner', type: 'string' }
+FLOW_SELECTED { flowId: 'exterior_wash_beginner', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'exterior_wash_beginner',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:13.252Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"exterior_wash_beginner","stepId":"prewash","knowledgeUsed":"prewash_importanta","fallbackUsed":false}
+[2026-04-23T12:52:13.412Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"exterior_wash_beginner","stepId":"contact_wash","knowledgeUsed":"sampon_neutru_rol","fallbackUsed":false}
+[2026-04-23T12:52:13.576Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"exterior_wash_beginner","stepId":"drying","knowledgeUsed":"laveta_uscare_auto","fallbackUsed":false}
+PRODUCT_FILTER {
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' },
+  before: 4,
+  after: 3
+}
+PRODUCT_BUNDLE {
+  selected: [
+    'Spuma activa alcalina EWOCAR ALK Prewash - Traffic Film Remover',
+    'ADBL SPLUSHY BUCKET+ADBL DIRT BLOCKER',
+    "Prosop uscare auto Meguiar's Water Magnet Microfiber Drying Towel"
+  ],
+  roles: [
+    [ 'exterior', 'paint', 'apc', 'cleaning' ],
+    [ 'exterior', 'paint', 'cleaner' ],
+    [ 'drying_towel' ]
+  ]
+}
+[2026-04-23T12:52:13.678Z] [INFO] [FLOW_EXECUTED] {"flowId":"exterior_wash_beginner","slots":{"context":"exterior","surface":"paint","object":"caroserie"}}
+[2026-04-23T12:52:13.679Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":3}
+GET_MISSING_SLOT_INPUT { context: 'exterior', object: 'caroserie', surface: 'paint' }
+[2026-04-23T12:52:13.679Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"exterior_wash_beginner","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:13.680Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"exterior_wash_beginner","productsLength":3,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:15.198Z] [INFO] [CHAT] {"sessionId":"session-xgv35jjqh","message":"Jantele sunt pline de noroi. Cum le curat?"}
+[2026-04-23T12:52:15.199Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-xgv35jjqh"}
+[2026-04-23T12:52:15.200Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:15.201Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE {
+  message: 'Jantele sunt pline de noroi. Cum le curat?',
+  problemType: null
+}
+[2026-04-23T12:52:15.214Z] [INFO] [LLM_PROMPT] {"prompt":"You are a product tag detector.\nGiven a customer message and available product tags, detect which tags are relevant.\n\nAvailable tags: exterior, paint, wax, protection, gloss, polish, cleaner, cleaning, plastic, interior, leather, dressing, textile, rubber, sealant, satin, glass, natural, tires, metal, detailer, apc, mat, wheels, interior_cleaner, glass_cleaner, drying_towel, interior_protectant, wash_mitt, coating, snow_foam, car_shampoo, alcantara\n\nCustomer message: \"Jantele sunt pline de noroi. Cum le curat?\"\n\nRespond ONLY with a comma-separated list of tags (e.g.: \"polish, wax\").\nIf no tags match, respond: \"none\"\n"}
+[2026-04-23T12:52:16.047Z] [INFO] [LLM_RESPONSE] {"response":"cleaner, cleaning, wheels"}
+[2026-04-23T12:52:16.049Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"jante","surface":"wheels"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jantele sunt pline de noroi. cum le curat?'
+}
+GET_MISSING_SLOT_INPUT { context: null, surface: null, object: 'jante' }
+[2026-04-23T12:52:16.051Z] [INFO] [SLOT_INFERENCE] {"context":"exterior","reason":"strong_keyword_jante"}
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+[2026-04-23T12:52:16.051Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"exterior","object":"jante","surface":"wheels"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":false}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'wheels', object: 'jante' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'wheels', object: 'jante' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'wheels', object: 'jante' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'wheels', object: 'jante' }
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_SCORING { flowId: 'exterior_wash_beginner', score: 1 }
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jantele sunt pline de noroi. cum le curat?'
+}
+FLOW_SCORING { flowId: 'wheel_tire_deep_clean', score: 16 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL wheel_tire_deep_clean
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jantele sunt pline de noroi. cum le curat?'
+}
+FLOW_DECISION { flowCandidate: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:16.058Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"exterior","surface":"wheels","object":"jante"},"flowId":"wheel_tire_deep_clean","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:16.059Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"wheel_tire_deep_clean","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:16.059Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"exterior","surface":"wheels","object":"jante"},"flowId":"wheel_tire_deep_clean","missingSlot":null}
+[2026-04-23T12:52:16.059Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:16.059Z] [INFO] [SLOTS] {"context":"exterior","surface":"wheels","object":"jante"}
+[2026-04-23T12:52:16.059Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"wheel_tire_deep_clean","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'wheel_tire_deep_clean',
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'wheel_tire_deep_clean', type: 'string' }
+FLOW_SELECTED { flowId: 'wheel_tire_deep_clean', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'wheel_tire_deep_clean',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:16.061Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"wheel_clean","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:16.115Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"tire_clean","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:16.116Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"wheel_tire_deep_clean","stepId":"tire_clean","strictCount":0,"fallbackCount":0,"selectedCount":0,"reason":null}
+[2026-04-23T12:52:16.116Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"tire_protect","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:16.116Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"wheel_tire_deep_clean","stepId":"tire_protect","strictCount":0,"fallbackCount":0,"selectedCount":0,"reason":null}
+PRODUCT_FILTER {
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' },
+  before: 1,
+  after: 1
+}
+PRODUCT_BUNDLE {
+  selected: [ 'ADBL Wheel Sword - Perie Jante' ],
+  roles: [ [ 'exterior', 'wheels', 'cleaner' ] ]
+}
+[2026-04-23T12:52:16.116Z] [INFO] [FLOW_EXECUTED] {"flowId":"wheel_tire_deep_clean","slots":{"context":"exterior","surface":"wheels","object":"jante"}}
+[2026-04-23T12:52:16.116Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":1}
+GET_MISSING_SLOT_INPUT { context: 'exterior', object: 'jante', surface: 'wheels' }
+[2026-04-23T12:52:16.117Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"wheel_tire_deep_clean","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:16.117Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"wheel_tire_deep_clean","productsLength":1,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:17.631Z] [INFO] [CHAT] {"sessionId":"session-00syv02v5","message":"Trebuie sa curat caroseria masini"}
+[2026-04-23T12:52:17.633Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-00syv02v5"}
+[2026-04-23T12:52:17.636Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:17.637Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Trebuie sa curat caroseria masini', problemType: null }
+[2026-04-23T12:52:17.648Z] [INFO] [LLM_PROMPT] {"prompt":"You are a product tag detector.\nGiven a customer message and available product tags, detect which tags are relevant.\n\nAvailable tags: exterior, paint, wax, protection, gloss, polish, cleaner, cleaning, plastic, interior, leather, dressing, textile, rubber, sealant, satin, glass, natural, tires, metal, detailer, apc, mat, wheels, interior_cleaner, glass_cleaner, drying_towel, interior_protectant, wash_mitt, coating, snow_foam, car_shampoo, alcantara\n\nCustomer message: \"Trebuie sa curat caroseria masini\"\n\nRespond ONLY with a comma-separated list of tags (e.g.: \"polish, wax\").\nIf no tags match, respond: \"none\"\n"}
+[2026-04-23T12:52:18.583Z] [INFO] [LLM_RESPONSE] {"response":"cleaner, cleaning, exterior"}
+[2026-04-23T12:52:18.585Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"caroserie","surface":"paint"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":false}
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+GET_MISSING_SLOT_INPUT { context: null, surface: null, object: 'caroserie' }
+[2026-04-23T12:52:18.590Z] [INFO] [SLOT_INFERENCE] {"context":null,"reason":"default_unknown"}
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: null, surface: null, object: 'caroserie' }
+}
+[2026-04-23T12:52:18.592Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":null,"object":"caroserie","surface":null},"status":"CORRECTABLE","reasonCode":"OBJ_INFERRED_CONTEXT","correctedSlots":{"context":"exterior","surface":"paint"},"askPresent":false}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'paint', object: 'caroserie' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'paint', object: 'caroserie' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'paint', object: 'caroserie' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'paint', object: 'caroserie' }
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_SCORING { flowId: 'exterior_wash_beginner', score: 1 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL exterior_wash_beginner
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+FLOW_DECISION { flowCandidate: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:18.605Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"exterior","surface":"paint","object":"caroserie"},"flowId":"exterior_wash_beginner","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:18.606Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"exterior_wash_beginner","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:18.607Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"exterior","surface":"paint","object":"caroserie"},"flowId":"exterior_wash_beginner","missingSlot":null}
+[2026-04-23T12:52:18.608Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:18.608Z] [INFO] [SLOTS] {"context":"exterior","surface":"paint","object":"caroserie"}
+[2026-04-23T12:52:18.608Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"exterior_wash_beginner","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'exterior_wash_beginner',
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'exterior_wash_beginner', type: 'string' }
+FLOW_SELECTED { flowId: 'exterior_wash_beginner', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'exterior_wash_beginner',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:18.610Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"exterior_wash_beginner","stepId":"prewash","knowledgeUsed":"prewash_importanta","fallbackUsed":false}
+[2026-04-23T12:52:18.759Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"exterior_wash_beginner","stepId":"contact_wash","knowledgeUsed":"sampon_neutru_rol","fallbackUsed":false}
+[2026-04-23T12:52:18.919Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"exterior_wash_beginner","stepId":"drying","knowledgeUsed":"laveta_uscare_auto","fallbackUsed":false}
+PRODUCT_FILTER {
+  slots: { context: 'exterior', surface: 'paint', object: 'caroserie' },
+  before: 4,
+  after: 3
+}
+PRODUCT_BUNDLE {
+  selected: [
+    'Spuma activa alcalina EWOCAR ALK Prewash - Traffic Film Remover',
+    'ADBL SPLUSHY BUCKET+ADBL DIRT BLOCKER',
+    "Prosop uscare auto Meguiar's Water Magnet Microfiber Drying Towel"
+  ],
+  roles: [
+    [ 'exterior', 'paint', 'apc', 'cleaning' ],
+    [ 'exterior', 'paint', 'cleaner' ],
+    [ 'drying_towel' ]
+  ]
+}
+[2026-04-23T12:52:19.026Z] [INFO] [FLOW_EXECUTED] {"flowId":"exterior_wash_beginner","slots":{"context":"exterior","surface":"paint","object":"caroserie"}}
+[2026-04-23T12:52:19.026Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":3}
+GET_MISSING_SLOT_INPUT { context: 'exterior', object: 'caroserie', surface: 'paint' }
+[2026-04-23T12:52:19.026Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"exterior_wash_beginner","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'exterior_wash_beginner', missingSlot: null }
+[2026-04-23T12:52:19.027Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"exterior_wash_beginner","productsLength":3,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:20.538Z] [INFO] [CHAT] {"sessionId":"session-a56s4w3cz","message":"Mocheta interioara, cum se curata?"}
+[2026-04-23T12:52:20.540Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-a56s4w3cz"}
+[2026-04-23T12:52:20.542Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:20.543Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Mocheta interioara, cum se curata?', problemType: null }
+[2026-04-23T12:52:20.548Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"interior","object":"mocheta","surface":"textile"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":false}
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: null, object: 'mocheta' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'interior', surface: null, object: 'mocheta' }
+}
+[2026-04-23T12:52:20.551Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"interior","object":"mocheta","surface":null},"status":"CORRECTABLE","reasonCode":"OBJ_INFERRED_SURFACE","correctedSlots":{"surface":"textile"},"askPresent":false}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'mocheta' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'mocheta' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'mocheta' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'mocheta' }
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_SCORING { flowId: 'interior_clean_basic', score: 13 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL interior_clean_basic
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+FLOW_DECISION { flowCandidate: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:20.553Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"interior","surface":"textile","object":"mocheta"},"flowId":"interior_clean_basic","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:20.553Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:20.553Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"interior","surface":"textile","object":"mocheta"},"flowId":"interior_clean_basic","missingSlot":null}
+[2026-04-23T12:52:20.554Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:20.554Z] [INFO] [SLOTS] {"context":"interior","surface":"textile","object":"mocheta"}
+[2026-04-23T12:52:20.554Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"interior_clean_basic","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'interior_clean_basic',
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'interior_clean_basic', type: 'string' }
+FLOW_SELECTED { flowId: 'interior_clean_basic', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'interior_clean_basic',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:20.555Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"vacuum","knowledgeUsed":"interior_vacuum","fallbackUsed":false}
+[2026-04-23T12:52:20.664Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"general_clean","knowledgeUsed":"textile_cleaning","fallbackUsed":false}
+[2026-04-23T12:52:20.821Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"finishing","knowledgeUsed":"interior_protect","fallbackUsed":false}
+PRODUCT_FILTER {
+  slots: { context: 'interior', surface: 'textile', object: 'mocheta' },
+  before: 3,
+  after: 2
+}
+PRODUCT_BUNDLE {
+  selected: [ 'APC EWOCAR AllClean Concentrate', 'Kit curatare plafon auto' ],
+  roles: [
+    [ 'interior', 'textile', 'plastic', 'cleaner' ],
+    [ 'interior', 'textile', 'cleaner', 'cleaning' ]
+  ]
+}
+[2026-04-23T12:52:20.909Z] [INFO] [FLOW_EXECUTED] {"flowId":"interior_clean_basic","slots":{"context":"interior","surface":"textile","object":"mocheta"}}
+[2026-04-23T12:52:20.909Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":2}
+GET_MISSING_SLOT_INPUT { context: 'interior', object: 'mocheta', surface: 'textile' }
+[2026-04-23T12:52:20.909Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:20.909Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"interior_clean_basic","productsLength":2,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:22.428Z] [INFO] [CHAT] {"sessionId":"session-ye2bv0nl5","message":"Parbrizul este murdar. Cum il spel?"}
+[2026-04-23T12:52:22.431Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-ye2bv0nl5"}
+[2026-04-23T12:52:22.434Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:22.436Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":true}
+PROBLEM_TYPE_ACTIVE { message: 'Parbrizul este murdar. Cum il spel?', problemType: null }
+[2026-04-23T12:52:22.449Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"parbriz","surface":"glass"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":false}
+FLOW_MATCH_REASON {
+  flowId: 'bug_removal_quick',
+  matched: true,
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'glass', object: 'parbriz' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+[2026-04-23T12:52:22.453Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"exterior","object":"parbriz","surface":"glass"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":false}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'glass', object: 'parbriz' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'glass', object: 'parbriz' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'glass', object: 'parbriz' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'glass', object: 'parbriz' }
+FLOW_MATCH_REASON {
+  flowId: 'bug_removal_quick',
+  matched: true,
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+FLOW_SCORING { flowId: 'bug_removal_quick', score: 13 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL bug_removal_quick
+FLOW_MATCH_REASON {
+  flowId: 'bug_removal_quick',
+  matched: true,
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+FLOW_DECISION { flowCandidate: 'bug_removal_quick', missingSlot: null }
+[2026-04-23T12:52:22.459Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"exterior","surface":"glass","object":"parbriz"},"flowId":"bug_removal_quick","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'bug_removal_quick', missingSlot: null }
+[2026-04-23T12:52:22.460Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"bug_removal_quick","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'bug_removal_quick', missingSlot: null }
+[2026-04-23T12:52:22.461Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"exterior","surface":"glass","object":"parbriz"},"flowId":"bug_removal_quick","missingSlot":null}
+[2026-04-23T12:52:22.462Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:22.462Z] [INFO] [SLOTS] {"context":"exterior","surface":"glass","object":"parbriz"}
+[2026-04-23T12:52:22.462Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"bug_removal_quick","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'bug_removal_quick',
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'bug_removal_quick', type: 'string' }
+FLOW_SELECTED { flowId: 'bug_removal_quick', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'bug_removal_quick',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:22.466Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"bug_removal_quick","stepId":"apply_solution","knowledgeUsed":"bug_removal_quick_apply_solution_glass","fallbackUsed":false}
+[2026-04-23T12:52:22.472Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"bug_removal_quick","stepId":"apply_solution","strictCount":2,"fallbackCount":0,"selectedCount":2,"reason":"strict_glass_cleaner"}
+[2026-04-23T12:52:22.473Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"bug_removal_quick","stepId":"wipe","knowledgeUsed":"bug_removal_quick_wipe_glass","fallbackUsed":false}
+[2026-04-23T12:52:22.483Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"bug_removal_quick","stepId":"wipe","strictCount":2,"fallbackCount":0,"selectedCount":2,"reason":"strict_glass_cleaner"}
+[2026-04-23T12:52:22.484Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"bug_removal_quick","stepId":"escalation","knowledgeUsed":"bug_removal_quick_escalation_glass","fallbackUsed":false}
+[2026-04-23T12:52:22.492Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"bug_removal_quick","stepId":"escalation","strictCount":2,"fallbackCount":0,"selectedCount":2,"reason":"strict_glass_cleaner"}
+PRODUCT_FILTER {
+  slots: { context: 'exterior', surface: 'glass', object: 'parbriz' },
+  before: 2,
+  after: 0
+}
+PRODUCT_BUNDLE { selected: [], roles: [] }
+[2026-04-23T12:52:22.494Z] [INFO] [FLOW_EXECUTED] {"flowId":"bug_removal_quick","slots":{"context":"exterior","surface":"glass","object":"parbriz"}}
+[2026-04-23T12:52:22.494Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":0}
+GET_MISSING_SLOT_INPUT { context: 'exterior', object: 'parbriz', surface: 'glass' }
+[2026-04-23T12:52:22.495Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"bug_removal_quick","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'bug_removal_quick', missingSlot: null }
+[2026-04-23T12:52:22.496Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"bug_removal_quick","productsLength":0,"productsReason":"no_matching_products","pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:24.013Z] [INFO] [CHAT] {"sessionId":"session-x6pd79nux","message":"Scaun vopsea cum se curata?"}
+[2026-04-23T12:52:24.015Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-x6pd79nux"}
+[2026-04-23T12:52:24.019Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:24.020Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Scaun vopsea cum se curata?', problemType: null }
+[2026-04-23T12:52:24.036Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"interior","object":"scaun","surface":"paint"},"status":"INVALID","reasonCode":"SURFACE_NOT_ALLOWED_FOR_OBJECT","correctedSlots":null,"askPresent":true}
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'paint', object: 'scaun' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'paint', object: 'scaun' }
+[2026-04-23T12:52:24.039Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"clarification","flowId":null,"missingSlot":null},"outputType":"question"}
+FINAL_DECISION { action: 'clarification', flowId: null, missingSlot: null }
+[2026-04-23T12:52:24.040Z] [INFO] [INTERACTION_COMPLETE] {"action":"clarification","flowId":null,"productsLength":0,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:25.556Z] [INFO] [CHAT] {"sessionId":"session-xi63hamsy","message":"Geam piele, cum se curata?"}
+[2026-04-23T12:52:25.556Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-xi63hamsy"}
+[2026-04-23T12:52:25.558Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:25.559Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Geam piele, cum se curata?', problemType: null }
+[2026-04-23T12:52:25.568Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"geam","surface":"leather"},"status":"INVALID","reasonCode":"SURFACE_NOT_ALLOWED_FOR_OBJECT","correctedSlots":null,"askPresent":true}
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'leather', object: 'geam' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'leather', object: 'geam' }
+[2026-04-23T12:52:25.569Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"clarification","flowId":null,"missingSlot":null},"outputType":"question"}
+FINAL_DECISION { action: 'clarification', flowId: null, missingSlot: null }
+[2026-04-23T12:52:25.570Z] [INFO] [INTERACTION_COMPLETE] {"action":"clarification","flowId":null,"productsLength":0,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:27.085Z] [INFO] [CHAT] {"sessionId":"session-et0it2m2o","message":"Jante textile, vreau sa le curat"}
+[2026-04-23T12:52:27.087Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-et0it2m2o"}
+[2026-04-23T12:52:27.092Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:27.094Z] [INFO] [INTENT] {"detected":"product_search","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Jante textile, vreau sa le curat', problemType: null }
+[2026-04-23T12:52:27.102Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"jante","surface":"textile"},"status":"INVALID","reasonCode":"SURFACE_NOT_ALLOWED_FOR_OBJECT","correctedSlots":null,"askPresent":true}
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'textile', object: 'jante' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'textile', object: 'jante' }
+[2026-04-23T12:52:27.103Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"clarification","flowId":null,"missingSlot":null},"outputType":"question"}
+FINAL_DECISION { action: 'clarification', flowId: null, missingSlot: null }
+[2026-04-23T12:52:27.104Z] [INFO] [INTERACTION_COMPLETE] {"action":"clarification","flowId":null,"productsLength":0,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:28.622Z] [INFO] [CHAT] {"sessionId":"session-rq8u0jtzj","message":"Interior aripa, cum se curata?"}
+[2026-04-23T12:52:28.624Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"session-rq8u0jtzj"}
+[2026-04-23T12:52:28.626Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:28.627Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Interior aripa, cum se curata?', problemType: null }
+[2026-04-23T12:52:28.639Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"interior","object":null,"surface":null},"status":"VALID","reasonCode":"OBJ_UNKNOWN_SKIP_VALIDATION","correctedSlots":null,"askPresent":false}
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: null, object: null }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: null, object: null }
+}
+KEYWORD_MATCH {
+  flowId: 'interior_clean_basic',
+  matched: 'interior',
+  message: 'interior aripa, cum se curata?'
+}
+[2026-04-23T12:52:28.643Z] [INFO] [FLOW_DISAMBIGUATION] {"candidates":["interior_clean_basic","tool_care_towel"]}
+[2026-04-23T12:52:28.645Z] [INFO] [RESPONSE] {"type":"question","steps":0,"products":0}
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: null, object: null }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: null, object: null }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: null, object: null }
+[2026-04-23T12:52:28.647Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"clarification","flowId":null,"missingSlot":"object"},"outputType":"question"}
+FINAL_DECISION { action: 'clarification', flowId: null, missingSlot: 'object' }
+[2026-04-23T12:52:28.650Z] [INFO] [INTERACTION_COMPLETE] {"action":"clarification","flowId":null,"productsLength":0,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:30.170Z] [INFO] [CHAT] {"sessionId":"test-f1","message":"Jante in interior, ajuta-ma!"}
+[2026-04-23T12:52:30.172Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"test-f1"}
+[2026-04-23T12:52:30.178Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:30.179Z] [INFO] [INTENT] {"detected":"product_search","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Jante in interior, ajuta-ma!', problemType: null }
+[2026-04-23T12:52:30.189Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"exterior","object":"jante","surface":"wheels"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: null, object: 'jante' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: {},
+  after: { context: 'interior', surface: null, object: 'jante' }
+}
+[2026-04-23T12:52:30.191Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"interior","object":"jante","surface":null},"status":"CORRECTABLE","reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","correctedSlots":{"context":"exterior","surface":"wheels"},"askPresent":true}
+[2026-04-23T12:52:30.191Z] [INFO] [SLOT_VALIDATION_INFO_MESSAGE] {"reasonCode":"CONTEXT_CONFLICT_WITH_OBJECT","message":"Jantele sunt la exterior. Te ajut cu curatarea lor."}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'wheels', object: 'jante' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'wheels', object: 'jante' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+SLOT_CHECK_SOURCE { context: 'exterior', surface: 'wheels', object: 'jante' }
+GET_MISSING_SLOT_INPUT { context: 'exterior', surface: 'wheels', object: 'jante' }
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_SCORING { flowId: 'exterior_wash_beginner', score: 1 }
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jante in interior, ajuta-ma!'
+}
+FLOW_SCORING { flowId: 'wheel_tire_deep_clean', score: 16 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL wheel_tire_deep_clean
+FLOW_MATCH_REASON {
+  flowId: 'exterior_wash_beginner',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'wheel_tire_deep_clean',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+KEYWORD_MATCH {
+  flowId: 'wheel_tire_deep_clean',
+  matched: 'jante',
+  message: 'jante in interior, ajuta-ma!'
+}
+FLOW_DECISION { flowCandidate: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:30.196Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"exterior","surface":"wheels","object":"jante"},"flowId":"wheel_tire_deep_clean","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:30.197Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"wheel_tire_deep_clean","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:30.197Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"exterior","surface":"wheels","object":"jante"},"flowId":"wheel_tire_deep_clean","missingSlot":null}
+[2026-04-23T12:52:30.198Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:30.198Z] [INFO] [SLOTS] {"context":"exterior","surface":"wheels","object":"jante"}
+[2026-04-23T12:52:30.198Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"wheel_tire_deep_clean","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'wheel_tire_deep_clean',
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'wheel_tire_deep_clean', type: 'string' }
+FLOW_SELECTED { flowId: 'wheel_tire_deep_clean', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'wheel_tire_deep_clean',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:30.200Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"wheel_clean","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:30.275Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"tire_clean","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:30.275Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"wheel_tire_deep_clean","stepId":"tire_clean","strictCount":0,"fallbackCount":0,"selectedCount":0,"reason":null}
+[2026-04-23T12:52:30.275Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"wheel_tire_deep_clean","stepId":"tire_protect","knowledgeUsed":null,"fallbackUsed":false}
+[2026-04-23T12:52:30.275Z] [INFO] [FLOW_PRODUCT_FALLBACK] {"flowId":"wheel_tire_deep_clean","stepId":"tire_protect","strictCount":0,"fallbackCount":0,"selectedCount":0,"reason":null}
+PRODUCT_FILTER {
+  slots: { context: 'exterior', surface: 'wheels', object: 'jante' },
+  before: 1,
+  after: 1
+}
+PRODUCT_BUNDLE {
+  selected: [ 'ADBL Wheel Sword - Perie Jante' ],
+  roles: [ [ 'exterior', 'wheels', 'cleaner' ] ]
+}
+[2026-04-23T12:52:30.276Z] [INFO] [FLOW_EXECUTED] {"flowId":"wheel_tire_deep_clean","slots":{"context":"exterior","surface":"wheels","object":"jante"}}
+[2026-04-23T12:52:30.277Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":1}
+GET_MISSING_SLOT_INPUT { context: 'exterior', object: 'jante', surface: 'wheels' }
+[2026-04-23T12:52:30.277Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"wheel_tire_deep_clean","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'wheel_tire_deep_clean', missingSlot: null }
+[2026-04-23T12:52:30.278Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"wheel_tire_deep_clean","productsLength":1,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}
+[2026-04-23T12:52:31.790Z] [INFO] [CHAT] {"sessionId":"test-f1","message":"Scaun textile, cum se curata?"}
+[2026-04-23T12:52:31.792Z] [INFO] [PENDING_SELECTION_LOADED] {"sessionId":"test-f1"}
+[2026-04-23T12:52:31.794Z] [INFO] [ROUTING] {"queryType":"procedural"}
+[2026-04-23T12:52:31.795Z] [INFO] [INTENT] {"detected":"product_guidance","problemOverrideApplied":false}
+PROBLEM_TYPE_ACTIVE { message: 'Scaun textile, cum se curata?', problemType: null }
+[2026-04-23T12:52:31.808Z] [INFO] [SLOT_VALIDATION_RESULT_PREVIEW] {"inputs":{"context":"interior","object":"scaun","surface":"textile"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":true}
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+KEYWORD_MATCH {
+  flowId: 'interior_clean_basic',
+  matched: 'scaun',
+  message: 'scaun textile, cum se curata?'
+}
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'scaun' }
+SLOT_MODE { mode: 'replace' }
+SLOT_UPDATE {
+  mode: 'replace',
+  before: { context: 'exterior', surface: 'wheels', object: 'jante' },
+  after: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+[2026-04-23T12:52:31.813Z] [INFO] [SLOT_VALIDATION_RESULT] {"inputs":{"context":"interior","object":"scaun","surface":"textile"},"status":"VALID","reasonCode":"VALID","correctedSlots":null,"askPresent":false}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'scaun' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'scaun' }
+SLOT_SOURCE_CHECK {
+  slotsUsed: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+SLOT_CHECK_SOURCE { context: 'interior', surface: 'textile', object: 'scaun' }
+GET_MISSING_SLOT_INPUT { context: 'interior', surface: 'textile', object: 'scaun' }
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+KEYWORD_MATCH {
+  flowId: 'interior_clean_basic',
+  matched: 'scaun',
+  message: 'scaun textile, cum se curata?'
+}
+FLOW_SCORING { flowId: 'interior_clean_basic', score: 18 }
+FLOW_SCORING { flowId: 'tool_care_towel', score: 0 }
+FLOW_SELECTED_FINAL interior_clean_basic
+FLOW_MATCH_REASON {
+  flowId: 'interior_clean_basic',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+FLOW_MATCH_REASON {
+  flowId: 'tool_care_towel',
+  matched: true,
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+KEYWORD_MATCH {
+  flowId: 'interior_clean_basic',
+  matched: 'scaun',
+  message: 'scaun textile, cum se curata?'
+}
+FLOW_DECISION { flowCandidate: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:31.816Z] [INFO] [ROUTING_DECISION] {"queryType":"procedural","action":"flow","reason":"procedural_query","slots":{"context":"interior","surface":"textile","object":"scaun"},"flowId":"interior_clean_basic","missingSlot":null,"pendingSelectionState":null}
+DECISION_FINAL { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:31.816Z] [INFO] [DECISION_SOURCE] {"source":"resolveAction","decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null}}
+STAGE:RESOLVE { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:31.817Z] [INFO] [FINAL_ACTION] {"action":"flow","routing":"procedural","slots":{"context":"interior","surface":"textile","object":"scaun"},"flowId":"interior_clean_basic","missingSlot":null}
+[2026-04-23T12:52:31.817Z] [INFO] [ROUTER_DECISION] {"action":"procedural","reason":"procedural_query"}
+[2026-04-23T12:52:31.817Z] [INFO] [SLOTS] {"context":"interior","surface":"textile","object":"scaun"}
+[2026-04-23T12:52:31.817Z] [INFO] [EXECUTION_PATH] {"action":"flow","flowId":"interior_clean_basic","reason":"routing_decision_finalized"}
+STAGE:EXECUTE_INPUT {
+  action: 'flow',
+  flowId: 'interior_clean_basic',
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' }
+}
+EXECUTION_PATH { action: 'flow' }
+FLOW_REGISTRY_KEYS [
+  'exterior_wash_beginner',
+  'interior_clean_basic',
+  'bug_removal_quick',
+  'wheel_tire_deep_clean',
+  'tool_care_towel'
+]
+FLOW_LOOKUP { requested: 'interior_clean_basic', type: 'string' }
+FLOW_SELECTED { flowId: 'interior_clean_basic', exists: true }
+STAGE:EXECUTE_FLOW {
+  flowId: 'interior_clean_basic',
+  availableFlows: [
+    'exterior_wash_beginner',
+    'interior_clean_basic',
+    'bug_removal_quick',
+    'wheel_tire_deep_clean',
+    'tool_care_towel'
+  ]
+}
+[2026-04-23T12:52:31.819Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"vacuum","knowledgeUsed":"interior_vacuum","fallbackUsed":false}
+[2026-04-23T12:52:31.946Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"general_clean","knowledgeUsed":"textile_cleaning","fallbackUsed":false}
+[2026-04-23T12:52:32.115Z] [INFO] [FLOW_STEP_KNOWLEDGE] {"flowId":"interior_clean_basic","stepId":"finishing","knowledgeUsed":"interior_protect","fallbackUsed":false}
+PRODUCT_FILTER {
+  slots: { context: 'interior', surface: 'textile', object: 'scaun' },
+  before: 3,
+  after: 2
+}
+PRODUCT_BUNDLE {
+  selected: [ 'APC EWOCAR AllClean Concentrate', 'Kit curatare plafon auto' ],
+  roles: [
+    [ 'interior', 'textile', 'plastic', 'cleaner' ],
+    [ 'interior', 'textile', 'cleaner', 'cleaning' ]
+  ]
+}
+[2026-04-23T12:52:32.204Z] [INFO] [FLOW_EXECUTED] {"flowId":"interior_clean_basic","slots":{"context":"interior","surface":"textile","object":"scaun"}}
+[2026-04-23T12:52:32.204Z] [INFO] [RESPONSE] {"type":"flow","steps":3,"products":2}
+GET_MISSING_SLOT_INPUT { context: 'interior', object: 'scaun', surface: 'textile' }
+[2026-04-23T12:52:32.204Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"flow","flowId":"interior_clean_basic","missingSlot":null},"outputType":"flow"}
+FINAL_DECISION { action: 'flow', flowId: 'interior_clean_basic', missingSlot: null }
+[2026-04-23T12:52:32.205Z] [INFO] [INTERACTION_COMPLETE] {"action":"flow","flowId":"interior_clean_basic","productsLength":2,"productsReason":null,"pendingQuestion":false,"hardGuardApplied":false}

@@ -1,0 +1,18 @@
+{
+  "flowId": "tool_care_towel",
+  "type": "micro",
+  "triggers": {
+    "contexts": [],
+    "surfaces": [],
+    "objects": []
+  },
+  "title": "Ingrijire lavete si prosoape microfibra",
+  "steps": [
+    {
+      "id": "tool_care_towel_guidance",
+      "title": "Ghid rapid de spalare microfibra",
+      "knowledgeIds": [],
+      "roles": []
+    }
+  ]
+}

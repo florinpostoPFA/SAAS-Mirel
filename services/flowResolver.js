@@ -156,7 +156,31 @@ function getBestMatchingFlow(candidates, slots, message) {
   return flowCandidate;
 }
 
-function resolveSpecializedFlowOverride() {
+function resolveSpecializedFlowOverride(message) {
+  const msg = normalizeValue(message);
+
+  if (!msg) {
+    return null;
+  }
+
+  const hasTowelToken = ["laveta", "lavete", "prosop", "prosoape", "microfibra", "microfibre"]
+    .some(token => msg.includes(token));
+  const hasCareToken = ["spal", "curat", "usuc"]
+    .some(token => msg.includes(token));
+
+  if (hasTowelToken && hasCareToken) {
+    const flow = config?.flows?.tool_care_towel || null;
+    if (flow) {
+      logInfo("FLOW_SPECIALIZED_MATCH", {
+        flowId: flow.flowId,
+        reason: "tool_care_towel",
+        action: "flow",
+        missingSlot: null
+      });
+      return flow;
+    }
+  }
+
   return null;
 }
 

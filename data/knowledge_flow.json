@@ -53,5 +53,20 @@
     "id": "leather_cleaning",
     "title": "Cum cureti suprafetele din piele",
     "content": "Foloseste o solutie dedicata pentru piele si o laveta moale sau o perie foarte fina. Curata usor fara presiune excesiva, apoi sterge reziduurile si aplica un produs de hidratare pentru a mentine pielea moale si protejata."
+  },
+  {
+    "id": "bug_removal_quick_apply_solution_glass",
+    "title": "Aplicare solutie insecte pe geam",
+    "content": "Pulverizeaza solutia pe geamul rece, lasa 60-90 secunde sa actioneze, fara frecare agresiva. Lucreaza pe zone mici si evita uscarea produsului pe suprafata."
+  },
+  {
+    "id": "bug_removal_quick_wipe_glass",
+    "title": "Stergere delicata pe geam",
+    "content": "Sterge cu laveta de microfibra curata, cu miscari lineare si presiune redusa. Intoarce laveta pe partea curata la fiecare trecere pentru a evita urmele."
+  },
+  {
+    "id": "bug_removal_quick_escalation_glass",
+    "title": "Escaladare pentru urme persistente",
+    "content": "Repeta ciclul pulverizare + timp de actiune + stergere usoara. Finalizeaza cu cleaner de geam pentru claritate si indepartarea ultimelor urme."
   }
 ]

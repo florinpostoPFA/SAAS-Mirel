@@ -18,26 +18,132 @@ function getKnowledgeEntryById(id) {
   return knowledgeFlow.find(entry => String(entry?.id) === String(id)) || null;
 }
 
+function getBugGlassDefaultSnippet() {
+  return "Pre-umezeste zona, lasa solutia 60-90 secunde sa actioneze, sterge usor cu microfibra curata si finalizeaza cu cleaner de geam pentru claritate.";
+}
+
+function getToolCareTowelReply() {
+  return [
+    "Iata ghidul rapid pentru spalarea lavetei/prosopului din microfibra:",
+    "- Spala la 30-40C, program delicat.",
+    "- Foloseste detergent lichid simplu, fara inalbitori.",
+    "- Nu folosi balsam de rufe (incarca fibrele).",
+    "- Spala separat de bumbac sau materiale care lasa scame.",
+    "- Clateste bine, ideal cu extra-rinse.",
+    "- Evita uscarea la temperatura mare; daca folosesti uscator, doar low heat.",
+    "- Ideal: uscare la aer, ferit de praf.",
+    "- Daca devine aspra, mai fa un ciclu scurt fara detergent, doar clatire."
+  ].join("\n");
+}
+
+function scoreDeterministicFallbackProduct(product, fallbackTags) {
+  const tags = Array.isArray(product?.tags)
+    ? product.tags.map(tag => normalizeText(tag)).filter(Boolean)
+    : [];
+
+  let score = 0;
+  fallbackTags.forEach(tag => {
+    if (tags.includes(tag)) {
+      score += 1;
+    }
+  });
+
+  return score;
+}
+
+function selectFallbackProductsForFlow(products, flowId, slots = {}) {
+  if (flowId !== "bug_removal_quick" || normalizeText(slots?.surface) !== "glass") {
+    return { strictCount: 0, fallbackCount: 0, selected: [], reason: null };
+  }
+
+  const safeProducts = Array.isArray(products) ? products : [];
+  const strictCandidates = safeProducts.filter(product => {
+    const tags = Array.isArray(product?.tags)
+      ? product.tags.map(tag => normalizeText(tag)).filter(Boolean)
+      : [];
+    return tags.includes("glass_cleaner");
+  });
+
+  if (strictCandidates.length > 0) {
+    return {
+      strictCount: strictCandidates.length,
+      fallbackCount: 0,
+      selected: uniqueProducts(strictCandidates).slice(0, 2),
+      reason: "strict_glass_cleaner"
+    };
+  }
+
+  const fallbackTags = ["glass_cleaner", "glass", "cleaner"];
+  const fallbackCandidates = safeProducts
+    .map(product => ({
+      product,
+      score: scoreDeterministicFallbackProduct(product, fallbackTags)
+    }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return String(a.product?.name || "").localeCompare(String(b.product?.name || ""));
+    })
+    .map(item => item.product);
+
+  const selected = uniqueProducts(fallbackCandidates).slice(0, 2);
+
+  const reason = selected.length > 0
+    ? "fallback_tags_glass_cleaner_cleaner_glass"
+    : "no_matching_products";
+
+  return {
+    strictCount: strictCandidates.length,
+    fallbackCount: fallbackCandidates.length,
+    selected,
+    reason
+  };
+}
+
 function isSurfaceAwareCleaningStep(step) {
   const stepId = normalizeText(step?.id);
 
   return stepId === "general_clean" || stepId.includes("clean");
 }
 
-function getStepKnowledge(step, slots = {}) {
+function getStepKnowledge(step, slots = {}, flowId = null) {
   const knowledgeIds = Array.isArray(step?.knowledgeIds) ? step.knowledgeIds : [];
   const surface = normalizeText(slots?.surface);
   const stepId = String(step?.id || "").trim() || null;
+
+  if (flowId === "bug_removal_quick" && surface === "glass" && stepId) {
+    const stepSpecificId = `${flowId}_${stepId}_glass`;
+    const stepSpecificEntry = getKnowledgeEntryById(stepSpecificId);
+    if (stepSpecificEntry) {
+      logInfo("FLOW_STEP_KNOWLEDGE", {
+        flowId,
+        stepId,
+        knowledgeUsed: stepSpecificId,
+        fallbackUsed: false
+      });
+      return [String(stepSpecificEntry.content || "").trim()].filter(Boolean);
+    }
+
+    const fallbackSnippet = getBugGlassDefaultSnippet();
+    logInfo("FLOW_STEP_KNOWLEDGE", {
+      flowId,
+      stepId,
+      knowledgeUsed: null,
+      fallbackUsed: true
+    });
+    return [fallbackSnippet];
+  }
 
   if (surface && isSurfaceAwareCleaningStep(step)) {
     const surfaceKnowledgeId = `${surface}_cleaning`;
     const surfaceEntry = getKnowledgeEntryById(surfaceKnowledgeId);
 
     if (surfaceEntry) {
-      logInfo("KNOWLEDGE_SELECTION", {
+      logInfo("FLOW_STEP_KNOWLEDGE", {
+        flowId,
         stepId,
-        surface,
-        used: surfaceKnowledgeId
+        knowledgeUsed: surfaceKnowledgeId,
+        fallbackUsed: false
       });
       return [String(surfaceEntry.content || "").trim()].filter(Boolean);
     }
@@ -47,15 +153,28 @@ function getStepKnowledge(step, slots = {}) {
     .map(id => getKnowledgeEntryById(id))
     .filter(Boolean);
 
-  logInfo("KNOWLEDGE_SELECTION", {
+  logInfo("FLOW_STEP_KNOWLEDGE", {
+    flowId,
     stepId,
-    surface: surface || null,
-    used: fallbackEntries[0]?.id || null
+    knowledgeUsed: fallbackEntries[0]?.id || null,
+    fallbackUsed: false
   });
 
-  return fallbackEntries
+  const snippets = fallbackEntries
     .map(entry => String(entry.content || "").trim())
     .filter(Boolean);
+
+  if (flowId === "bug_removal_quick" && surface === "glass" && snippets.length === 0) {
+    logInfo("FLOW_STEP_KNOWLEDGE", {
+      flowId,
+      stepId,
+      knowledgeUsed: null,
+      fallbackUsed: true
+    });
+    return [getBugGlassDefaultSnippet()];
+  }
+
+  return snippets;
 }
 
 function matchesRoleText(product, matchText) {
@@ -206,6 +325,23 @@ function executeFlow(flow, products, slots = {}) {
     throw new Error("Flow not found: " + flowId);
   }
 
+  if (flowId === "tool_care_towel") {
+    return {
+      reply: getToolCareTowelReply(),
+      products: [],
+      steps: [
+        {
+          id: "tool_care_towel_guidance",
+          title: "Ghid rapid de spalare microfibra",
+          goal: "Intretinere corecta pentru lavete si prosoape din microfibra.",
+          explanation: getToolCareTowelReply(),
+          roles: [],
+          products: []
+        }
+      ]
+    };
+  }
+
   const steps = Array.isArray(safeFlow.steps) ? safeFlow.steps : [];
   const lines = [];
   const allProducts = [];
@@ -223,12 +359,27 @@ function executeFlow(flow, products, slots = {}) {
       : Array.isArray(step?.productRoles)
         ? step.productRoles
         : [];
-    const knowledgeSnippets = getStepKnowledge(step, slots);
+    const knowledgeSnippets = getStepKnowledge(step, slots, flowId);
     const stepExplanation = buildStepExplanation(stepGoal, knowledgeSnippets);
     const safeStepExplanation = stepExplanation || `Executa ${stepTitle} cu tehnica standard de curatare.`;
-    const stepProducts = limitStepProducts(
+    let stepProducts = limitStepProducts(
       stepRoles.flatMap(role => resolveProductsForRole(role, products))
     );
+
+    if (stepProducts.length === 0) {
+      const fallback = selectFallbackProductsForFlow(products, flowId, slots);
+      logInfo("FLOW_PRODUCT_FALLBACK", {
+        flowId,
+        stepId: step?.id || null,
+        strictCount: fallback.strictCount,
+        fallbackCount: fallback.fallbackCount,
+        selectedCount: fallback.selected.length,
+        reason: fallback.reason
+      });
+      if (fallback.selected.length > 0) {
+        stepProducts = fallback.selected;
+      }
+    }
 
     structuredSteps.push({
       id: step?.id || `step_${stepNumber}`,
@@ -261,6 +412,11 @@ function executeFlow(flow, products, slots = {}) {
       }
     }
   });
+
+  if (flowId === "bug_removal_quick" && uniqueProducts(allProducts).length === 0) {
+    lines.push("");
+    lines.push("Produse: no matching products");
+  }
 
   return {
     reply: lines.join("\n"),

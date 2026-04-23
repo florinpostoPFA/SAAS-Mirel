@@ -106,7 +106,8 @@ Recomandă produsele direct cu o explicație a DE CE se potrivesc.
     exterior_wash_beginner: require("./flows/exteriorWash.json"),
     interior_clean_basic: require("./flows/interior_clean_basic.json"),
     bug_removal_quick: require("./flows/bug_removal_quick.json"),
-    wheel_tire_deep_clean: require("./flows/wheel_tire_deep_clean.json")
+    wheel_tire_deep_clean: require("./flows/wheel_tire_deep_clean.json"),
+    tool_care_towel: require("./flows/tool_care_towel.json")
   }
 };
 

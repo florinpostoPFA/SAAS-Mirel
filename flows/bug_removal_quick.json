@@ -12,21 +12,21 @@
       "id": "apply_solution",
       "title": "Aplicare solutie insecte",
       "goal": "Inmoaie si dizolva reziduurile de insecte.",
-      "knowledgeIds": ["insect_remover_utilizare"],
+      "knowledgeIds": ["insect_remover_utilizare", "bug_removal_quick_apply_solution_glass"],
       "roles": ["bug_remover"]
     },
     {
       "id": "wipe",
       "title": "Stergere usoara",
       "goal": "Indeparteaza reziduurile fara frecare agresiva.",
-      "knowledgeIds": [],
+      "knowledgeIds": ["bug_removal_quick_wipe_glass"],
       "roles": ["microfiber"]
     },
     {
       "id": "escalation",
       "title": "Daca urmele persista",
       "goal": "Pentru urme persistente, poate fi necesara corectie.",
-      "knowledgeIds": ["arsuri_insecte_corectie"],
+      "knowledgeIds": ["arsuri_insecte_corectie", "bug_removal_quick_escalation_glass"],
       "roles": []
     }
   ]
