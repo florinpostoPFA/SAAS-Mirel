@@ -3010,6 +3010,34 @@ function normalizeRomanianText(text) {
     .trim();
 }
 
+// Deterministic how-to action detector (procedural).
+// Matches: cum curat/curăț, cum spal, cum scot/îndepărtez, cum aplic, cum folosesc
+function matchesHowToAction(message) {
+  const msg = normalizeRomanianText(message);
+  const howToPatterns = [
+    "cum curat",
+    "cum spal",
+    "cum scot",
+    "cum indepartez",
+    "cum aplic",
+    "cum folosesc"
+  ];
+  return howToPatterns.some(p => msg.includes(p));
+}
+
+// Deterministic informational exception detector.
+// Matches: cum funcționează, ce este, ce înseamnă
+// These must remain informational and must NOT produce steps.
+function matchesInformationalException(message) {
+  const msg = normalizeRomanianText(message);
+  const informationalPatterns = [
+    "cum functioneaza",
+    "ce este",
+    "ce inseamna"
+  ];
+  return informationalPatterns.some(p => msg.includes(p));
+}
+
 function detectSelectionEscalationTrigger(message) {
   const msg = normalizeRomanianText(message);
 
@@ -4748,15 +4776,78 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     // ROUTING PURITY: Knowledge questions gate
-    // If user message is a knowledge/information question, route to knowledge handler, not procedural slot-filling
-    if (queryType === "procedural" && isKnowledgeQuestion(userMessage)) {
-      logInfo("KNOWLEDGE_GATE_APPLIED", {
-        reason: "knowledge_pattern_matched",
-        original_queryType: "procedural",
-        new_queryType: "informational"
-      });
-      queryType = "informational";
-      interactionRef.queryType = queryType;
+    // If user message is a knowledge/information question, route to knowledge handler, not procedural slot-filling.
+    // EXCEPTION: Procedural how-to actions ("cum curat/spal/scot/aplic/folosesc") are protected from being
+    // downgraded to informational, unless an explicit informational exception ("cum functioneaza", "ce este") applies.
+    {
+      const knowledgeGateTriggered = isKnowledgeQuestion(userMessage);
+      const isHowToActionMsg = matchesHowToAction(userMessage);
+      const isInformationalExceptionMsg = matchesInformationalException(userMessage);
+      // Protect procedural how-to only when NOT a conceptual/informational exception
+      const protectProcedural = queryType === "procedural" && isHowToActionMsg && !isInformationalExceptionMsg;
+
+      if (knowledgeGateTriggered && !protectProcedural) {
+        logInfo("KNOWLEDGE_GATE_APPLIED", {
+          originalQueryType: queryType,
+          knowledgePatternMatched: true,
+          isHowToAction: isHowToActionMsg,
+          isInformationalException: isInformationalExceptionMsg,
+          protectProcedural: false,
+          finalQueryType: "informational"
+        });
+        queryType = "informational";
+        interactionRef.queryType = queryType;
+      } else if (knowledgeGateTriggered && protectProcedural) {
+        logInfo("KNOWLEDGE_GATE_SKIPPED", {
+          originalQueryType: queryType,
+          knowledgePatternMatched: true,
+          isHowToAction: isHowToActionMsg,
+          isInformationalException: isInformationalExceptionMsg,
+          protectProcedural: true,
+          finalQueryType: queryType
+        });
+      }
+
+      // PROCEDURAL HOW-TO: Surface clarification gate.
+      // If a how-to action is detected and no surface is known, ask for it before proceeding.
+      // PROCEDURAL HOW-TO: Surface clarification gate.
+      // Only fires when context AND object are already resolved (so getMissingSlot returns "surface").
+      // Objects with a single deterministic surface are excluded (glass, jante, caroserie, mocheta).
+      const DETERMINISTIC_SURFACE_OBJECTS = new Set(["glass", "jante", "caroserie", "mocheta"]);
+      if (queryType === "procedural" && isHowToActionMsg) {
+        const currentMsgSlots = extractSlotsFromMessage(userMessage);
+        const mergedContext = currentMsgSlots.context || sessionContext.slots?.context || null;
+        const mergedObject  = currentMsgSlots.object  || sessionContext.slots?.object  || null;
+        const mergedSurface = currentMsgSlots.surface || sessionContext.slots?.surface || null;
+
+        if (mergedContext && mergedObject && !mergedSurface && !DETERMINISTIC_SURFACE_OBJECTS.has(mergedObject)) {
+          const surfaceQuestion = `Ce material are ${mergedObject}-ul? Textil, piele, plastic sau alcantara?`;
+
+          logInfo("PROCEDURAL_SURFACE_CLARIFICATION", {
+            queryType,
+            isHowToAction: isHowToActionMsg,
+            object: mergedObject,
+            message: userMessage
+          });
+
+          // Merge resolved slots into session and interactionRef so that
+          // getMissingSlot(slots) === "surface" and the decision invariant passes.
+          const clarificationSlots = { context: mergedContext, object: mergedObject, surface: null };
+          sessionContext.slots = { ...(sessionContext.slots || {}), ...clarificationSlots };
+          sessionContext.pendingQuestion = { slot: "surface" };
+          sessionContext.state = "NEEDS_SURFACE";
+          saveSession(sessionId, sessionContext);
+          interactionRef.slots = { ...clarificationSlots };
+
+          return endInteraction(interactionRef, {
+            type: "question",
+            message: surfaceQuestion
+          }, {
+            decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+            outputType: "question"
+          });
+        }
+      }
     }
 
     // ROUTING LAYER (before slots)

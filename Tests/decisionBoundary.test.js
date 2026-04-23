@@ -243,4 +243,75 @@ describe("Decision boundary and reset rules", () => {
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
     expect(lastLogEntry.decision.action).not.toBe("selection");
   });
+
+  // Fix 3: Knowledge gate protection for procedural how-to queries
+
+  it("cum curet cotiera stays procedural and asks for surface", async () => {
+    const sessionId = `howto-surface-1-${Date.now()}`;
+
+    const result = await handleChat("cum curat cotiera", "C1", [], sessionId);
+
+    expect(result.type).toBe("question");
+    const msg = String(result.message || "").toLowerCase();
+    expect(msg).toMatch(/textil|piele|plastic|alcantara/);
+    const session = getSession(sessionId);
+    expect(session.state).toBe("NEEDS_SURFACE");
+  });
+
+  it("cum curet cotiera murdara stays procedural and asks for surface (not downgraded to informational)", async () => {
+    const sessionId = `howto-surface-2-${Date.now()}`;
+
+    const result = await handleChat("cum curat cotiera murdara", "C1", [], sessionId);
+
+    expect(result.type).toBe("question");
+    const msg = String(result.message || "").toLowerCase();
+    expect(msg).toMatch(/textil|piele|plastic|alcantara/);
+    const session = getSession(sessionId);
+    expect(session.state).toBe("NEEDS_SURFACE");
+  });
+
+  it("cum scot pete de pe scaun stays procedural and asks for surface", async () => {
+    const sessionId = `howto-surface-3-${Date.now()}`;
+
+    const result = await handleChat("cum scot pete de pe scaun", "C1", [], sessionId);
+
+    expect(result.type).toBe("question");
+    const msg = String(result.message || "").toLowerCase();
+    expect(msg).toMatch(/textil|piele|plastic|alcantara/);
+  });
+
+  it("cum functioneaza apc remains informational and does not ask surface", async () => {
+    const sessionId = `howto-informational-1-${Date.now()}`;
+
+    const result = await handleChat("cum functioneaza apc", "C1", [], sessionId);
+
+    const msg = String(result.message || result.reply || "").toLowerCase();
+    expect(msg).not.toMatch(/textil|piele|plastic|alcantara/);
+    expect(result.type).not.toBe("question");
+    const logEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(logEntry.decision.action).toBe("knowledge");
+  });
+
+  it("ce este apc remains informational - regression check", async () => {
+    const sessionId = `howto-informational-2-${Date.now()}`;
+
+    const result = await handleChat("ce este apc", "C1", [], sessionId);
+
+    const msg = String(result.message || result.reply || "").toLowerCase();
+    expect(msg).not.toMatch(/textil|piele|plastic|alcantara/);
+    expect(result.type).not.toBe("question");
+    const logEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(logEntry.decision.action).toBe("knowledge");
+  });
+
+  it("cum curat cotiera with surface in message proceeds without asking surface", async () => {
+    const sessionId = `howto-surface-known-${Date.now()}`;
+
+    const result = await handleChat("cum curat cotiera din piele", "C1", [], sessionId);
+
+    // Surface is piele (leather) - should NOT ask for surface again
+    const msg = String(result.message || result.reply || "").toLowerCase();
+    const isAskingSurface = result.type === "question" && msg.match(/textil|piele|plastic|alcantara/);
+    expect(isAskingSurface).toBeFalsy();
+  });
 });
