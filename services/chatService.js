@@ -1131,6 +1131,17 @@ function mergeSlots(sessionSlots, newSlots) {
   };
 }
 
+function mergePendingClarificationSlots(previousSlots, parsedSlots) {
+  const previous = previousSlots && typeof previousSlots === "object" ? previousSlots : {};
+  const parsed = parsedSlots && typeof parsedSlots === "object" ? parsedSlots : {};
+
+  return {
+    context: parsed.context ?? previous.context ?? null,
+    surface: parsed.surface ?? previous.surface ?? null,
+    object: parsed.object ?? previous.object ?? null
+  };
+}
+
 function hasRequiredSelectionSlots(slots) {
   return (
     slots &&
@@ -3254,6 +3265,7 @@ function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   safeContext.proceduralSlots = {};
   safeContext.slots = {};
   safeContext.pendingQuestion = null;
+  safeContext.pendingSlots = null;
   safeContext.state = "IDLE";
 
   saveSession(sessionId, safeContext);
@@ -3268,6 +3280,7 @@ function resetSessionAfterAbuse(sessionContext, sessionId) {
 
   safeContext.slots = {};
   safeContext.pendingQuestion = null;
+  safeContext.pendingSlots = null;
   safeContext.pendingSelection = false;
   safeContext.pendingSelectionMissingSlot = null;
   safeContext.state = "IDLE";
@@ -4226,6 +4239,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     if (!pendingClarificationActive && shouldHardResetForNewRootQuery(userMessage, sessionContext)) {
       sessionContext.slots = {};
       sessionContext.pendingQuestion = null;
+      sessionContext.pendingSlots = null;
       sessionContext.lastFlow = null;
       sessionContext.state = "IDLE";
       sessionContext.originalIntent = null;
@@ -4361,6 +4375,26 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     const hadPendingQuestionAtStart = Boolean(sessionContext?.pendingQuestion);
+    const hadPendingClarificationAtStart = pendingClarificationActive;
+
+    if (pendingClarificationActive) {
+      const prevSlots = sessionContext.pendingSlots && typeof sessionContext.pendingSlots === "object"
+        ? { ...sessionContext.pendingSlots }
+        : { ...(sessionContext.slots || {}) };
+      const parsedSlots = normalizeSlots(applyObjectSlotInference(extractSlotsFromMessage(userMessage)));
+      const mergedSlots = mergePendingClarificationSlots(prevSlots, parsedSlots);
+      const nextMissingSlot = getMissingSlot(mergedSlots);
+
+      sessionContext.pendingSlots = mergedSlots;
+      sessionContext.slots = mergePendingClarificationSlots(sessionContext.slots || {}, mergedSlots);
+
+      logInfo("CLARIFICATION_SLOT_PROGRESS", {
+        prevSlots,
+        parsedSlots,
+        mergedSlots,
+        nextMissingSlot
+      });
+    }
 
     // HANDLE SLOT ANSWER (CRITICAL)
     const pending = sessionContext?.pendingQuestion;
@@ -4450,7 +4484,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const intentType = typeof currentIntent === "string" ? currentIntent : currentIntent?.type;
       if (intentType === "selection") {
         // Re-enter selection slot evaluation immediately
-        const slotResult = processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingQuestionAtStart });
+        const slotResult = processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingClarificationAtStart });
         const reentryPendingBeforeUpdate = sessionContext.pendingQuestion
           ? { ...sessionContext.pendingQuestion }
           : null;
@@ -4459,7 +4493,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.state = null;
           sessionContext.pendingQuestion = null;
         }
-        const reentrySlotMode = hadPendingQuestionAtStart ? "merge" : "replace";
+        const reentrySlotMode = hadPendingClarificationAtStart ? "merge" : "replace";
         const reentryBeforeSlots = { ...(sessionContext.slots || {}) };
         console.log("SLOT_MODE", {
           mode: reentrySlotMode
@@ -5530,6 +5564,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.slots = {};
       sessionContext.state = null;
       sessionContext.pendingQuestion = null;
+      sessionContext.pendingSlots = null;
     }
     const pendingBeforeSlotUpdate = sessionContext.pendingQuestion
       ? { ...sessionContext.pendingQuestion }
@@ -5538,7 +5573,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       ...sessionContext.objective.slots,
       ...slotResult.slots
     };
-    const slotMode = isSafetyQuery(userMessage) ? "override" : hadPendingQuestionAtStart ? "merge" : "replace";
+    const slotMode = isSafetyQuery(userMessage) ? "override" : hadPendingClarificationAtStart ? "merge" : "replace";
     const beforeSlots = { ...(sessionContext.slots || {}) };
     console.log("SLOT_MODE", {
       mode: slotMode
@@ -5690,6 +5725,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     if (!slotResult.missing) {
       sessionContext.state = null;
       sessionContext.pendingQuestion = null;
+      sessionContext.pendingSlots = null;
     }
     if (!sessionContext.slots || typeof sessionContext.slots !== "object") {
       throw new Error("Slots not initialized");
@@ -5956,6 +5992,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       const contextHint = detectContextHint(userMessage);
       if (contextHint === "interior") {
+        sessionContext.pendingSlots = mergePendingClarificationSlots(
+          sessionContext.pendingSlots || sessionContext.slots || {},
+          slotResult.slots || {}
+        );
         sessionContext.pendingQuestion = {
           type: "confirm_context",
           value: "interior",
@@ -5984,6 +6024,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       if (contextHint === "exterior") {
+        sessionContext.pendingSlots = mergePendingClarificationSlots(
+          sessionContext.pendingSlots || sessionContext.slots || {},
+          slotResult.slots || {}
+        );
         sessionContext.pendingQuestion = {
           type: "confirm_context",
           value: "exterior",
@@ -6011,6 +6055,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         });
       }
 
+      sessionContext.pendingSlots = mergePendingClarificationSlots(
+        sessionContext.pendingSlots || sessionContext.slots || {},
+        slotResult.slots || {}
+      );
       sessionContext.pendingQuestion = {
         slot: "context",
         object: sessionContext.slots?.object || null,
@@ -6045,6 +6093,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.pendingSelection = true;
         sessionContext.pendingSelectionMissingSlot = "object";
       }
+      sessionContext.pendingSlots = mergePendingClarificationSlots(
+        sessionContext.pendingSlots || sessionContext.slots || {},
+        slotResult.slots || {}
+      );
       sessionContext.pendingQuestion = {
         slot: "object",
         object: sessionContext.slots?.object || null,
@@ -6078,6 +6130,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.pendingSelection = true;
         sessionContext.pendingSelectionMissingSlot = "surface";
       }
+      sessionContext.pendingSlots = mergePendingClarificationSlots(
+        sessionContext.pendingSlots || sessionContext.slots || {},
+        slotResult.slots || {}
+      );
       sessionContext.pendingQuestion = {
         slot: "surface",
         object: sessionContext.slots?.object || null,
