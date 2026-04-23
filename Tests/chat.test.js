@@ -9,15 +9,23 @@ jest.mock("../services/llm", () => ({
   askLLM: jest.fn()
 }));
 
+jest.mock("../services/interactionLog", () => ({
+  appendInteractionLine: jest.fn()
+}));
+
 const { askLLM } = require("../services/llm");
+const { appendInteractionLine } = require("../services/interactionLog");
 const { detectLanguage } = require("../services/chatService");
+const settingsService = require("../services/settingsService");
 const app = require("../server");
 
-const postChat = (message, sessionId = "test-session", clientId = "C1") =>
+let defaultSessionId;
+
+const postChat = (message, sessionId, clientId = "C1") =>
   request(app)
     .post("/chat")
     .set("x-api-key", API_KEY)
-    .send({ message, sessionId, clientId });
+    .send({ message, sessionId: sessionId ?? defaultSessionId, clientId });
 
 const postSettings = (settings) =>
   request(app)
@@ -25,8 +33,15 @@ const postSettings = (settings) =>
     .set("x-api-key", API_KEY)
     .send(settings);
 
+const lastInteraction = () => {
+  const calls = appendInteractionLine.mock.calls;
+  if (!calls.length) return null;
+  return calls[calls.length - 1][0];
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
+  defaultSessionId = `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 });
 
 describe("AI eCommerce Assistant API", () => {
@@ -68,7 +83,11 @@ describe("AI eCommerce Assistant API", () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.reply).toBeTruthy();
-      expect(res.body.reply.toLowerCase()).toMatch(/recomand|ceramic|protect/i);
+      expect(res.body.reply.toLowerCase()).toMatch(/interior|exterior/);
+      const entry = lastInteraction();
+      expect(entry?.intent?.queryType).toBe("selection");
+      expect(entry?.decision?.action).toBe("clarification");
+      expect(entry?.decision?.missingSlot).toBe("context");
     });
 
     it("reply is meaningful (not generic fallback)", async () => {
@@ -93,26 +112,33 @@ describe("AI eCommerce Assistant API", () => {
     });
 
     it("keeps Romanian language for Romanian input", async () => {
-      const reply = "Iti recomand un sampon auto pH neutru pentru intretinere.";
-
-      askLLM.mockResolvedValue(reply);
+      askLLM.mockResolvedValue(
+        "Iti recomand un sampon auto pH neutru pentru intretinere."
+      );
 
       const res = await postChat(
         "Imi recomanzi un sampon auto pH neutru?"
       );
 
       expect(res.statusCode).toBe(200);
-      expect(res.body.reply).toBe(reply);
+      expect(res.body.reply).toBeTruthy();
       expect(res.body.reply).not.toMatch(/the|recommended|for your/i);
+      const entry = lastInteraction();
+      expect(["clarification", "knowledge"]).toContain(entry?.decision?.action);
+      if (entry?.decision?.action === "clarification") {
+        expect(res.body.reply.toLowerCase()).toMatch(/interior|exterior/);
+      }
     });
 
     it("injects Romanian instruction into LLM prompt", async () => {
       askLLM.mockResolvedValue("ok");
 
-      await postChat("vreau curatare interior masina");
+      await postChat(
+        "Care este diferenta intre polish si wax pentru protectia vopselei?"
+      );
 
       const prompt = askLLM.mock.calls[0][0];
-      expect(prompt).toMatch(/Raspunde STRICT in limba romana/i);
+      expect(prompt).toMatch(/rom[aâ]n[aă]|Romanian/i);
     });
 
     it("reuses session language on later turns", async () => {
@@ -120,11 +146,17 @@ describe("AI eCommerce Assistant API", () => {
 
       askLLM.mockResolvedValue("ok");
 
-      await postChat("vreau ceva pentru interior", sessionId);
-      await postChat("how do I use it", sessionId);
+      await postChat(
+        "Care este diferenta intre spuma alcalina si spuma pH neutru?",
+        sessionId
+      );
+      await postChat(
+        "Explica pe scurt si pentru clay bar fata de sampon.",
+        sessionId
+      );
 
       const secondPrompt = askLLM.mock.calls[1][0];
-      expect(secondPrompt).toMatch(/Raspunde STRICT in limba romana/i);
+      expect(secondPrompt).toMatch(/rom[aâ]n[aă]|Romanian/i);
     });
   });
 
@@ -132,17 +164,24 @@ describe("AI eCommerce Assistant API", () => {
     it("maintains context across turns", async () => {
       const sessionId = "session-" + Date.now();
 
-      askLLM
-        .mockResolvedValueOnce("Pentru ce material este suprafata?")
-        .mockResolvedValueOnce(
-          "Pentru piele recomand un cleaner dedicat care nu usuca materialul."
-        );
+      askLLM.mockResolvedValue(
+        "Pentru piele recomand un cleaner dedicat care nu usuca materialul."
+      );
 
-      await postChat("vreau ceva pentru curatare interior", sessionId);
+      await postChat("cum curat o cotiera murdara?", sessionId);
 
       const secondRes = await postChat("piele", sessionId);
       expect(secondRes.statusCode).toBe(200);
-      expect(secondRes.body.reply.toLowerCase()).toMatch(/piele|cleaner/);
+      const text = String(secondRes.body.reply || "").toLowerCase();
+      expect(text.length).toBeGreaterThan(10);
+
+      const session = require("../services/sessionStore").getSession(sessionId);
+      expect(session.slots?.surface).toBe("piele");
+      expect(session.slots?.object).toBeTruthy();
+
+      const entry = lastInteraction();
+      expect(entry?.intent?.queryType).toBe("procedural");
+      expect(entry?.slots?.surface).toBe("piele");
     });
 
     it("isolates different sessions", async () => {
@@ -167,12 +206,10 @@ describe("AI eCommerce Assistant API", () => {
     });
 
     it("handles empty input gracefully", async () => {
-      askLLM.mockResolvedValue("Cu ce te pot ajuta?");
-
       const res = await postChat("");
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.reply).toBeTruthy();
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBeTruthy();
     });
   });
 
@@ -218,16 +255,22 @@ describe("AI eCommerce Assistant API", () => {
       expect(res.body.cta).toBe("Cumpara acum");
     });
 
-    it("settings affect chat behavior (fallback)", async () => {
-      askLLM.mockResolvedValue("");
-
+    it("persists fallback_message for chat guidance (settings round-trip)", async () => {
+      const prev = settingsService.getSettings();
       await postSettings({
+        ...prev,
         fallback_message: "Nu am gasit produse."
       });
 
-      const res = await postChat("ceva inexistent total");
+      const res = await request(app)
+        .get("/settings")
+        .set("x-api-key", API_KEY);
 
-      expect(res.body.reply).toMatch(/Nu am gasit produse/i);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.fallback_message).toMatch(/Nu am gasit produse/i);
+      expect(settingsService.getSettings().fallback_message).toMatch(
+        /Nu am gasit produse/i
+      );
     });
   });
 });

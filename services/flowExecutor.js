@@ -18,11 +18,46 @@ function getKnowledgeEntryById(id) {
   return knowledgeFlow.find(entry => String(entry?.id) === String(id)) || null;
 }
 
-function getBugGlassDefaultSnippet() {
+function normalizeFlowLocale(locale) {
+  const s = String(locale || "ro").toLowerCase().trim();
+  return s.startsWith("en") ? "en" : "ro";
+}
+
+function pickLocalizedKnowledgeContent(entry, locale) {
+  if (!entry) return "";
+  const loc = normalizeFlowLocale(locale);
+  if (loc === "en") {
+    if (entry.contentEn) return String(entry.contentEn).trim();
+    logInfo("LOCALE_KNOWLEDGE_FALLBACK", {
+      id: entry.id || null,
+      requested: "en",
+      used: "content"
+    });
+  }
+  return String(entry.content || "").trim();
+}
+
+function getBugGlassDefaultSnippet(responseLocale = "ro") {
+  if (normalizeFlowLocale(responseLocale) === "en") {
+    return "Pre-wet the area, let the product work 60-90 seconds, wipe gently with a clean microfiber towel, then finish with a glass cleaner for clarity.";
+  }
   return "Pre-umezeste zona, lasa solutia 60-90 secunde sa actioneze, sterge usor cu microfibra curata si finalizeaza cu cleaner de geam pentru claritate.";
 }
 
-function getToolCareTowelReply() {
+function getToolCareTowelReply(responseLocale = "ro") {
+  if (normalizeFlowLocale(responseLocale) === "en") {
+    return [
+      "Quick guide for washing microfiber towels:",
+      "- Wash at 30-40C, gentle cycle.",
+      "- Use simple liquid detergent, no fabric softener.",
+      "- Do not use fabric conditioner (it clogs fibers).",
+      "- Wash separately from cotton or lint-shedding fabrics.",
+      "- Rinse well; extra rinse is ideal.",
+      "- Avoid high-heat drying; if using a dryer, use low heat.",
+      "- Best: air dry away from dust.",
+      "- If towels feel stiff, run a short rinse-only cycle without detergent."
+    ].join("\n");
+  }
   return [
     "Iata ghidul rapid pentru spalarea lavetei/prosopului din microfibra:",
     "- Spala la 30-40C, program delicat.",
@@ -122,7 +157,7 @@ function isSurfaceAwareCleaningStep(step) {
   return stepId === "general_clean" || stepId.includes("clean");
 }
 
-function getStepKnowledge(step, slots = {}, flowId = null) {
+function getStepKnowledge(step, slots = {}, flowId = null, responseLocale = "ro") {
   const knowledgeIds = Array.isArray(step?.knowledgeIds) ? step.knowledgeIds : [];
   const surface = normalizeText(slots?.surface);
   const stepId = String(step?.id || "").trim() || null;
@@ -137,10 +172,10 @@ function getStepKnowledge(step, slots = {}, flowId = null) {
         knowledgeUsed: stepSpecificId,
         fallbackUsed: false
       });
-      return [String(stepSpecificEntry.content || "").trim()].filter(Boolean);
+      return [pickLocalizedKnowledgeContent(stepSpecificEntry, responseLocale)].filter(Boolean);
     }
 
-    const fallbackSnippet = getBugGlassDefaultSnippet();
+    const fallbackSnippet = getBugGlassDefaultSnippet(responseLocale);
     logInfo("FLOW_STEP_KNOWLEDGE", {
       flowId,
       stepId,
@@ -161,7 +196,7 @@ function getStepKnowledge(step, slots = {}, flowId = null) {
         knowledgeUsed: surfaceKnowledgeId,
         fallbackUsed: false
       });
-      return [String(surfaceEntry.content || "").trim()].filter(Boolean);
+      return [pickLocalizedKnowledgeContent(surfaceEntry, responseLocale)].filter(Boolean);
     }
   }
 
@@ -177,7 +212,7 @@ function getStepKnowledge(step, slots = {}, flowId = null) {
   });
 
   const snippets = fallbackEntries
-    .map(entry => String(entry.content || "").trim())
+    .map(entry => pickLocalizedKnowledgeContent(entry, responseLocale))
     .filter(Boolean);
 
   if (flowId === "bug_removal_quick" && surface === "glass" && snippets.length === 0) {
@@ -187,7 +222,7 @@ function getStepKnowledge(step, slots = {}, flowId = null) {
       knowledgeUsed: null,
       fallbackUsed: true
     });
-    return [getBugGlassDefaultSnippet()];
+    return [getBugGlassDefaultSnippet(responseLocale)];
   }
 
   return snippets;
@@ -302,6 +337,35 @@ function buildStepExplanation(stepGoal, knowledgeSnippets) {
   return parts.join(" ").trim();
 }
 
+function getFlowShellLabels(responseLocale = "ro") {
+  if (normalizeFlowLocale(responseLocale) === "en") {
+    return {
+      titlePrefix: "Title:",
+      stepsHeader: "Steps:",
+      whatToDo: "What to do:",
+      products: "Products:",
+      recommended: "Recommended:",
+      optional: "Optional:",
+      stepLinePrefix: "Step",
+      genericStep: "Apply standard cleaning technique for this step.",
+      noExact: "No exact product match",
+      noSafe: "No safe product found for this step."
+    };
+  }
+  return {
+    titlePrefix: "Titlu:",
+    stepsHeader: "Pasi:",
+    whatToDo: "Ce faci:",
+    products: "Produse:",
+    recommended: "Recomandat:",
+    optional: "Optional:",
+    stepLinePrefix: "Pasul",
+    genericStep: "Executa acest pas cu tehnica standard de curatare.",
+    noExact: "Nu am gasit produs exact",
+    noSafe: "Nu am gasit produs exact pentru acest pas."
+  };
+}
+
 function limitStepProducts(products) {
   return uniqueProducts(products).slice(0, 2);
 }
@@ -323,14 +387,17 @@ function getFlowRegistry(currentFlow) {
   return registry;
 }
 
-function executeFlow(flow, products, slots = {}) {
+function executeFlow(flow, products, slots = {}, options = {}) {
+  const responseLocale = options?.responseLocale || "ro";
+  const shell = getFlowShellLabels(responseLocale);
   const safeFlow = flow && typeof flow === "object" ? flow : {};
   const flowId = safeFlow.flowId || safeFlow.id || null;
   const flowRegistry = getFlowRegistry(safeFlow);
 
   console.log("STAGE:EXECUTE_FLOW", {
     flowId,
-    availableFlows: Object.keys(flowRegistry || {})
+    availableFlows: Object.keys(flowRegistry || {}),
+    responseLocale
   });
 
   if (!flowId || typeof flowId !== "string") {
@@ -342,15 +409,16 @@ function executeFlow(flow, products, slots = {}) {
   }
 
   if (flowId === "tool_care_towel") {
+    const towelReply = getToolCareTowelReply(responseLocale);
     return {
-      reply: getToolCareTowelReply(),
+      reply: towelReply,
       products: [],
       steps: [
         {
           id: "tool_care_towel_guidance",
           title: "Ghid rapid de spalare microfibra",
           goal: "Intretinere corecta pentru lavete si prosoape din microfibra.",
-          explanation: getToolCareTowelReply(),
+          explanation: towelReply,
           roles: [],
           products: []
         }
@@ -363,24 +431,52 @@ function executeFlow(flow, products, slots = {}) {
   const allProducts = [];
   const structuredSteps = [];
 
-  lines.push(`Titlu: ${String(safeFlow.title || safeFlow.flowId || "Flow")}`);
-  lines.push("Pasi:");
+  lines.push(`${shell.titlePrefix} ${String(safeFlow.title || safeFlow.flowId || "Flow")}`);
+  lines.push(shell.stepsHeader);
 
   steps.forEach((step, index) => {
     const stepNumber = index + 1;
-    const stepTitle = String(step?.title || `Pas ${stepNumber}`);
+    const fallbackStepTitle = normalizeFlowLocale(responseLocale) === "en"
+      ? `Step ${stepNumber}`
+      : `Pas ${stepNumber}`;
+    const stepTitle = String(step?.title || fallbackStepTitle);
     const stepGoal = String(step?.goal || "").trim();
     const stepRoles = Array.isArray(step?.roles)
       ? step.roles
       : Array.isArray(step?.productRoles)
         ? step.productRoles
         : [];
-    const knowledgeSnippets = getStepKnowledge(step, slots, flowId);
+    const knowledgeSnippets = getStepKnowledge(step, slots, flowId, responseLocale);
     const stepExplanation = buildStepExplanation(stepGoal, knowledgeSnippets);
-    const safeStepExplanation = stepExplanation || `Executa ${stepTitle} cu tehnica standard de curatare.`;
+    const safeStepExplanation = stepExplanation || shell.genericStep;
     let stepProducts = limitStepProducts(
       stepRoles.flatMap(role => resolveProductsForRole(role, products))
     );
+
+    if (stepProducts.length === 0 && stepRoles.length > 0) {
+      logInfo("PRODUCT_ROLE_ZERO_MATCH", {
+        flowId,
+        stepId: step?.id || null,
+        stepNumber,
+        requiredRoles: stepRoles,
+        roleRequirements: stepRoles.map(role => {
+          const cfg = productRoles[role];
+          if (!cfg) {
+            return { role, unknownRole: true, matchText: [], matchTags: [] };
+          }
+          return {
+            role,
+            matchText: cfg.matchText || [],
+            matchTags: cfg.matchTags || []
+          };
+        }),
+        productPoolSize: Array.isArray(products) ? products.length : 0,
+        sampleProductTags: (products || []).slice(0, 8).map(p => ({
+          name: p?.name || null,
+          tags: Array.isArray(p?.tags) ? p.tags : []
+        }))
+      });
+    }
 
     if (stepProducts.length === 0) {
       const fallback = selectFallbackProductsForFlow(products, flowId, slots);
@@ -409,21 +505,21 @@ function executeFlow(flow, products, slots = {}) {
     allProducts.push(...stepProducts);
 
     lines.push("");
-    lines.push(`Pasul ${stepNumber}: ${stepTitle}`);
+    lines.push(`${shell.stepLinePrefix} ${stepNumber}: ${stepTitle}`);
     lines.push("");
-    lines.push("Ce faci:");
+    lines.push(`${shell.whatToDo}`);
     lines.push(safeStepExplanation);
 
     if (stepProducts.length > 0) {
       lines.push("");
-      lines.push("Produse:");
+      lines.push(shell.products);
       lines.push("");
-      lines.push("Recomandat:");
+      lines.push(shell.recommended);
       lines.push(`- ${String(stepProducts[0]?.name || "Produs")}`);
 
       if (stepProducts[1]) {
         lines.push("");
-        lines.push("Optional:");
+        lines.push(shell.optional);
         lines.push(`- ${String(stepProducts[1]?.name || "Produs")}`);
       }
     }
@@ -431,7 +527,7 @@ function executeFlow(flow, products, slots = {}) {
 
   if (flowId === "bug_removal_quick" && uniqueProducts(allProducts).length === 0) {
     lines.push("");
-    lines.push("Produse: no matching products");
+    lines.push(`${shell.products}: no matching products`);
   }
 
   let finalProducts = uniqueProducts(allProducts);
@@ -440,7 +536,11 @@ function executeFlow(flow, products, slots = {}) {
     if (safeFallback) {
       finalProducts = [safeFallback];
       lines.push("");
-      lines.push(`Nu am gasit produs exact; recomand ${String(safeFallback?.name || "un cleaner sigur")}.`);
+      lines.push(
+        normalizeFlowLocale(responseLocale) === "en"
+          ? `No exact match; I recommend ${String(safeFallback?.name || "a safe cleaner")}.`
+          : `Nu am gasit produs exact; recomand ${String(safeFallback?.name || "un cleaner sigur")}.`
+      );
       logInfo("FLOW_GENERIC_FALLBACK", {
         flowId,
         product: safeFallback?.name || null,
@@ -448,7 +548,7 @@ function executeFlow(flow, products, slots = {}) {
       });
     } else {
       lines.push("");
-      lines.push("Nu am gasit produs exact pentru acest pas.");
+      lines.push(shell.noSafe);
       logInfo("FLOW_GENERIC_FALLBACK", {
         flowId,
         product: null,

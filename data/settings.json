@@ -1,3 +1,13 @@
 {
+  "max_products": 1,
+  "delay_recommendation": true,
+  "tone": "friendly",
+  "response_style": "persuasive",
+  "sales_mode": "soft",
+  "ask_questions": true,
+  "max_questions": 2,
+  "greeting_enabled": true,
+  "tagRules": "",
+  "cta": "Cumpara acum",
   "fallback_message": "Nu am gasit produse."
 }

@@ -1,6 +1,7 @@
 {
   "flowId": "tool_care_towel",
   "type": "micro",
+  "requiredSlots": [],
   "triggers": {
     "contexts": [],
     "surfaces": [],

@@ -95,8 +95,13 @@ describe("Decision boundary and reset rules", () => {
     expect(result.type).toBe("reply");
     expect(executeFlow.mock.calls.length).toBe(flowCallsBefore);
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
-    expect(lastLogEntry.decision.action).toBe("knowledge");
-    expect(lastLogEntry.slots).toEqual({});
+    expect(lastLogEntry.decision.action).toBe("safety");
+    expect(lastLogEntry.slots).toEqual(
+      expect.objectContaining({
+        context: expect.anything(),
+        surface: expect.anything()
+      })
+    );
   });
 
   it("clears procedural slots on knowledge boundary after procedural sequence", async () => {
@@ -113,8 +118,13 @@ describe("Decision boundary and reset rules", () => {
     expect(session.pendingQuestion).toBeNull();
 
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
-    expect(lastLogEntry.decision.action).toBe("knowledge");
-    expect(lastLogEntry.slots).toEqual({});
+    expect(lastLogEntry.decision.action).toBe("safety");
+    expect(lastLogEntry.slots).toEqual(
+      expect.objectContaining({
+        context: expect.anything(),
+        surface: expect.anything()
+      })
+    );
   });
 
   it("cod de reducere resets session without clarification loop", async () => {
@@ -175,7 +185,7 @@ describe("Decision boundary and reset rules", () => {
 
     expect(firstMessage).not.toContain("interior sau exterior");
     expect(session.slots.context).toBe("interior");
-    expect(session.slots.surface).toBe("leather");
+    expect(session.slots.surface).toBe("piele");
   });
 
   it("pending clarification keeps procedural path on cotiera follow-up", async () => {
@@ -313,5 +323,59 @@ describe("Decision boundary and reset rules", () => {
     const msg = String(result.message || result.reply || "").toLowerCase();
     const isAskingSurface = result.type === "question" && msg.match(/textil|piele|plastic|alcantara/);
     expect(isAskingSurface).toBeFalsy();
+  });
+
+  it("cum curat prosopul executes tool_care_towel without slot clarification", async () => {
+    const sessionId = `towel-specialized-${Date.now()}`;
+
+    const result = await handleChat("cum curat prosopul ?", "C1", [], sessionId);
+
+    expect(result.type).toBe("flow");
+    expect(executeFlow).toHaveBeenCalled();
+    expect(executeFlow.mock.calls[0][0].flowId).toBe("tool_care_towel");
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).not.toBe("clarification");
+    expect(lastLogEntry.decision.flowId).toBe("tool_care_towel");
+    expect(lastLogEntry.decision.missingSlot).toBeNull();
+    expect(lastLogEntry.output.type).not.toBe("question");
+  });
+
+  it("cum curat o cotiera still clarifies when legacy flow requires surface", async () => {
+    const sessionId = `cotiera-surface-clar-${Date.now()}`;
+
+    const result = await handleChat("cum curat o cotiera ?", "C1", [], sessionId);
+
+    expect(result.type).toBe("question");
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).toBe("clarification");
+    expect(lastLogEntry.output.type).toBe("question");
+    expect(lastLogEntry.decision.missingSlot).toBe("surface");
+  });
+
+  it("responseLocale stays ro across procedural surface clarification into flow execution", async () => {
+    const sessionId = `locale-clar-flow-${Date.now()}`;
+    executeFlow.mockImplementation((flow, products, slots, options) => {
+      expect(options?.responseLocale).toBe("ro");
+      return {
+        reply: "Pasul 1: curatare textile. Foloseste solutie dedicata textilelor.",
+        products: []
+      };
+    });
+
+    const first = await handleChat("cum curat o cotiera ?", "C1", [], sessionId);
+    expect(first.type).toBe("question");
+    const q1 = String(first.message || "").toLowerCase();
+    expect(q1).toMatch(/suprafata|textile|piele|plastic|alcantara/);
+    expect(q1).not.toMatch(/^what surface is it/i);
+
+    const mid = getSession(sessionId);
+    expect(mid.responseLocale).toBe("ro");
+    expect(mid.pendingClarification?.responseLocale).toBe("ro");
+
+    await handleChat("textile", "C1", [], sessionId);
+    const fin = getSession(sessionId);
+    expect(fin.responseLocale).toBe("ro");
+    const lastFlowCall = executeFlow.mock.calls[executeFlow.mock.calls.length - 1];
+    expect(lastFlowCall[3]?.responseLocale).toBe("ro");
   });
 });

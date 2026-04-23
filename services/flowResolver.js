@@ -52,7 +52,7 @@ function normalizeRequest(input, legacySlots = {}) {
     slots: {
       ...rawSlots,
       object: canonicalObject,
-      surface: rawSlots.surface || (canonicalObject === "glass" ? "glass" : rawSlots.surface)
+      surface: rawSlots.surface || null
     }
   };
 }
@@ -141,7 +141,7 @@ function hasCleaningDomainSignal(message, slots = {}) {
     return true;
   }
 
-  if (["leather", "textile", "alcantara", "plastic", "paint", "glass", "wheels"].includes(surface)) {
+  if (["leather", "piele", "textile", "alcantara", "plastic", "paint", "glass", "wheels"].includes(surface)) {
     return true;
   }
 
@@ -211,8 +211,11 @@ function getFlowSpecificityScore(flow, slots, message) {
     score += 10;
   }
 
-  if (triggerSurfaces.length > 0 && slotSurface && triggerSurfaces.includes(slotSurface)) {
-    score += 2;
+  if (triggerSurfaces.length > 0 && slotSurface) {
+    const surfaceCandidates = surfaceSlotValuesForTriggerMatch(slotSurface);
+    if (surfaceCandidates.some(s => triggerSurfaces.includes(s))) {
+      score += 2;
+    }
   }
 
   if (triggerContexts.length > 0 && slotContext && triggerContexts.includes(slotContext)) {
@@ -293,6 +296,17 @@ function requiresSlot(flow, slotName) {
   return requiredSlots.includes(normalizeValue(slotName));
 }
 
+function surfaceSlotValuesForTriggerMatch(slotValue) {
+  const v = normalizeValue(slotValue);
+  if (!v) {
+    return [];
+  }
+  if (v === "piele") {
+    return ["piele", "leather"];
+  }
+  return [v];
+}
+
 function matchesSlotTrigger(flow, slotName, triggerValues, slotValue, allowPartial) {
   const slotIsRequired = requiresSlot(flow, slotName);
   const normalizedValue = normalizeValue(slotValue);
@@ -309,7 +323,19 @@ function matchesSlotTrigger(flow, slotName, triggerValues, slotValue, allowParti
       return matchesObjectTrigger(triggerValues, normalizedValue);
     }
 
+    if (slotName === "surface") {
+      const candidates = surfaceSlotValuesForTriggerMatch(slotValue);
+      return candidates.some(c => matchesTrigger(triggerValues, c));
+    }
+
     return matchesTrigger(triggerValues, normalizedValue);
+  }
+
+  if (slotName === "surface") {
+    const candidates = surfaceSlotValuesForTriggerMatch(slotValue);
+    return allowPartial
+      ? candidates.some(c => matchesProvidedTrigger(triggerValues, c))
+      : candidates.some(c => matchesTrigger(triggerValues, c));
   }
 
   return allowPartial
@@ -381,6 +407,58 @@ function findMatchingFlows(request, allowPartial = false) {
         reason: "explicit_insect_signal_prefers_bug_removal"
       });
       continue;
+    }
+
+    if (flowId === "glass_clean_basic") {
+      const msg = normalizeValue(request?.message || "");
+      const glassKw = flowKeywords.glass_clean_basic.find(kw => msg.includes(kw));
+      const glassObj =
+        slotObject === "glass" ||
+        slotObject === "oglinda" ||
+        slotObject === "oglinzi";
+      const slotSurf = normalizeValue(request?.slots?.surface);
+      const glassSurf = slotSurf === "glass";
+      const interiorNonGlassObjects = new Set([
+        "cotiera",
+        "scaun",
+        "mocheta",
+        "plafon",
+        "bord",
+        "volan",
+        "tapiterie",
+        "caroserie",
+        "jante",
+        "roti",
+        "anvelope"
+      ]);
+      const conflictingObject = slotObject && interiorNonGlassObjects.has(slotObject);
+      if (!glassKw && !glassObj && !glassSurf) {
+        logInfo("FLOW_EXCLUDED", {
+          flowId,
+          reason: "glass_clean_requires_explicit_glass_signal",
+          keywordMatched: null,
+          slotObject: slotObject || null,
+          surface: request?.slots?.surface || null,
+          context: request?.slots?.context || null
+        });
+        continue;
+      }
+      if (conflictingObject && !glassKw && !glassSurf) {
+        logInfo("FLOW_EXCLUDED", {
+          flowId,
+          reason: "glass_clean_blocked_by_interior_object_without_glass_keyword",
+          keywordMatched: glassKw || null,
+          slotObject: slotObject || null
+        });
+        continue;
+      }
+      logInfo("FLOW_GLASS_CANDIDATE_OK", {
+        flowId,
+        keywordMatched: glassKw || null,
+        glassObject: glassObj,
+        glassSurface: glassSurf,
+        slotObject: slotObject || null
+      });
     }
 
     const matchesIntent = matchesTrigger(triggers.intents, request.intent);
@@ -481,6 +559,37 @@ function resolveFlowCandidate(input, legacySlots = {}) {
   return getBestMatchingFlow(findMatchingFlows(request, true), request.slots, request.message);
 }
 
+function getFlowRequiredSlotsConfig(flow) {
+  if (!flow || typeof flow !== "object" || !flow.flowId) {
+    return { legacy: true, requiredSlots: null };
+  }
+  if (!Object.prototype.hasOwnProperty.call(flow, "requiredSlots")) {
+    return { legacy: true, requiredSlots: null };
+  }
+  const allowed = new Set(["context", "object", "surface"]);
+  const req = Array.isArray(flow.requiredSlots)
+    ? flow.requiredSlots.map(s => normalizeValue(String(s))).filter(s => allowed.has(s))
+    : [];
+  return { legacy: false, requiredSlots: req };
+}
+
+function assertFlowLockInvariant(flowLocked, decision) {
+  if (!flowLocked || !decision || typeof decision !== "object") {
+    return;
+  }
+  if (decision.action === "clarification" || decision.missingSlot != null) {
+    logInfo("FLOW_LOCK_VIOLATION", {
+      action: decision.action,
+      missingSlot: decision.missingSlot ?? null
+    });
+    console.assert(
+      false,
+      "FLOW_LOCK_VIOLATION: flowLocked requires action!==clarification and missingSlot===null"
+    );
+    throw new Error("FLOW_LOCK_VIOLATION");
+  }
+}
+
 function resolveFlowCandidates(input, legacySlots = {}) {
   const request = normalizeRequest(input, legacySlots);
 
@@ -511,4 +620,10 @@ function resolveFlowCandidates(input, legacySlots = {}) {
     .map(entry => entry.flow);
 }
 
-module.exports = { resolveFlow, resolveFlowCandidate, resolveFlowCandidates };
+module.exports = {
+  resolveFlow,
+  resolveFlowCandidate,
+  resolveFlowCandidates,
+  getFlowRequiredSlotsConfig,
+  assertFlowLockInvariant
+};
