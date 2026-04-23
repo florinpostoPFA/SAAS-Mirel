@@ -516,13 +516,124 @@ function endInteraction(interactionRef, result, patch = {}) {
   let finalOutputType = patch.outputType != null ? patch.outputType : inferOutputType(result);
   let finalProducts = patch.products != null ? patch.products : summarizeProductsForLog(result.products);
   const sessionContext = interactionRef?.sessionId ? getSession(interactionRef.sessionId) : null;
+  const hardGuardPrompt = "Ce vrei sa cureti mai exact (ex: geamuri, jante, bord, scaune)?";
+  const resolveHardGuardMissingSlot = (slots) => {
+    const safeSlots = slots && typeof slots === "object" ? slots : {};
+    const missingSlot = getMissingSlot(safeSlots);
+    return missingSlot || "context";
+  };
 
-  interactionRef.decision = enforceClarificationContract(interactionRef.decision);
-  assertDecisionInvariantsBeforeExecution(
-    interactionRef.decision,
-    interactionRef.slots,
-    interactionRef.message
-  );
+  // P0 - HARD GUARD: decision.action must never be null
+  if (!interactionRef.decision || !interactionRef.decision.action) {
+    console.error("HARD_GUARD_VIOLATION", {
+      decision: interactionRef.decision,
+      slots: interactionRef.slots,
+      message: interactionRef.message
+    });
+    logInfo("HARD_GUARD_TRIGGERED", {
+      reason: "null_action",
+      decision: interactionRef.decision
+    });
+    // Fallback: force clarification with generic prompt
+    interactionRef.slots = interactionRef.slots ?? {};
+    const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
+    interactionRef.decision = {
+      action: "clarification",
+      flowId: null,
+      missingSlot: fallbackMissingSlot,
+      hardGuardFallback: true
+    };
+    finalResult = {
+      type: "question",
+      message: hardGuardPrompt
+    };
+    finalOutputType = "question";
+    finalProducts = [];
+  }
+
+  // P0a - HARD GUARD: clarification decisions must have contract-complete missingSlot
+  if (interactionRef?.decision?.action === "clarification") {
+    interactionRef.slots = interactionRef.slots ?? {};
+    const previousMissingSlot = interactionRef.decision.missingSlot;
+    const resolvedMissingSlot = previousMissingSlot ?? getMissingSlot(interactionRef.slots) ?? "context";
+    interactionRef.decision = {
+      ...interactionRef.decision,
+      missingSlot: resolvedMissingSlot
+    };
+
+    if (!previousMissingSlot) {
+      logInfo("CLARIFICATION_HARD_GUARD_TRIGGERED", {
+        reason: "missing_missingSlot",
+        missingSlot: resolvedMissingSlot,
+        decision: interactionRef.decision,
+        slots: interactionRef.slots
+      });
+    }
+  }
+
+  try {
+    interactionRef.decision = enforceClarificationContract(interactionRef.decision);
+  } catch (err) {
+    if (interactionRef?.decision?.hardGuardFallback) {
+      interactionRef.slots = interactionRef.slots ?? {};
+      const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
+      logInfo("CLARIFICATION_CONTRACT_BYPASSED_HARD_GUARD", {
+        error: err.message,
+        decision: interactionRef.decision,
+        missingSlot: fallbackMissingSlot
+      });
+      interactionRef.decision = {
+        action: "clarification",
+        flowId: null,
+        missingSlot: fallbackMissingSlot,
+        hardGuardFallback: true
+      };
+      finalResult = {
+        type: "question",
+        message: hardGuardPrompt
+      };
+      finalOutputType = "question";
+      finalProducts = [];
+    } else {
+      throw err;
+    }
+  }
+
+  if (interactionRef?.decision?.hardGuardFallback) {
+    try {
+      assertDecisionInvariantsBeforeExecution(
+        interactionRef.decision,
+        interactionRef.slots,
+        interactionRef.message
+      );
+    } catch (err) {
+      interactionRef.slots = interactionRef.slots ?? {};
+      const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
+      logInfo("HARD_GUARD_INVARIANT_BYPASS", {
+        error: err.message,
+        decision: interactionRef.decision,
+        missingSlot: fallbackMissingSlot
+      });
+      interactionRef.decision = {
+        action: "clarification",
+        flowId: null,
+        missingSlot: fallbackMissingSlot,
+        hardGuardFallback: true
+      };
+      finalResult = {
+        type: "question",
+        message: hardGuardPrompt
+      };
+      finalOutputType = "question";
+      finalProducts = [];
+    }
+  } else {
+    assertDecisionInvariantsBeforeExecution(
+      interactionRef.decision,
+      interactionRef.slots,
+      interactionRef.message
+    );
+  }
 
   if (interactionRef?.decision?.action === "flow" && finalOutputType !== "flow") {
     const forcedFlowOutput = forceFlowExecutionAtBoundary(interactionRef, sessionContext);
@@ -583,6 +694,7 @@ function endInteraction(interactionRef, result, patch = {}) {
     timestamp: interactionRef.timestamp,
     sessionId: interactionRef.sessionId,
     message: interactionRef.message,
+    normalizedMessage: interactionRef.message ? String(interactionRef.message).toLowerCase().trim() : null,
     intent: {
       queryType: interactionRef.queryType,
       type: interactionRef.intentType,
@@ -592,16 +704,31 @@ function endInteraction(interactionRef, result, patch = {}) {
     decision: {
       action: interactionRef.decision.action,
       flowId: interactionRef.decision.flowId,
-      missingSlot: interactionRef.decision.missingSlot
+      missingSlot: interactionRef.decision.missingSlot,
+      hardGuardFallback: interactionRef.decision.hardGuardFallback || false
     },
     output: {
       type: finalOutputType,
-      products: finalProducts
+      products: finalProducts,
+      productsLength: Array.isArray(finalProducts) ? finalProducts.length : 0,
+      productsReason: interactionRef.decision.action === "flow" && Array.isArray(finalProducts) && finalProducts.length === 0 ? "no_matching_products" : null
     },
+    pendingQuestion: sessionContext?.pendingQuestion || null,
     feedback: interactionRef.feedback
   };
 
   appendInteractionLine(entry);
+
+  // P1 - ENHANCED LOGGING: Log key fields for observability
+  logInfo("INTERACTION_COMPLETE", {
+    action: interactionRef.decision.action,
+    flowId: interactionRef.decision.flowId || null,
+    productsLength: Array.isArray(finalProducts) ? finalProducts.length : 0,
+    productsReason: entry.output.productsReason,
+    pendingQuestion: Boolean(sessionContext?.pendingQuestion),
+    hardGuardApplied: interactionRef.decision.hardGuardFallback || false
+  });
+
   return finalResult;
 }
 
@@ -3122,9 +3249,26 @@ function resolveAction({
   };
 }
 
+/**
+ * P1 - INPUT SANITY: Preprocess message with trim, lowercase, strip HTML artifacts
+ * No typo correction, minimal safety only.
+ */
 function normalizeMessage(message) {
-  let msg = String(message || "").toLowerCase();
+  let msg = String(message || "").trim().toLowerCase();
 
+  // Strip known HTML artifacts from logging/rendering
+  msg = msg.replace(/&nbsp;/g, " ");
+  msg = msg.replace(/&lt;/g, "<");
+  msg = msg.replace(/&gt;/g, ">");
+  msg = msg.replace(/&amp;/g, "&");
+  msg = msg.replace(/&#039;/g, "'");
+  msg = msg.replace(/&quot;/g, '"');
+  // Strip any other common HTML entities
+  msg = msg.replace(/&#?[a-z0-9]+;/g, " ");
+  // Collapse multiple spaces
+  msg = msg.replace(/\s+/g, " ").trim();
+
+  // Route transformations (not typo correction)
   if (msg.includes("vreau sa curat")) {
     msg = msg.replace("vreau sa curat", "cum curat");
   }
@@ -3134,6 +3278,25 @@ function normalizeMessage(message) {
   }
 
   return msg;
+}
+
+/**
+ * P1 - BASIC SAFETY: Profanity/insult detection (minimal list)
+ * Returns true if message violates safety, false otherwise. No complex NLP upgrades.
+ */
+const PROFANITY_INSULT_LIST = [
+  "prost", "idiot", "imbecil", "dobitoc", "nenorocit",
+  "dracu", "naiba", "dute dracu", "dute in p",
+  "muie", "fut", "cacat", "cocaini", "pizda", "pula"
+];
+
+function isSafetyViolation(message) {
+  const text = String(message || "").toLowerCase().trim();
+  return PROFANITY_INSULT_LIST.some(term => text.includes(term));
+}
+
+function getSafetyViolationReply() {
+  return "Pot sa te ajut cu intrebari legate de curatarea masinii sau produse. Ce vrei sa cureti?";
 }
 
 function overrideIntent(message, detectedIntent) {
@@ -3203,6 +3366,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
   const routingMessage = normalizeMessage(userMessage);
 
+  // P1 - ENHANCED LOGGING: Track normalized message processing
+  if (routingMessage !== String(userMessage).toLowerCase()) {
+    logInfo("MESSAGE_NORMALIZED", {
+      original: userMessage,
+      normalized: routingMessage,
+      reason: "html_artifacts_or_whitespace_stripped"
+    });
+  }
+
   if (!Array.isArray(products) || products.length === 0) {
     products = Array.isArray(fallbackProductsCatalog) ? fallbackProductsCatalog : [];
   }
@@ -3237,6 +3409,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       feedback: extractFeedback(typeof message === "object" ? message : null),
       productsCatalog: products
     };
+
+    // P0 - SAFETY FIRST: check profanity/insults before any intent/tagging/routing work
+    if (isSafetyViolation(routingMessage)) {
+      logInfo("SAFETY_VIOLATION_DETECTED", {
+        message: userMessage,
+        normalizedMessage: routingMessage
+      });
+      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
+
+      return endInteraction(interactionRef, {
+        type: "reply",
+        message: getSafetyViolationReply()
+      }, {
+        slots: {},
+        decision: { action: "safety", flowId: null, missingSlot: null, safetyViolation: true },
+        outputType: "reply"
+      });
+    }
 
     if (shouldResetForNonCleaningMessage(userMessage)) {
       sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
