@@ -874,6 +874,7 @@ function endInteraction(interactionRef, result, patch = {}) {
       finalResult.products.length < 2;
     sessionContext.lastUserMessage = interactionRef.message;
     sessionContext.lastResponseType = finalOutputType;
+    sessionContext.previousAction = interactionRef?.decision?.action || null;
     saveSession(interactionRef.sessionId, sessionContext);
   }
 
@@ -2999,6 +3000,85 @@ function isSelectionFollowUp(message) {
   );
 }
 
+function normalizeRomanianText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[ăâ]/g, "a")
+    .replace(/î/g, "i")
+    .replace(/[șş]/g, "s")
+    .replace(/[țţ]/g, "t")
+    .trim();
+}
+
+function detectSelectionEscalationTrigger(message) {
+  const msg = normalizeRomanianText(message);
+
+  if (!msg || msg === "ok") {
+    return null;
+  }
+
+  if (msg.includes("care este diferenta") || msg.includes("mai explica")) {
+    return null;
+  }
+
+  if (msg.includes("apc") && msg.includes("link")) {
+    return "apc+link";
+  }
+
+  if (msg.includes("sampon") && (msg.includes("recomanzi") || msg.includes("ce recomanzi") || msg.includes("care recomanzi"))) {
+    return "sampon+recomanzi";
+  }
+
+  if (msg.includes("de care")) return "de_care";
+  if (msg.includes("care recomanzi")) return "care_recomanzi";
+  if (msg.includes("pe care")) return "pe_care";
+  if (msg.includes("ce recomanzi")) return "ce_recomanzi";
+  if (msg.includes("trimite link")) return "trimite_link";
+  if (msg.includes("unde gasesc")) return "unde_gasesc";
+  if (msg.includes("vreau sa cumpar")) return "vreau_sa_cumpar";
+  if (msg.includes("link")) return "link";
+
+  return null;
+}
+
+function isSelectionEscalation(message, context = {}) {
+  const previousAction = String(context?.previousAction || "").toLowerCase().trim();
+  if (previousAction !== "knowledge" && previousAction !== "informational") {
+    return { escalate: false, matchedTrigger: null };
+  }
+
+  const matchedTrigger = detectSelectionEscalationTrigger(message);
+  if (!matchedTrigger) {
+    return { escalate: false, matchedTrigger: null };
+  }
+
+  return {
+    escalate: true,
+    matchedTrigger
+  };
+}
+
+function getTopicHintFromMessage(message) {
+  const msg = normalizeRomanianText(message);
+
+  if (msg.includes("apc")) {
+    return "apc";
+  }
+
+  if (msg.includes("sampon")) {
+    return "sampon";
+  }
+
+  return null;
+}
+
+function getContextHintForEscalation(message) {
+  const msg = normalizeRomanianText(message);
+  if (msg.includes("interior")) return "interior";
+  if (msg.includes("exterior")) return "exterior";
+  return null;
+}
+
 function getDeterministicIntent(message) {
   const msg = String(message || "").toLowerCase();
 
@@ -3969,6 +4049,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       productsCatalog: products
     };
 
+    const previousAction = String(sessionContext?.previousAction || sessionContext?.activeIntent || "").toLowerCase().trim() || null;
+    const messageTopicHint = getTopicHintFromMessage(userMessage);
+    if (messageTopicHint) {
+      sessionContext.currentTopic = messageTopicHint;
+      saveSession(sessionId, sessionContext);
+    }
+
+    let selectionEscalation = false;
+    let selectionEscalationTrigger = null;
+
     // P0 - SAFETY + ABUSE ENTRY: must run before normal intent/tagging/routing
     if (isSafetyViolation(routingMessage)) {
       logInfo("SAFETY_VIOLATION_DETECTED", {
@@ -4194,6 +4284,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
+    const escalationCheck = isSelectionEscalation(userMessage, {
+      previousAction
+    });
+    selectionEscalation = escalationCheck.escalate === true;
+    selectionEscalationTrigger = escalationCheck.matchedTrigger;
+
     const isPendingSelectionContinuation = sessionContext?.pendingSelection === true;
     let queryType = isPendingSelectionContinuation ? "selection" : detectQueryType(routingMessage);
 
@@ -4222,6 +4318,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         state: sessionContext?.state || null,
         pendingSlot: sessionContext?.pendingQuestion?.slot || null
       });
+    }
+
+    if (selectionEscalation && !pendingClarificationActive) {
+      queryType = "selection";
     }
 
     interactionRef.queryType = queryType;
@@ -4678,6 +4778,70 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       normalizedUserMessage.includes("altceva");
     sessionContext.objective.type = routingDecision.action;
     saveSession(sessionId, sessionContext);
+
+    if (selectionEscalation && !pendingClarificationActive) {
+      const escalationTopic = messageTopicHint || sessionContext.currentTopic || null;
+      const escalationContextHint = getContextHintForEscalation(userMessage);
+
+      if (!escalationTopic) {
+        sessionContext.pendingQuestion = { slot: "context" };
+        sessionContext.state = "NEEDS_CONTEXT";
+        saveSession(sessionId, sessionContext);
+        logInfo("SELECTION_ESCALATION_ROUTING", {
+          previousAction,
+          selectionEscalation: true,
+          matchedTrigger: selectionEscalationTrigger,
+          finalAction: "clarification"
+        });
+
+        return endInteraction(interactionRef, {
+          type: "question",
+          message: "Pentru interior sau exterior?"
+        }, {
+          decision: { action: "clarification", flowId: null, missingSlot: "context" },
+          outputType: "question"
+        });
+      }
+
+      const escalationTags = [escalationTopic];
+      if (escalationContextHint) {
+        escalationTags.push(escalationContextHint);
+      }
+
+      const escalationCandidates = findRelevantProducts(escalationTags, products, MAX_SELECTION_PRODUCTS);
+      const escalationRanked = applyRanking(escalationCandidates, { tags: escalationTags, priceRange: null }, settings);
+      const escalationFiltered = filterProducts(
+        enrichProducts(escalationRanked, products),
+        { context: escalationContextHint || null, object: null, surface: null }
+      );
+      const escalationBundle = buildProductBundle(escalationFiltered);
+      const finalEscalationProducts = enforceProductLimit(escalationBundle, MAX_SELECTION_PRODUCTS);
+      const escalationReply = finalEscalationProducts.length > 0
+        ? formatSelectionResponse(finalEscalationProducts, { context: escalationContextHint || null })
+        : "Nu am gasit produse potrivite pentru aceasta selectie.";
+
+      updateSessionWithProducts(sessionId, finalEscalationProducts, "recommendation");
+      emit("products_recommended", { products: finalEscalationProducts, tags: escalationTags });
+      emit("ai_response", { response: escalationReply });
+      logResponseSummary("selection_escalation", { products: finalEscalationProducts.length });
+      logInfo("SELECTION_ESCALATION_ROUTING", {
+        previousAction,
+        selectionEscalation: true,
+        matchedTrigger: selectionEscalationTrigger,
+        finalAction: "selection"
+      });
+
+      return endInteraction(interactionRef, {
+        reply: escalationReply,
+        products: finalEscalationProducts
+      }, {
+        intentType: "selection",
+        slots: { context: escalationContextHint || null, object: null, surface: null },
+        decision: { action: "selection", flowId: null, missingSlot: null },
+        outputType: finalEscalationProducts.length > 0 ? "recommendation" : "reply",
+        products: summarizeProductsForLog(finalEscalationProducts)
+      });
+    }
 
     // INFORMATIONAL
     if (queryType === "informational" && previewAction === "knowledge") {
@@ -5554,6 +5718,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         resolvedAction.missingSlot = null;
       }
     }
+
+    if (selectionEscalation) {
+      resolvedAction.action = "selection";
+      resolvedAction.flowId = null;
+      resolvedAction.missingSlot = null;
+    }
+
+    logInfo("SELECTION_ESCALATION_ROUTING", {
+      previousAction,
+      selectionEscalation,
+      matchedTrigger: selectionEscalationTrigger || null,
+      finalAction: resolvedAction.action
+    });
 
     // Create canonical routing decision for logging (fulfills requirement)
     const canonicalRoutingDecision = createCanonicalRoutingDecision({

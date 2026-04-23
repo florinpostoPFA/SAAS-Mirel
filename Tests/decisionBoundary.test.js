@@ -198,4 +198,49 @@ describe("Decision boundary and reset rules", () => {
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
     expect(lastLogEntry.decision.action).not.toBe("knowledge");
   });
+
+  it("knowledge to de care escalates to selection", async () => {
+    const sessionId = `escalate-de-care-${Date.now()}`;
+
+    await handleChat("ce este apc?", "C1", [], sessionId);
+    const second = await handleChat("de care?", "C1", [], sessionId);
+
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).toBe("selection");
+    expect(Array.isArray(second.products)).toBe(true);
+    expect(second.products.length).toBeGreaterThan(0);
+  });
+
+  it("knowledge to link de apc escalates to selection", async () => {
+    const sessionId = `escalate-apc-link-${Date.now()}`;
+
+    await handleChat("ce este apc?", "C1", [], sessionId);
+    const second = await handleChat("link de apc", "C1", [], sessionId);
+
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).toBe("selection");
+    expect(Array.isArray(second.products)).toBe(true);
+    expect(second.products.length).toBeGreaterThan(0);
+  });
+
+  it("knowledge to care recomanzi pentru interior stays in selection with interior context", async () => {
+    const sessionId = `escalate-interior-reco-${Date.now()}`;
+
+    await handleChat("ce este apc?", "C1", [], sessionId);
+    await handleChat("care recomanzi pentru interior?", "C1", [], sessionId);
+
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).toBe("selection");
+    expect(lastLogEntry.slots.context).toBe("interior");
+  });
+
+  it("knowledge to ok does not escalate to selection", async () => {
+    const sessionId = `escalate-no-ok-${Date.now()}`;
+
+    await handleChat("ce este apc?", "C1", [], sessionId);
+    await handleChat("ok", "C1", [], sessionId);
+
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).not.toBe("selection");
+  });
 });
