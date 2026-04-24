@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   ask_questions: true,
   max_questions: 2,
   greeting_enabled: true,
+  surface_assist_enabled: false,
   tagRules: "",
   cta: "Vezi produsul",
   fallback_message: "Hai sa vedem cum te pot ajuta mai bine. Spune-mi, te intereseaza curatare interior, exterior sau alt tip de produs?"
@@ -26,7 +27,7 @@ function getSettings() {
       ...parsed
     };
   } catch (err) {
-    return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS };
   }
 }
 
@@ -39,12 +40,17 @@ function getClientSettings(clientId) {
       ...parsed
     };
   } catch (err) {
-    return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS };
   }
 }
 
 function saveSettings(settings) {
-  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  const incoming = settings && typeof settings === "object" ? settings : {};
+  const merged = {
+    ...getSettings(),
+    ...incoming
+  };
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2));
 }
 
 module.exports = {

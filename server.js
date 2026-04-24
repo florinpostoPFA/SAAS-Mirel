@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const config = require("./config");
+const { computeSurfaceAssistEnabled } = require("./services/surfaceAssistFeature");
 const chatService = require("./services/chatService");
 const { autoTagProduct } = require("./services/autoTagService");
 const settingsService = require("./services/settingsService");
@@ -24,6 +25,16 @@ const {
 } = require("./services/trackingService");
 const { logInfo, error: logError, warn: logWarn } = require("./services/logger");
 
+const surfaceAssistStartup = computeSurfaceAssistEnabled({
+  env: process.env,
+  settings: settingsService.getSettings(),
+  config
+});
+logInfo("SURFACE_ASSIST_FEATURE_STARTUP", {
+  effective: surfaceAssistStartup.effective,
+  enabledSources: surfaceAssistStartup.enabledSources,
+  rawEnvValue: surfaceAssistStartup.rawEnvValue
+});
 
 const rateLimit = require("express-rate-limit");
 const app = express();

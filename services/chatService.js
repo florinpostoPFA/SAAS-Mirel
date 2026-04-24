@@ -31,6 +31,8 @@ const { findRelevantKnowledge } = require("./knowledgeService");
 const fallbackProductsCatalog = require("../data/products.json");
 const productRoles = require("../data/product_roles.json");
 const knowledgeBase = require("../data/knowledge.json");
+const { resolveSurfaceShortlist } = require("./vehicleSurfaceShortlist");
+const { computeSurfaceAssistEnabled } = require("./surfaceAssistFeature");
 
 const SOURCE = "ChatService";
 const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "piele"];
@@ -47,6 +49,396 @@ function getProceduralSurfaceEnumQuestion(responseLocale) {
     ? "What surface is it: textile, piele, plastic, or alcantara?"
     : "Ce suprafata este: textile, piele, plastic sau alcantara?";
 }
+
+const SURFACE_ASSIST_STRINGS = {
+  en: {
+    cta: "Not sure? Tell me your car (make, model, year) and I'll help you pick.",
+    vehiclePrompt: "Please send make and model (year optional), e.g. VW Golf 2016.",
+    shortlistHead:
+      "Most likely upholstery for your car — pick one option (reply with the number or name):"
+  },
+  ro: {
+    ctaEn: "Not sure? Tell me your car (make, model, year) and I'll help you pick.",
+    ctaRo:
+      "Nu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
+    vehiclePrompt:
+      "Spune-mi marca si modelul (anul e optional), ex: Dacia Logan 2018.",
+    shortlistHead:
+      "Cele mai probabile tapiterii pentru masina ta — alege o optiune (raspunde cu numar sau nume):"
+  }
+};
+
+function resolveSurfaceAssistFlag() {
+  return computeSurfaceAssistEnabled({
+    env: process.env,
+    settings: getSettings(),
+    config
+  });
+}
+
+function qualifiesForInteriorSurfaceAssist(slots) {
+  const s = slots && typeof slots === "object" ? slots : {};
+  if (s.context !== "interior") return false;
+  const obj = canonicalizeObjectValue(s.object);
+  if (!obj) return false;
+  if (obj === "mocheta" || obj === "bord") return false;
+  return true;
+}
+
+function appendSurfaceAssistFallbackCTA(baseMessage, responseLocale) {
+  if (!resolveSurfaceAssistFlag().effective || typeof baseMessage !== "string") {
+    return baseMessage;
+  }
+  const loc = normalizeResponseLocale(responseLocale);
+  if (loc === "en") {
+    return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.en.cta}`;
+  }
+  return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.ro.ctaEn}\n${SURFACE_ASSIST_STRINGS.ro.ctaRo}`;
+}
+
+function clearSurfaceAssistState(sessionContext) {
+  if (!sessionContext || typeof sessionContext !== "object") return;
+  sessionContext.surfaceUnknown = false;
+  sessionContext.surfaceAssistPhase = null;
+  sessionContext.surfaceAssistShortlist = null;
+  sessionContext.vehicleFieldsRequested = false;
+  if (sessionContext.slots && typeof sessionContext.slots === "object") {
+    delete sessionContext.slots.vehicleMake;
+    delete sessionContext.slots.vehicleModel;
+    delete sessionContext.slots.vehicleYear;
+  }
+}
+
+const SURFACE_ASSIST_MAKE_KEYS = [
+  "mercedes benz",
+  "mercedes",
+  "volkswagen",
+  "land rover",
+  "bmw",
+  "audi",
+  "ford",
+  "dacia",
+  "renault",
+  "skoda",
+  "toyota",
+  "tesla",
+  "hyundai",
+  "kia",
+  "opel",
+  "peugeot",
+  "citroen",
+  "mazda",
+  "nissan",
+  "honda",
+  "jeep",
+  "volvo",
+  "porsche",
+  "vw"
+];
+
+function parseVehicleSlotsFromMessage(message, existing = {}) {
+  const ex = existing && typeof existing === "object" ? existing : {};
+  let vehicleYear =
+    ex.vehicleYear != null && String(ex.vehicleYear).trim() !== ""
+      ? String(ex.vehicleYear).trim()
+      : null;
+  let vehicleMake =
+    ex.vehicleMake != null && String(ex.vehicleMake).trim() !== ""
+      ? String(ex.vehicleMake).trim()
+      : null;
+  let vehicleModel =
+    ex.vehicleModel != null && String(ex.vehicleModel).trim() !== ""
+      ? String(ex.vehicleModel).trim()
+      : null;
+
+  const raw = String(message || "").trim();
+  if (!raw) {
+    return { vehicleMake, vehicleModel, vehicleYear };
+  }
+
+  const yearMatch = raw.match(/\b(19|20)\d{2}\b/);
+  if (yearMatch) {
+    vehicleYear = vehicleYear || yearMatch[0];
+  }
+
+  const gate = normalizeRomanianTextForGate(raw.replace(/\b(19|20)\d{2}\b/g, " "));
+  if (!gate) {
+    return { vehicleMake, vehicleModel, vehicleYear };
+  }
+
+  let makeKeyFound = null;
+  for (const key of SURFACE_ASSIST_MAKE_KEYS) {
+    const g = key.replace(/\s+/g, "");
+    if (!g) continue;
+    if (gate.includes(g)) {
+      makeKeyFound = key;
+      break;
+    }
+  }
+
+  if (makeKeyFound) {
+    const canon =
+      makeKeyFound === "vw"
+        ? "volkswagen"
+        : makeKeyFound === "mercedes benz"
+          ? "mercedes"
+          : makeKeyFound;
+    vehicleMake = vehicleMake || canon;
+    const idx = gate.indexOf(makeKeyFound.replace(/\s+/g, ""));
+    const tail =
+      idx >= 0
+        ? gate.slice(idx + makeKeyFound.replace(/\s+/g, "").length).trim()
+        : gate.replace(makeKeyFound.replace(/\s+/g, ""), "").trim();
+    const stop = new Set([
+      "am",
+      "am o",
+      "masina",
+      "masinii",
+      "auto",
+      "cu",
+      "un",
+      "o",
+      "vreau",
+      "ajutor",
+      "help",
+      "car",
+      "year",
+      "an",
+      "fabricatie",
+      "model"
+    ]);
+    const words = tail.split(/\s+/).filter(w => w.length > 1 && !stop.has(w));
+    if (words.length > 0 && !vehicleModel) {
+      vehicleModel = words.join(" ").slice(0, 80);
+    }
+  }
+
+  return { vehicleMake, vehicleModel, vehicleYear };
+}
+
+function userSignalsSurfaceAssistIntent(message) {
+  const gate = normalizeRomanianTextForGate(message);
+  if (!gate) return false;
+  if (/\b(19|20)\d{2}\b/.test(String(message || ""))) return true;
+  if (
+    gate.includes("nu stiu") ||
+    gate.includes("nu sunt sigur") ||
+    gate.includes("fara idee") ||
+    gate.includes("not sure") ||
+    gate.includes("no idea") ||
+    (gate.includes("ajut") && gate.includes("aleg")) ||
+    (gate.includes("help") && gate.includes("pick"))
+  ) {
+    return true;
+  }
+  return SURFACE_ASSIST_MAKE_KEYS.some(k => gate.includes(k.replace(/\s+/g, "")));
+}
+
+function tryParseExplicitCtoSurfaceFromText(message) {
+  const gate = normalizeRomanianTextForGate(message);
+  const fromGate = parseCtoSurfaceFromNormalizedGateText(gate);
+  if (fromGate) return fromGate;
+  const fromSlots = extractSlotsFromMessage(message);
+  return coerceLegacySurfaceToCto(fromSlots?.surface || null);
+}
+
+function surfaceShortlistDisplayLabel(surface, responseLocale) {
+  const loc = normalizeResponseLocale(responseLocale);
+  const mapRo = {
+    textile: "textil (textile)",
+    piele: "piele",
+    plastic: "plastic",
+    alcantara: "alcantara"
+  };
+  if (loc === "en") {
+    const mapEn = {
+      textile: "textile",
+      piele: "leather (piele)",
+      plastic: "plastic",
+      alcantara: "alcantara"
+    };
+    return mapEn[surface] || surface;
+  }
+  return mapRo[surface] || surface;
+}
+
+function matchUserPickFromShortlist(message, shortlist) {
+  const list = Array.isArray(shortlist) ? shortlist : [];
+  if (list.length === 0) return null;
+  const trimmed = String(message || "").trim();
+  const n = parseInt(trimmed, 10);
+  if (!Number.isNaN(n) && n >= 1 && n <= list.length) {
+    return list[n - 1];
+  }
+  const gate = normalizeRomanianTextForGate(message);
+  for (const s of list) {
+    if (!s) continue;
+    if (gate.includes(normKeyForShortlistMatch(s))) return s;
+  }
+  if (gate.includes("textil") && list.includes("textile")) return "textile";
+  if ((gate.includes("piele") || gate.includes("leather")) && list.includes("piele")) return "piele";
+  return null;
+}
+
+function normKeyForShortlistMatch(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function buildSurfaceShortlistQuestion(shortlist, responseLocale) {
+  const loc = normalizeResponseLocale(responseLocale);
+  const lines = (Array.isArray(shortlist) ? shortlist : []).map((s, i) => {
+    const label = surfaceShortlistDisplayLabel(s, responseLocale);
+    return `${i + 1}) ${label}`;
+  });
+  const head = loc === "en" ? SURFACE_ASSIST_STRINGS.en.shortlistHead : SURFACE_ASSIST_STRINGS.ro.shortlistHead;
+  return `${head}\n${lines.join("\n")}`;
+}
+
+function tryConsumeSurfaceAssistTurn({
+  sessionId,
+  sessionContext,
+  userMessage,
+  interactionRef,
+  queryType,
+  endInteractionFn
+}) {
+  if (!resolveSurfaceAssistFlag().effective) return null;
+  if (!(queryType === "procedural" || queryType === "selection")) return null;
+
+  const pendingSurface =
+    sessionContext?.pendingQuestion?.slot === "surface" ||
+    sessionContext?.pendingClarification?.state === "NEEDS_SURFACE" ||
+    sessionContext?.state === "NEEDS_SURFACE";
+
+  if (!pendingSurface) return null;
+
+  const slots = sessionContext.slots && typeof sessionContext.slots === "object" ? sessionContext.slots : {};
+  if (!qualifiesForInteriorSurfaceAssist(slots)) return null;
+
+  const explicit = tryParseExplicitCtoSurfaceFromText(userMessage);
+  if (explicit && CTO_SURFACE_SET.has(explicit)) {
+    sessionContext.slots = { ...slots, surface: explicit };
+    sessionContext.pendingQuestion = null;
+    sessionContext.state = null;
+    clearPendingClarificationSlots(sessionContext);
+    clearSurfaceAssistState(sessionContext);
+    saveSession(sessionId, sessionContext);
+    logInfo("surface_selected", {
+      source: "explicit_while_assist_eligible",
+      surface: explicit,
+      shortlist: sessionContext.surfaceAssistShortlist || null,
+      sessionId: sessionId != null ? String(sessionId) : null
+    });
+    return null;
+  }
+
+  if (sessionContext.surfaceAssistPhase === "shortlist" && Array.isArray(sessionContext.surfaceAssistShortlist)) {
+    const picked = matchUserPickFromShortlist(userMessage, sessionContext.surfaceAssistShortlist);
+    if (picked) {
+      sessionContext.slots = { ...sessionContext.slots, surface: picked };
+      logInfo("surface_selected", {
+        source: "shortlist",
+        surface: picked,
+        shortlist: sessionContext.surfaceAssistShortlist,
+        sessionId: sessionId != null ? String(sessionId) : null
+      });
+      sessionContext.pendingQuestion = null;
+      sessionContext.state = null;
+      clearPendingClarificationSlots(sessionContext);
+      clearSurfaceAssistState(sessionContext);
+      saveSession(sessionId, sessionContext);
+      return null;
+    }
+    saveSession(sessionId, sessionContext);
+    return endInteractionFn(interactionRef, {
+      type: "question",
+      message: buildSurfaceShortlistQuestion(sessionContext.surfaceAssistShortlist, sessionContext.responseLocale)
+    }, {
+      slots: { ...(sessionContext.slots || {}) },
+      decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+      outputType: "question"
+    });
+  }
+
+  const wasUnknown = sessionContext.surfaceUnknown === true;
+  if (!wasUnknown && userSignalsSurfaceAssistIntent(userMessage)) {
+    sessionContext.surfaceUnknown = true;
+    logInfo("surface_assist_used", {
+      reason: "vehicle_or_unsure_signal",
+      sessionId: sessionId != null ? String(sessionId) : null
+    });
+  }
+
+  if (!sessionContext.surfaceUnknown) {
+    return null;
+  }
+
+  const prevV = {
+    vehicleMake: slots.vehicleMake || null,
+    vehicleModel: slots.vehicleModel || null,
+    vehicleYear: slots.vehicleYear || null
+  };
+  const parsedV = parseVehicleSlotsFromMessage(userMessage, prevV);
+  sessionContext.slots = {
+    ...sessionContext.slots,
+    vehicleMake: parsedV.vehicleMake || prevV.vehicleMake,
+    vehicleModel: parsedV.vehicleModel || prevV.vehicleModel,
+    vehicleYear: parsedV.vehicleYear || prevV.vehicleYear
+  };
+  setPendingClarificationSlots(sessionContext, sessionContext.slots);
+  saveSession(sessionId, sessionContext);
+
+  const v = sessionContext.slots;
+  const hasMake = Boolean(v.vehicleMake && String(v.vehicleMake).trim());
+  const hasModel = Boolean(v.vehicleModel && String(v.vehicleModel).trim());
+
+  if (!sessionContext.vehicleFieldsRequested && (!hasMake || !hasModel)) {
+    sessionContext.vehicleFieldsRequested = true;
+    saveSession(sessionId, sessionContext);
+    const loc = normalizeResponseLocale(sessionContext.responseLocale);
+    const msg = loc === "en" ? SURFACE_ASSIST_STRINGS.en.vehiclePrompt : SURFACE_ASSIST_STRINGS.ro.vehiclePrompt;
+    return endInteractionFn(interactionRef, {
+      type: "question",
+      message: msg
+    }, {
+      slots: { ...(sessionContext.slots || {}) },
+      decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+      outputType: "question"
+    });
+  }
+
+  const shortlist = resolveSurfaceShortlist({
+    vehicleMake: v.vehicleMake,
+    vehicleModel: v.vehicleModel,
+    vehicleYear: v.vehicleYear
+  });
+  sessionContext.surfaceAssistPhase = "shortlist";
+  sessionContext.surfaceAssistShortlist = shortlist.slice(0, 3);
+  saveSession(sessionId, sessionContext);
+
+  logInfo("vehicle_provided", {
+    hasMake,
+    hasModel,
+    hasYear: Boolean(v.vehicleYear),
+    mkLen: v.vehicleMake ? String(v.vehicleMake).length : 0,
+    mdLen: v.vehicleModel ? String(v.vehicleModel).length : 0,
+    yr: v.vehicleYear ? String(v.vehicleYear).slice(0, 4) : null,
+    shortlist: sessionContext.surfaceAssistShortlist,
+    sessionId: sessionId != null ? String(sessionId) : null
+  });
+
+  return endInteractionFn(interactionRef, {
+    type: "question",
+    message: buildSurfaceShortlistQuestion(sessionContext.surfaceAssistShortlist, sessionContext.responseLocale)
+  }, {
+    slots: { ...(sessionContext.slots || {}) },
+    decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+    outputType: "question"
+  });
+}
+
 const OBJECT_SLOT_VALUES = ["cotiera", "scaun", "plafon", "bord", "oglinda", "geam", "parbriz", "oglinzi", "volan", "mocheta", "tapiterie", "glass"];
 const OBJECT_MATCH_TERMS = {
   cotiera: ["cotiera", "armrest"],
@@ -556,17 +948,7 @@ function getClarificationQuestion(missingSlot, slots, responseLocale = "ro") {
   }
 
   if (missingSlot === "surface") {
-    if (slots?.context === "interior") {
-      return getProceduralSurfaceEnumQuestion(responseLocale);
-    }
-
-    if (slots?.context === "exterior") {
-      return loc === "en"
-        ? "What do you want to clean outside: paint, wheels, or glass?"
-        : "Ce vrei sa cureti la exterior: vopsea, jante sau geamuri?";
-    }
-
-    return getProceduralSurfaceEnumQuestion(responseLocale);
+    return buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, null, null);
   }
 
   if (missingSlot === "object") {
@@ -1276,10 +1658,15 @@ function extractSlotsForSafetyQuery(message) {
 }
 
 function mergeSlots(sessionSlots, newSlots) {
+  const prev = sessionSlots && typeof sessionSlots === "object" ? sessionSlots : {};
+  const next = newSlots && typeof newSlots === "object" ? newSlots : {};
   return {
-    context: newSlots.context || sessionSlots.context || null,
-    surface: newSlots.surface || sessionSlots.surface || null,
-    object: newSlots.object || sessionSlots.object || null
+    context: next.context || prev.context || null,
+    surface: next.surface || prev.surface || null,
+    object: next.object || prev.object || null,
+    vehicleMake: next.vehicleMake ?? prev.vehicleMake ?? null,
+    vehicleModel: next.vehicleModel ?? prev.vehicleModel ?? null,
+    vehicleYear: next.vehicleYear ?? prev.vehicleYear ?? null
   };
 }
 
@@ -1290,7 +1677,10 @@ function mergePendingClarificationSlots(previousSlots, parsedSlots) {
   return {
     context: parsed.context ?? previous.context ?? null,
     surface: parsed.surface ?? previous.surface ?? null,
-    object: parsed.object ?? previous.object ?? null
+    object: parsed.object ?? previous.object ?? null,
+    vehicleMake: parsed.vehicleMake ?? previous.vehicleMake ?? null,
+    vehicleModel: parsed.vehicleModel ?? previous.vehicleModel ?? null,
+    vehicleYear: parsed.vehicleYear ?? previous.vehicleYear ?? null
   };
 }
 
@@ -1331,7 +1721,10 @@ function seedPendingClarificationAtEmission(sessionContext, missingSlot) {
   const pendingSlots = {
     context: sessionContext?.slots?.context ?? null,
     object: sessionContext?.slots?.object ?? null,
-    surface: sessionContext?.slots?.surface ?? null
+    surface: sessionContext?.slots?.surface ?? null,
+    vehicleMake: sessionContext?.slots?.vehicleMake ?? null,
+    vehicleModel: sessionContext?.slots?.vehicleModel ?? null,
+    vehicleYear: sessionContext?.slots?.vehicleYear ?? null
   };
   const responseLocale =
     sessionContext.responseLocale ||
@@ -1776,6 +2169,38 @@ function getAllowedSurfaces(slots) {
   }
 
   return [...CTO_SURFACE_ENUM, "paint", "wheels", "glass"];
+}
+
+function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sessionId, sessionState = null) {
+  const loc = normalizeResponseLocale(responseLocale);
+  const raw = slots && typeof slots === "object" ? slots : {};
+  const inferred = { ...raw };
+  applyObjectContextInferenceInPlace(inferred);
+  const s = inferred;
+  let base;
+  if (s.context === "interior") {
+    base = getProceduralSurfaceEnumQuestion(loc);
+  } else if (s.context === "exterior") {
+    base =
+      loc === "en"
+        ? "What do you want to clean outside: paint, wheels, or glass?"
+        : "Ce vrei sa cureti la exterior: vopsea, jante sau geamuri?";
+  } else {
+    base = getProceduralSurfaceEnumQuestion(loc);
+  }
+  const flag = resolveSurfaceAssistFlag();
+  const assistEligible = flag.effective && qualifiesForInteriorSurfaceAssist(s);
+  const message = assistEligible ? appendSurfaceAssistFallbackCTA(base, loc) : base;
+  logInfo("SURFACE_ASSIST_CTA_ATTACHED", {
+    enabledEffective: Boolean(assistEligible),
+    enabledSources: flag.enabledSources,
+    rawEnvValue: flag.rawEnvValue,
+    missingSlot: "surface",
+    state: sessionState != null ? sessionState : null,
+    responseLocale: loc,
+    sessionId: sessionId != null ? String(sessionId) : null
+  });
+  return message;
 }
 
 function detectContextHint(message) {
@@ -2470,7 +2895,7 @@ function getFlowDisambiguationQuestion(candidateFlows, slots, responseLocale = "
     if (safeSlots.context === "interior") {
       return {
         state: "NEEDS_SURFACE",
-        message: getProceduralSurfaceEnumQuestion(responseLocale)
+        message: buildSurfaceClarificationQuestionWithAssist(safeSlots, responseLocale, null, "NEEDS_SURFACE")
       };
     }
 
@@ -3652,6 +4077,7 @@ function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   safeContext.pendingQuestion = null;
   clearPendingClarificationSlots(safeContext);
   safeContext.state = "IDLE";
+  clearSurfaceAssistState(safeContext);
 
   saveSession(sessionId, safeContext);
 
@@ -3666,6 +4092,7 @@ function resetSessionAfterAbuse(sessionContext, sessionId) {
   safeContext.slots = {};
   safeContext.pendingQuestion = null;
   clearPendingClarificationSlots(safeContext);
+  clearSurfaceAssistState(safeContext);
   safeContext.pendingSelection = false;
   safeContext.pendingSelectionMissingSlot = null;
   safeContext.state = "IDLE";
@@ -4703,6 +5130,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.slots = {};
       sessionContext.pendingQuestion = null;
       clearPendingClarificationSlots(sessionContext);
+      clearSurfaceAssistState(sessionContext);
       sessionContext.lastFlow = null;
       sessionContext.state = "IDLE";
       sessionContext.originalIntent = null;
@@ -4891,6 +5319,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           mergedSlots,
           responseLocale: sessionContext.responseLocale || sessionContext.language || null
         });
+      }
+
+      const surfaceAssistEarly = tryConsumeSurfaceAssistTurn({
+        sessionId,
+        sessionContext,
+        userMessage,
+        interactionRef,
+        queryType,
+        endInteractionFn: endInteraction
+      });
+      if (surfaceAssistEarly) {
+        return surfaceAssistEarly;
       }
     }
 
@@ -5092,24 +5532,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             sessionContext.pendingSelectionMissingSlot = "surface";
             seedPendingClarificationAtEmission(sessionContext, "surface");
             saveSession(sessionId, sessionContext);
-            const allowedSurfaces = getAllowedSurfaces(slotResult.slots);
-            const isInteriorEnumSel = slotResult.slots?.context === "interior";
-            const selQuestion = isInteriorEnumSel
-              ? getProceduralSurfaceEnumQuestion(sessionContext.responseLocale)
-              : (() => {
-                const labelMap = {
-                  textile: "textil",
-                  piele: "piele",
-                  leather: "piele",
-                  alcantara: "alcantara",
-                  plastic: "plastic",
-                  paint: "vopsea",
-                  wheels: "jante",
-                  glass: "geamuri"
-                };
-                const options = allowedSurfaces.map(surface => labelMap[surface] || surface).join(", ");
-                return `Pe ce suprafata? (${options})`;
-              })();
+            const selQuestion = buildSurfaceClarificationQuestionWithAssist(
+              slotResult.slots,
+              sessionContext.responseLocale,
+              sessionId,
+              sessionContext.state
+            );
             return endInteraction(interactionRef, {
               type: "question",
               message: selQuestion
@@ -5356,9 +5784,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const DETERMINISTIC_SURFACE_OBJECTS = new Set(["glass", "jante", "caroserie", "mocheta"]);
       if (queryType === "procedural" && isHowToActionMsg) {
         const currentMsgSlots = extractSlotsFromMessage(userMessage);
-        const mergedContext = currentMsgSlots.context || sessionContext.slots?.context || null;
-        const mergedObject  = currentMsgSlots.object  || sessionContext.slots?.object  || null;
-        const mergedSurface = currentMsgSlots.surface || sessionContext.slots?.surface || null;
+        const clarificationSlots = {
+          context: currentMsgSlots.context || sessionContext.slots?.context || null,
+          object: currentMsgSlots.object || sessionContext.slots?.object || null,
+          surface: currentMsgSlots.surface || sessionContext.slots?.surface || null
+        };
+        applyObjectContextInferenceInPlace(clarificationSlots);
+        const mergedContext = clarificationSlots.context;
+        const mergedObject = clarificationSlots.object;
+        const mergedSurface = clarificationSlots.surface;
 
         if (mergedContext && mergedObject && !mergedSurface && !DETERMINISTIC_SURFACE_OBJECTS.has(mergedObject)) {
           logInfo("PROCEDURAL_SURFACE_CLARIFICATION", {
@@ -5370,17 +5804,22 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
           // Merge resolved slots into session and interactionRef so that
           // getMissingSlot(slots) === "surface" and the decision invariant passes.
-          const clarificationSlots = { context: mergedContext, object: mergedObject, surface: null };
-          sessionContext.slots = { ...(sessionContext.slots || {}), ...clarificationSlots };
+          const mergedClarificationSlots = { context: mergedContext, object: mergedObject, surface: null };
+          sessionContext.slots = { ...(sessionContext.slots || {}), ...mergedClarificationSlots };
           sessionContext.pendingQuestion = { slot: "surface" };
           sessionContext.state = "NEEDS_SURFACE";
           seedPendingClarificationAtEmission(sessionContext, "surface");
           saveSession(sessionId, sessionContext);
-          interactionRef.slots = { ...clarificationSlots };
+          interactionRef.slots = { ...mergedClarificationSlots };
 
           return endInteraction(interactionRef, {
             type: "question",
-            message: getProceduralSurfaceEnumQuestion(sessionContext.responseLocale)
+            message: buildSurfaceClarificationQuestionWithAssist(
+              sessionContext.slots,
+              sessionContext.responseLocale,
+              sessionId,
+              sessionContext.state
+            )
           }, {
             decision: { action: "clarification", flowId: null, missingSlot: "surface" },
             outputType: "question"
@@ -6090,6 +6529,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.state = null;
       sessionContext.pendingQuestion = null;
       clearPendingClarificationSlots(sessionContext);
+      clearSurfaceAssistState(sessionContext);
     }
     const pendingBeforeSlotUpdate = sessionContext.pendingQuestion
       ? { ...sessionContext.pendingQuestion }
@@ -6147,6 +6587,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     applyObjectContextInferenceInPlace(sessionContext.slots);
+    slotResult.slots = mergeSlots(slotResult.slots || {}, {
+      context: sessionContext.slots.context,
+      object: sessionContext.slots.object,
+      surface: sessionContext.slots.surface
+    });
 
     // --- Deterministic slot validation ---
     {
@@ -6652,24 +7097,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
       logInfo("FLOW", getFlowLogPayload(intent, slotResult.slots, null, "missing_surface"));
 
-      const allowedSurfaces = getAllowedSurfaces(slotResult.slots);
-      const isInteriorEnum = slotResult.slots?.context === "interior";
-      const questionMessage = isInteriorEnum
-        ? getProceduralSurfaceEnumQuestion(sessionContext.responseLocale)
-        : (() => {
-          const labelMap = {
-            textile: "textil",
-            piele: "piele",
-            leather: "piele",
-            alcantara: "alcantara",
-            plastic: "plastic",
-            paint: "vopsea",
-            wheels: "jante",
-            glass: "geamuri"
-          };
-          const options = allowedSurfaces.map(surface => labelMap[surface] || surface).join(", ");
-          return `Pe ce suprafata? (${options})`;
-        })();
+      const questionMessage = buildSurfaceClarificationQuestionWithAssist(
+        sessionContext.slots,
+        sessionContext.responseLocale,
+        sessionId,
+        sessionContext.state
+      );
 
       logResponseSummary("question", { products: 0 });
       return endInteraction(interactionRef, {

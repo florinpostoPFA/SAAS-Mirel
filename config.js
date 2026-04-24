@@ -3,6 +3,8 @@
  * All hardcoded values and behavior settings in one place
  */
 
+const { envIndicatesSurfaceAssistEnabled } = require("./services/surfaceAssistFeature");
+
 const config = {
   // Server configuration
   server: {
@@ -99,6 +101,10 @@ Recomandă produsele direct cu o explicație a DE CE se potrivesc.
     baseUrl: "",
     token: "",
     timeout: 5000
+  },
+
+  features: {
+    surface_assist_enabled: envIndicatesSurfaceAssistEnabled(process.env)
   },
 
   // Predefined deterministic flows
