@@ -1,5 +1,6 @@
 node_modules/
 logs/
+tests/golden/cases/*/actual/
 .env
 *.pem
 *.key

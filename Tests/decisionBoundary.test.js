@@ -89,19 +89,20 @@ describe("Decision boundary and reset rules", () => {
     await handleChat("cum curat o cotiera murdara?", "C1", [], sessionId);
     await handleChat("textil", "C1", [], sessionId);
     const flowCallsBefore = executeFlow.mock.calls.length;
+    const llmCallsBefore = askLLM.mock.calls.length;
 
     const result = await handleChat("pot folosi apc pe piele?", "C1", [], sessionId);
 
     expect(result.type).toBe("reply");
     expect(executeFlow.mock.calls.length).toBe(flowCallsBefore);
+    expect(askLLM.mock.calls.length).toBe(llmCallsBefore);
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
     expect(lastLogEntry.decision.action).toBe("safety");
-    expect(lastLogEntry.slots).toEqual(
-      expect.objectContaining({
-        context: expect.anything(),
-        surface: expect.anything()
-      })
-    );
+    expect(lastLogEntry.slots).toEqual({});
+    const reply = String(result.reply || result.message || "");
+    const isAnswerFirst = /^(DEPINDE|DA|NU)[.\s]/i.test(reply.trim());
+    const isTargetedClarification = /\?/.test(reply) && /piele|diluat|concentrat|suprafata|finisaj|mat|lucio/i.test(reply);
+    expect(isAnswerFirst || isTargetedClarification).toBe(true);
   });
 
   it("clears procedural slots on knowledge boundary after procedural sequence", async () => {
@@ -110,21 +111,18 @@ describe("Decision boundary and reset rules", () => {
 
     await handleChat("cotiera", "C1", [], sessionId);
     await handleChat("textil", "C1", [], sessionId);
+    const llmCallsBefore = askLLM.mock.calls.length;
     const final = await handleChat("pot folosi apc pe piele?", "C1", [], sessionId);
 
     expect(final.type).toBe("reply");
+    expect(askLLM.mock.calls.length).toBe(llmCallsBefore);
     const session = getSession(sessionId);
     expect(session.slots || {}).toEqual({});
     expect(session.pendingQuestion).toBeNull();
 
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
     expect(lastLogEntry.decision.action).toBe("safety");
-    expect(lastLogEntry.slots).toEqual(
-      expect.objectContaining({
-        context: expect.anything(),
-        surface: expect.anything()
-      })
-    );
+    expect(lastLogEntry.slots).toEqual({});
   });
 
   it("cod de reducere resets session without clarification loop", async () => {
@@ -176,15 +174,15 @@ describe("Decision boundary and reset rules", () => {
     expect(lastLogEntry.decision.missingSlot).not.toBe("object");
   });
 
-  it("vreau sa curat pielea defaults context to interior and does not ask context clarification", async () => {
+  it("vreau sa curat pielea does not default context; asks interior vs exterior (leather alone ambiguous)", async () => {
     const sessionId = `leather-default-${Date.now()}`;
 
     const first = await handleChat("vreau sa curat pielea", "C1", [], sessionId);
     const firstMessage = String(first.message || first.reply || "").toLowerCase();
     const session = getSession(sessionId);
 
-    expect(firstMessage).not.toContain("interior sau exterior");
-    expect(session.slots.context).toBe("interior");
+    expect(firstMessage).toMatch(/interior.*exterior|exterior.*interior/);
+    expect(session.slots.context == null || String(session.slots.context).trim() === "").toBe(true);
     expect(session.slots.surface).toBe("piele");
   });
 
@@ -209,28 +207,28 @@ describe("Decision boundary and reset rules", () => {
     expect(lastLogEntry.decision.action).not.toBe("knowledge");
   });
 
-  it("knowledge to de care escalates to selection", async () => {
+  it("knowledge to de care no longer auto-escalates to selection without pending/recommendation state", async () => {
     const sessionId = `escalate-de-care-${Date.now()}`;
 
     await handleChat("ce este apc?", "C1", [], sessionId);
     const second = await handleChat("de care?", "C1", [], sessionId);
 
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
-    expect(lastLogEntry.decision.action).toBe("selection");
-    expect(Array.isArray(second.products)).toBe(true);
-    expect(second.products.length).toBeGreaterThan(0);
+    expect(lastLogEntry.decision.action).not.toBe("selection");
+    expect(lastLogEntry.decision.action).toBe("clarification");
+    expect(Array.isArray(second.products || [])).toBe(true);
   });
 
-  it("knowledge to link de apc escalates to selection", async () => {
+  it("knowledge to link de apc no longer auto-escalates to selection without pending/recommendation state", async () => {
     const sessionId = `escalate-apc-link-${Date.now()}`;
 
     await handleChat("ce este apc?", "C1", [], sessionId);
     const second = await handleChat("link de apc", "C1", [], sessionId);
 
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
-    expect(lastLogEntry.decision.action).toBe("selection");
-    expect(Array.isArray(second.products)).toBe(true);
-    expect(second.products.length).toBeGreaterThan(0);
+    expect(lastLogEntry.decision.action).not.toBe("selection");
+    expect(lastLogEntry.decision.action).toBe("clarification");
+    expect(Array.isArray(second.products || [])).toBe(true);
   });
 
   it("knowledge to care recomanzi pentru interior stays in selection with interior context", async () => {
@@ -288,6 +286,43 @@ describe("Decision boundary and reset rules", () => {
     expect(result.type).toBe("question");
     const msg = String(result.message || "").toLowerCase();
     expect(msg).toMatch(/textil|piele|plastic|alcantara/);
+  });
+
+  it("missing surface clarification in ro contains only romanian helper", async () => {
+    const sessionId = `surface-clar-ro-${Date.now()}`;
+
+    const result = await handleChat("vreau sa curat cotiera", "C1", [], sessionId);
+
+    expect(result.type).toBe("question");
+    const message = String(result.message || result.reply || "");
+    expect(message).toContain("Ce suprafata este: textile, piele, plastic sau alcantara?");
+    expect(message).toContain("Nu esti sigur?");
+    expect(message).not.toContain("Not sure?");
+    expect(message).toContain("\n\n");
+  });
+
+  it("missing surface clarification in en contains only english helper", async () => {
+    const sessionId = `surface-clar-en-${Date.now()}`;
+
+    saveSession(sessionId, {
+      state: "FOLLOWUP",
+      tags: [],
+      activeProducts: [],
+      lastResponse: null,
+      slots: {},
+      pendingQuestion: null,
+      responseLocale: "en",
+      language: "en"
+    });
+
+    const result = await handleChat("i want to clean my armrest", "C1", [], sessionId);
+
+    expect(result.type).toBe("question");
+    const message = String(result.message || result.reply || "");
+    expect(message).toContain("What surface is it: textile, piele, plastic, or alcantara?");
+    expect(message).toContain("Not sure? Tell me your car (make, model, year) and I'll help you pick.");
+    expect(message).not.toContain("Nu esti sigur?");
+    expect(message).toContain("\n\n");
   });
 
   it("cum functioneaza apc remains informational and does not ask surface", async () => {

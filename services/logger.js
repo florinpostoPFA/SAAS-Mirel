@@ -3,6 +3,8 @@
  * Can be extended to use winston, pino, etc.
  */
 
+const { getNowIso } = require("./runtimeContext");
+
 const DEBUG_ENABLED = ["1", "true", "yes", "on"].includes(
   String(process.env.DEBUG || "").toLowerCase()
 );
@@ -44,7 +46,7 @@ function sanitizeForLog(value) {
 }
 
 function emit(level, tag, payload = null) {
-  const timestamp = new Date().toISOString();
+  const timestamp = getNowIso();
   const prefix = `[${timestamp}] [${level}] [${tag}]`;
   const safePayload = payload == null ? null : sanitizeForLog(payload);
   const line = safePayload == null

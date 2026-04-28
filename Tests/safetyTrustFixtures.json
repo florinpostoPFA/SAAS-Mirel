@@ -1,0 +1,106 @@
+[
+  {
+    "id": "apc-piele-clarify-leather",
+    "message": "Pot folosi APC pe piele?",
+    "expect": {
+      "decisionAction": "safety",
+      "queryType": "safety",
+      "askedClarification": true,
+      "blockedProductRouting": true,
+      "replyHasQuestion": true,
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "apc-piele-natural-merge",
+    "sessionPrep": [{ "message": "Pot folosi APC pe piele?" }, { "message": "piele naturala" }],
+    "expect": {
+      "decisionAction": "safety",
+      "replyStartsAnswerFirst": true,
+      "askedClarification": false,
+      "productsLength": 0,
+      "noProductPitch": true
+    }
+  },
+  {
+    "id": "degresant-plastic-one-question",
+    "message": "Pot folosi degresant pe plastic?",
+    "expect": {
+      "decisionAction": "safety",
+      "askedClarification": true,
+      "questionCountMax": 1,
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "degresant-plastic-mat-answer",
+    "message": "Pot folosi degresant pe plastic mat?",
+    "expect": {
+      "decisionAction": "safety",
+      "replyStartsAnswerFirst": true,
+      "askedClarification": false,
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "acid-piele-no",
+    "message": "E sigur sa folosesc acid pe piele?",
+    "expect": {
+      "decisionAction": "safety",
+      "replyStartsWithNu": true,
+      "safetyAnswerType": "no",
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "merge-pe-geam",
+    "message": "Merge APC pe geam?",
+    "expect": {
+      "decisionAction": "safety",
+      "replyStartsAnswerFirst": true,
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "compatibil-textil-apc",
+    "message": "E compatibil APC cu textilul din scaune?",
+    "expect": {
+      "decisionAction": "safety",
+      "replyStartsAnswerFirst": true,
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "safety-not-selection",
+    "sessionPrep": [
+      { "message": "Ce produs imi recomanzi pentru jante?" },
+      { "message": "Pot folosi degresant pe plastic?" }
+    ],
+    "expect": {
+      "decisionAction": "safety",
+      "executeFlowFlatSecondTurn": true,
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "incomplete-then-conservative",
+    "sessionPrep": [
+      { "message": "Pot folosi degresant pe plastic?" },
+      { "message": "nu stiu" }
+    ],
+    "expect": {
+      "decisionAction": "safety",
+      "replyStartsAnswerFirst": true,
+      "productsLength": 0
+    }
+  },
+  {
+    "id": "safety-phrase-only-asks-one",
+    "message": "Pot folosi asta pe piele?",
+    "expect": {
+      "decisionAction": "safety",
+      "askedClarification": true,
+      "productsLength": 0
+    }
+  }
+]

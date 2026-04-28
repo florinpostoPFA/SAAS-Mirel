@@ -114,7 +114,15 @@ Recomandă produsele direct cu o explicație a DE CE se potrivesc.
     glass_clean_basic: require("./flows/glass_clean_basic.json"),
     bug_removal_quick: require("./flows/bug_removal_quick.json"),
     wheel_tire_deep_clean: require("./flows/wheel_tire_deep_clean.json"),
-    tool_care_towel: require("./flows/tool_care_towel.json")
+    tool_care_towel: require("./flows/tool_care_towel.json"),
+    decontamination_basics: require("./flows/decontamination_basics.json"),
+    protection_prep_basic: require("./flows/protection_prep_basic.json"),
+    interior_quick_maintenance: require("./flows/interior_quick_maintenance.json"),
+    textile_cleaning_basic: require("./flows/textile_cleaning_basic.json"),
+    leather_program_basic: require("./flows/leather_program_basic.json"),
+    engine_bay_safety_basic: require("./flows/engine_bay_safety_basic.json"),
+    spot_correction_escalation: require("./flows/spot_correction_escalation.json"),
+    leather_ink_removal: require("./flows/leather_ink_removal.json")
   }
 };
 

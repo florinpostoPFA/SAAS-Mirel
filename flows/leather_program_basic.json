@@ -1,0 +1,30 @@
+{
+  "flowId": "leather_program_basic",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["interior"],
+    "surfaces": ["leather"],
+    "objects": ["scaun", "bancheta", "volan", "cotiera"]
+  },
+  "title": "Program piele: curatare + hidratare",
+  "steps": [
+    {
+      "id": "leather_clean",
+      "title": "Curatare piele",
+      "roles": ["leather_cleaner"],
+      "knowledgeIds": ["leather_cleaning"]
+    },
+    {
+      "id": "leather_condition",
+      "title": "Hidratare piele",
+      "roles": ["leather_protectant"],
+      "knowledgeIds": ["leather_conditioner_usage"]
+    },
+    {
+      "id": "leather_protect",
+      "title": "Protectie finala",
+      "roles": ["leather_protectant"],
+      "knowledgeIds": ["interior_protect"]
+    }
+  ]
+}

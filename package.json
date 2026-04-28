@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "jest --runInBand --forceExit",
+    "test:golden": "node scripts/golden-replay.js",
     "test:watch": "jest --watch",
     "start:frontend": "react-scripts start"
   },
@@ -23,5 +24,11 @@
   "devDependencies": {
     "jest": "^30.3.0",
     "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/frontend/"
+    ]
   }
 }

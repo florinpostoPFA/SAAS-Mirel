@@ -1,0 +1,30 @@
+{
+  "flowId": "protection_prep_basic",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["exterior"],
+    "surfaces": ["paint"],
+    "objects": ["caroserie"]
+  },
+  "title": "Pregatire pentru protectie (wash + decon)",
+  "steps": [
+    {
+      "id": "wash_baseline",
+      "title": "Spalare de baza",
+      "roles": ["prewash_cleaner", "contact_cleaner"],
+      "knowledgeIds": ["prewash_importanta", "sampon_neutru_rol", "laveta_uscare_auto"]
+    },
+    {
+      "id": "decon_optional",
+      "title": "Decontaminare optionala",
+      "roles": ["decontamination_chemical"],
+      "knowledgeIds": ["clay_bar_usage"]
+    },
+    {
+      "id": "protective_shampoo_optional",
+      "title": "Sampon cu protectie (optional)",
+      "roles": ["protective_shampoo"],
+      "knowledgeIds": ["protective_shampoo_usage"]
+    }
+  ]
+}

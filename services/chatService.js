@@ -1,6 +1,6 @@
 // Chat logic - orchestrate search, prompt building, and LLM
 const config = require("../config");
-const { searchProductsByTags } = require("./search");
+const { selectProducts } = require("./productSelectionService");
 const { buildPrompt } = require("./promptBuilder");
 const { getSettings } = require("./settingsService");
 const { askLLM } = require("./llm");
@@ -23,16 +23,84 @@ const {
   getFlowRequiredSlotsConfig,
   assertFlowLockInvariant
 } = require("./flowResolver");
+const { hasExplicitInsectSignal } = require("./insectSignal");
+const {
+  buildKnowledgeDeadEndRecoveryPatch,
+  isKnowledgeDeadEnd,
+  normalizeReplyText: normalizeKnowledgeReplyText
+} = require("./knowledgeDeadEndService");
 const { executeFlow } = require("./flowExecutor");
 const { normalizeDecision } = require("./decisionNormalizer");
 const { detectQueryType } = require("./queryTypeService");
+const {
+  analyzeSafetyQuery,
+  isSafetyQuery,
+  buildSafetyAnswerText,
+  CLARIFICATION_BY_FIELD,
+  conservativeFollowUpReply,
+  logSafetyFields
+} = require("./safetyQueryService");
 const { routeRequest, areSlotsComplete, getMissingSlot: getRouterMissingSlot } = require("./router");
 const { findRelevantKnowledge } = require("./knowledgeService");
 const fallbackProductsCatalog = require("../data/products.json");
 const productRoles = require("../data/product_roles.json");
 const knowledgeBase = require("../data/knowledge.json");
 const { resolveSurfaceShortlist } = require("./vehicleSurfaceShortlist");
-const { computeSurfaceAssistEnabled } = require("./surfaceAssistFeature");
+const { computeSurfaceAssistEnabled, resolveLlmSurfaceAssistFlag } = require("./surfaceAssistFeature");
+const {
+  userSignalsSurfaceMaterialUncertainty,
+  suggestSeatMaterialsAdvisory,
+  buildCarLineFromParsed,
+  matchPickFromLlmSuggestions,
+  buildSuggestionsUserMessage,
+  buildSuggestionUiChips,
+  canonicalToCtoSurface
+} = require("./surfaceAssistLlmAdvisory");
+const {
+  isLowSignalMessage,
+  buildLowSignalClarificationQuestion,
+  classifyIntentLevelReply,
+  buildLowSignalMenuPrompt,
+  matchesInformationalBypass,
+  isLegacySelectionFollowupShape,
+  isSelectionFollowupMessage,
+  normalizeRo: normalizeLowSignalText
+} = require("./lowSignalService");
+const {
+  applyUserCorrection,
+  shouldBreakRepeatedAsk,
+  recordClarificationAsk,
+  resetAskCountForSlot,
+  clearClarificationAskTracking,
+  hasExplicitCorrectionPattern
+} = require("./slotCorrectionService");
+const {
+  inferContext,
+  detectExplicitContext,
+  logContextInferenceTrace,
+  normalizeForContextInference
+} = require("./contextInferenceService");
+const { stripGreetingAndFillers, applySlangNormalize } = require("./messagePreprocessService");
+const { getNowIso } = require("./runtimeContext");
+const loggingV2 = require("./loggingV2");
+const { runSessionExclusive } = require("./sessionTurnQueue");
+const {
+  inferHighLevelIntent,
+  isInformationalKnowledgeShape,
+  isProceduralHowTo
+} = require("./productIntentHeuristics");
+const {
+  analyzeWheelTireMessage,
+  maybeWheelTireCombinedWorkflowReply,
+  maybeWheelTireAmbiguousProductClarification,
+  applyWheelTireObjectToSlots,
+  wheelTireTagBoost,
+  selectionRoleFromWheelTire
+} = require("./wheelTireSemantics");
+const {
+  buildPendingQuestionState,
+  evaluateClarificationEscalation
+} = require("./clarificationEscalationService");
 
 const SOURCE = "ChatService";
 const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "piele"];
@@ -50,6 +118,13 @@ function getProceduralSurfaceEnumQuestion(responseLocale) {
     : "Ce suprafata este: textile, piele, plastic sau alcantara?";
 }
 
+function getInteriorSurfaceLlmAssistBaseQuestion(responseLocale) {
+  const loc = normalizeResponseLocale(responseLocale);
+  return loc === "en"
+    ? "What material is the surface? (textile, leather, etc.) If you are not sure, tell me your car make, model, and year."
+    : "Din ce material este suprafata? (textil, piele, etc.) Daca nu esti sigur, spune-mi marca, modelul si anul masinii.";
+}
+
 const SURFACE_ASSIST_STRINGS = {
   en: {
     cta: "Not sure? Tell me your car (make, model, year) and I'll help you pick.",
@@ -58,8 +133,7 @@ const SURFACE_ASSIST_STRINGS = {
       "Most likely upholstery for your car — pick one option (reply with the number or name):"
   },
   ro: {
-    ctaEn: "Not sure? Tell me your car (make, model, year) and I'll help you pick.",
-    ctaRo:
+    cta:
       "Nu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
     vehiclePrompt:
       "Spune-mi marca si modelul (anul e optional), ex: Dacia Logan 2018.",
@@ -93,7 +167,12 @@ function appendSurfaceAssistFallbackCTA(baseMessage, responseLocale) {
   if (loc === "en") {
     return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.en.cta}`;
   }
-  return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.ro.ctaEn}\n${SURFACE_ASSIST_STRINGS.ro.ctaRo}`;
+  return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.ro.cta}`;
+}
+
+function clearLlmSurfaceAssistSessionState(sessionContext) {
+  if (!sessionContext || typeof sessionContext !== "object") return;
+  delete sessionContext.llmSurfaceAssistConsumed;
 }
 
 function clearSurfaceAssistState(sessionContext) {
@@ -102,6 +181,7 @@ function clearSurfaceAssistState(sessionContext) {
   sessionContext.surfaceAssistPhase = null;
   sessionContext.surfaceAssistShortlist = null;
   sessionContext.vehicleFieldsRequested = false;
+  clearLlmSurfaceAssistSessionState(sessionContext);
   if (sessionContext.slots && typeof sessionContext.slots === "object") {
     delete sessionContext.slots.vehicleMake;
     delete sessionContext.slots.vehicleModel;
@@ -296,7 +376,268 @@ function buildSurfaceShortlistQuestion(shortlist, responseLocale) {
   return `${head}\n${lines.join("\n")}`;
 }
 
-function tryConsumeSurfaceAssistTurn({
+async function tryConsumeLlmSurfaceAssistTurn({
+  sessionId,
+  sessionContext,
+  userMessage,
+  interactionRef,
+  endInteractionFn
+}) {
+  if (!resolveLlmSurfaceAssistFlag().effective) {
+    return null;
+  }
+
+  const pending = sessionContext.pendingQuestion;
+  if (!pending || pending.slot !== "surface") {
+    return null;
+  }
+
+  const slots = sessionContext.slots && typeof sessionContext.slots === "object" ? sessionContext.slots : {};
+  if (!qualifiesForInteriorSurfaceAssist(slots)) {
+    return null;
+  }
+
+  const msg = String(userMessage || "").trim();
+  const loc = normalizeResponseLocale(sessionContext.responseLocale);
+  const phase = pending.surfaceAssistLlmPhase || null;
+
+  const emitLlmAssistLog = (fields) => {
+    logInfo("LLM_SURFACE_ASSIST", {
+      surfaceAssistMode: fields.surfaceAssistMode != null ? fields.surfaceAssistMode : pending.surfaceAssistMode || null,
+      llmSurfaceAssistUsed: Boolean(fields.llmSurfaceAssistUsed),
+      llmSurfaceAssistError: fields.llmSurfaceAssistError != null ? fields.llmSurfaceAssistError : null,
+      llmSurfaceAssistSuggestions: fields.llmSurfaceAssistSuggestions != null
+        ? fields.llmSurfaceAssistSuggestions
+        : pending.surfaceAssistLlmSuggestions || null,
+      sessionId: sessionId != null ? String(sessionId) : null,
+      branch: fields.branch || null
+    });
+  };
+
+  if (phase === "awaiting_pick" && Array.isArray(pending.surfaceAssistLlmSuggestions) && pending.surfaceAssistLlmSuggestions.length) {
+    const pickedCanon = matchPickFromLlmSuggestions(
+      userMessage,
+      pending.surfaceAssistLlmSuggestions,
+      sessionContext.responseLocale
+    );
+    if (pickedCanon) {
+      const cto = canonicalToCtoSurface(pickedCanon);
+      if (cto && CTO_SURFACE_SET.has(cto)) {
+        sessionContext.slots = { ...sessionContext.slots, surface: cto };
+        sessionContext.pendingQuestion = null;
+        sessionContext.state = null;
+        clearPendingClarificationSlots(sessionContext);
+        clearSurfaceAssistState(sessionContext);
+        saveSession(sessionId, sessionContext);
+        emitLlmAssistLog({
+          surfaceAssistMode: "llm_advisory",
+          llmSurfaceAssistUsed: false,
+          llmSurfaceAssistSuggestions: pending.surfaceAssistLlmSuggestions,
+          branch: "user_pick_confirmed"
+        });
+        logInfo("surface_selected", {
+          source: "llm_advisory_pick",
+          surface: cto,
+          sessionId: sessionId != null ? String(sessionId) : null
+        });
+        return null;
+      }
+    }
+    emitLlmAssistLog({
+      surfaceAssistMode: "llm_advisory",
+      llmSurfaceAssistUsed: Boolean(sessionContext.llmSurfaceAssistConsumed),
+      branch: "reprompt_pick"
+    });
+    const reply = buildSuggestionsUserMessage(
+      pending.surfaceAssistLlmCarLabel || "",
+      pending.surfaceAssistLlmSuggestions,
+      loc
+    );
+    const ui = buildSuggestionUiChips(pending.surfaceAssistLlmSuggestions);
+    return endInteractionFn(
+      interactionRef,
+      { type: "question", message: reply, reply, ui },
+      {
+        slots: { ...(sessionContext.slots || {}) },
+        decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+        outputType: "question",
+        surfaceAssistMode: "llm_advisory",
+        llmSurfaceAssistSuggestions: pending.surfaceAssistLlmSuggestions
+      }
+    );
+  }
+
+  if (phase === "awaiting_vehicle") {
+    if (userSignalsSurfaceMaterialUncertainty(msg)) {
+      const vehicleMsg = loc === "en" ? SURFACE_ASSIST_STRINGS.en.vehiclePrompt : SURFACE_ASSIST_STRINGS.ro.vehiclePrompt;
+      emitLlmAssistLog({
+        surfaceAssistMode: "llm_advisory",
+        llmSurfaceAssistUsed: false,
+        branch: "reask_vehicle_uncertainty"
+      });
+      return endInteractionFn(
+        interactionRef,
+        { type: "question", message: vehicleMsg },
+        {
+          slots: { ...(sessionContext.slots || {}) },
+          decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+          outputType: "question",
+          surfaceAssistMode: "llm_advisory"
+        }
+      );
+    }
+
+    const prevV = {
+      vehicleMake: slots.vehicleMake || null,
+      vehicleModel: slots.vehicleModel || null,
+      vehicleYear: slots.vehicleYear || null
+    };
+    const parsedV = parseVehicleSlotsFromMessage(userMessage, prevV);
+    sessionContext.slots = {
+      ...sessionContext.slots,
+      vehicleMake: parsedV.vehicleMake || prevV.vehicleMake,
+      vehicleModel: parsedV.vehicleModel || prevV.vehicleModel,
+      vehicleYear: parsedV.vehicleYear || prevV.vehicleYear
+    };
+    setPendingClarificationSlots(sessionContext, sessionContext.slots);
+    saveSession(sessionId, sessionContext);
+
+    const hasMake = Boolean(sessionContext.slots.vehicleMake && String(sessionContext.slots.vehicleMake).trim());
+    const hasModel = Boolean(sessionContext.slots.vehicleModel && String(sessionContext.slots.vehicleModel).trim());
+    const hasYear = /\b(19|20)\d{2}\b/.test(msg);
+    const carLine = buildCarLineFromParsed(parsedV, userMessage);
+
+    if (!sessionContext.llmSurfaceAssistConsumed && ((hasMake && hasModel) || hasYear)) {
+      sessionContext.llmSurfaceAssistConsumed = true;
+      saveSession(sessionId, sessionContext);
+      try {
+        const suggestions = await suggestSeatMaterialsAdvisory(carLine, { timeoutMs: 2500 });
+        sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+          slot: "surface",
+          surfaceAssistMode: "llm_advisory",
+          surfaceAssistLlmPhase: "awaiting_pick",
+          surfaceAssistLlmSuggestions: suggestions,
+          surfaceAssistLlmCarLabel: carLine
+        });
+        saveSession(sessionId, sessionContext);
+        emitLlmAssistLog({
+          surfaceAssistMode: "llm_advisory",
+          llmSurfaceAssistUsed: true,
+          llmSurfaceAssistError: null,
+          llmSurfaceAssistSuggestions: suggestions,
+          branch: "llm_suggestions_shown"
+        });
+        const reply = buildSuggestionsUserMessage(carLine, suggestions, loc);
+        const ui = buildSuggestionUiChips(suggestions);
+        return endInteractionFn(
+          interactionRef,
+          { type: "question", message: reply, reply, ui },
+          {
+            slots: { ...(sessionContext.slots || {}) },
+            decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+            outputType: "question",
+            surfaceAssistMode: "llm_advisory",
+            llmSurfaceAssistSuggestions: suggestions
+          }
+        );
+      } catch (e) {
+        const errMsg = e && e.message ? String(e.message) : "LLM_ERROR";
+        emitLlmAssistLog({
+          surfaceAssistMode: null,
+          llmSurfaceAssistUsed: true,
+          llmSurfaceAssistError: errMsg,
+          llmSurfaceAssistSuggestions: null,
+          branch: "llm_error_fallback"
+        });
+        sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+          slot: "surface",
+          surfaceAssistMode: null,
+          surfaceAssistLlmPhase: null,
+          surfaceAssistLlmSuggestions: null,
+          surfaceAssistLlmCarLabel: null
+        });
+        saveSession(sessionId, sessionContext);
+        const fallbackMsg = getInteriorSurfaceLlmAssistBaseQuestion(loc);
+        return endInteractionFn(
+          interactionRef,
+          { type: "question", message: fallbackMsg },
+          {
+            slots: { ...(sessionContext.slots || {}) },
+            decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+            outputType: "question",
+            llmSurfaceAssistError: errMsg
+          }
+        );
+      }
+    }
+
+    const vehicleMsg = loc === "en" ? SURFACE_ASSIST_STRINGS.en.vehiclePrompt : SURFACE_ASSIST_STRINGS.ro.vehiclePrompt;
+    emitLlmAssistLog({
+      surfaceAssistMode: "llm_advisory",
+      llmSurfaceAssistUsed: false,
+      branch: "awaiting_vehicle_need_info"
+    });
+    return endInteractionFn(
+      interactionRef,
+      { type: "question", message: vehicleMsg },
+      {
+        slots: { ...(sessionContext.slots || {}) },
+        decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+        outputType: "question",
+        surfaceAssistMode: "llm_advisory"
+      }
+    );
+  }
+
+  if (!phase) {
+    if (userSignalsSurfaceMaterialUncertainty(msg)) {
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+        slot: "surface",
+        surfaceAssistMode: "llm_advisory",
+        surfaceAssistLlmPhase: "awaiting_vehicle"
+      });
+      saveSession(sessionId, sessionContext);
+      const vehicleMsg = loc === "en" ? SURFACE_ASSIST_STRINGS.en.vehiclePrompt : SURFACE_ASSIST_STRINGS.ro.vehiclePrompt;
+      emitLlmAssistLog({
+        surfaceAssistMode: "llm_advisory",
+        llmSurfaceAssistUsed: false,
+        branch: "uncertainty_to_vehicle_prompt"
+      });
+      return endInteractionFn(
+        interactionRef,
+        { type: "question", message: vehicleMsg },
+        {
+          slots: { ...(sessionContext.slots || {}) },
+          decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+          outputType: "question",
+          surfaceAssistMode: "llm_advisory"
+        }
+      );
+    }
+
+    const maybeCar =
+      userSignalsSurfaceAssistIntent(msg) && !userSignalsSurfaceMaterialUncertainty(msg);
+    if (maybeCar) {
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+        slot: "surface",
+        surfaceAssistMode: "llm_advisory",
+        surfaceAssistLlmPhase: "awaiting_vehicle"
+      });
+      saveSession(sessionId, sessionContext);
+      return tryConsumeLlmSurfaceAssistTurn({
+        sessionId,
+        sessionContext,
+        userMessage,
+        interactionRef,
+        endInteractionFn
+      });
+    }
+  }
+
+  return null;
+}
+
+async function tryConsumeSurfaceAssistTurn({
   sessionId,
   sessionContext,
   userMessage,
@@ -304,7 +645,9 @@ function tryConsumeSurfaceAssistTurn({
   queryType,
   endInteractionFn
 }) {
-  if (!resolveSurfaceAssistFlag().effective) return null;
+  const legacyAssist = resolveSurfaceAssistFlag().effective;
+  const llmAssist = resolveLlmSurfaceAssistFlag().effective;
+  if (!legacyAssist && !llmAssist) return null;
   if (!(queryType === "procedural" || queryType === "selection")) return null;
 
   const pendingSurface =
@@ -331,6 +674,23 @@ function tryConsumeSurfaceAssistTurn({
       shortlist: sessionContext.surfaceAssistShortlist || null,
       sessionId: sessionId != null ? String(sessionId) : null
     });
+    return null;
+  }
+
+  if (llmAssist) {
+    const llmTurn = await tryConsumeLlmSurfaceAssistTurn({
+      sessionId,
+      sessionContext,
+      userMessage,
+      interactionRef,
+      endInteractionFn
+    });
+    if (llmTurn) {
+      return llmTurn;
+    }
+  }
+
+  if (!legacyAssist) {
     return null;
   }
 
@@ -362,46 +722,77 @@ function tryConsumeSurfaceAssistTurn({
     });
   }
 
-  const wasUnknown = sessionContext.surfaceUnknown === true;
-  if (!wasUnknown && userSignalsSurfaceAssistIntent(userMessage)) {
-    sessionContext.surfaceUnknown = true;
-    logInfo("surface_assist_used", {
-      reason: "vehicle_or_unsure_signal",
+  if (!llmAssist) {
+    const wasUnknown = sessionContext.surfaceUnknown === true;
+    if (!wasUnknown && userSignalsSurfaceAssistIntent(userMessage)) {
+      sessionContext.surfaceUnknown = true;
+      logInfo("surface_assist_used", {
+        reason: "vehicle_or_unsure_signal",
+        sessionId: sessionId != null ? String(sessionId) : null
+      });
+    }
+
+    if (!sessionContext.surfaceUnknown) {
+      return null;
+    }
+
+    const prevV = {
+      vehicleMake: slots.vehicleMake || null,
+      vehicleModel: slots.vehicleModel || null,
+      vehicleYear: slots.vehicleYear || null
+    };
+    const parsedV = parseVehicleSlotsFromMessage(userMessage, prevV);
+    sessionContext.slots = {
+      ...sessionContext.slots,
+      vehicleMake: parsedV.vehicleMake || prevV.vehicleMake,
+      vehicleModel: parsedV.vehicleModel || prevV.vehicleModel,
+      vehicleYear: parsedV.vehicleYear || prevV.vehicleYear
+    };
+    setPendingClarificationSlots(sessionContext, sessionContext.slots);
+    saveSession(sessionId, sessionContext);
+
+    const v = sessionContext.slots;
+    const hasMake = Boolean(v.vehicleMake && String(v.vehicleMake).trim());
+    const hasModel = Boolean(v.vehicleModel && String(v.vehicleModel).trim());
+
+    if (!sessionContext.vehicleFieldsRequested && (!hasMake || !hasModel)) {
+      sessionContext.vehicleFieldsRequested = true;
+      saveSession(sessionId, sessionContext);
+      const loc = normalizeResponseLocale(sessionContext.responseLocale);
+      const msg = loc === "en" ? SURFACE_ASSIST_STRINGS.en.vehiclePrompt : SURFACE_ASSIST_STRINGS.ro.vehiclePrompt;
+      return endInteractionFn(interactionRef, {
+        type: "question",
+        message: msg
+      }, {
+        slots: { ...(sessionContext.slots || {}) },
+        decision: { action: "clarification", flowId: null, missingSlot: "surface" },
+        outputType: "question"
+      });
+    }
+
+    const shortlist = resolveSurfaceShortlist({
+      vehicleMake: v.vehicleMake,
+      vehicleModel: v.vehicleModel,
+      vehicleYear: v.vehicleYear
+    });
+    sessionContext.surfaceAssistPhase = "shortlist";
+    sessionContext.surfaceAssistShortlist = shortlist.slice(0, 3);
+    saveSession(sessionId, sessionContext);
+
+    logInfo("vehicle_provided", {
+      hasMake,
+      hasModel,
+      hasYear: Boolean(v.vehicleYear),
+      mkLen: v.vehicleMake ? String(v.vehicleMake).length : 0,
+      mdLen: v.vehicleModel ? String(v.vehicleModel).length : 0,
+      yr: v.vehicleYear ? String(v.vehicleYear).slice(0, 4) : null,
+      shortlist: sessionContext.surfaceAssistShortlist,
       sessionId: sessionId != null ? String(sessionId) : null
     });
-  }
 
-  if (!sessionContext.surfaceUnknown) {
-    return null;
-  }
-
-  const prevV = {
-    vehicleMake: slots.vehicleMake || null,
-    vehicleModel: slots.vehicleModel || null,
-    vehicleYear: slots.vehicleYear || null
-  };
-  const parsedV = parseVehicleSlotsFromMessage(userMessage, prevV);
-  sessionContext.slots = {
-    ...sessionContext.slots,
-    vehicleMake: parsedV.vehicleMake || prevV.vehicleMake,
-    vehicleModel: parsedV.vehicleModel || prevV.vehicleModel,
-    vehicleYear: parsedV.vehicleYear || prevV.vehicleYear
-  };
-  setPendingClarificationSlots(sessionContext, sessionContext.slots);
-  saveSession(sessionId, sessionContext);
-
-  const v = sessionContext.slots;
-  const hasMake = Boolean(v.vehicleMake && String(v.vehicleMake).trim());
-  const hasModel = Boolean(v.vehicleModel && String(v.vehicleModel).trim());
-
-  if (!sessionContext.vehicleFieldsRequested && (!hasMake || !hasModel)) {
-    sessionContext.vehicleFieldsRequested = true;
-    saveSession(sessionId, sessionContext);
-    const loc = normalizeResponseLocale(sessionContext.responseLocale);
-    const msg = loc === "en" ? SURFACE_ASSIST_STRINGS.en.vehiclePrompt : SURFACE_ASSIST_STRINGS.ro.vehiclePrompt;
     return endInteractionFn(interactionRef, {
       type: "question",
-      message: msg
+      message: buildSurfaceShortlistQuestion(sessionContext.surfaceAssistShortlist, sessionContext.responseLocale)
     }, {
       slots: { ...(sessionContext.slots || {}) },
       decision: { action: "clarification", flowId: null, missingSlot: "surface" },
@@ -409,34 +800,7 @@ function tryConsumeSurfaceAssistTurn({
     });
   }
 
-  const shortlist = resolveSurfaceShortlist({
-    vehicleMake: v.vehicleMake,
-    vehicleModel: v.vehicleModel,
-    vehicleYear: v.vehicleYear
-  });
-  sessionContext.surfaceAssistPhase = "shortlist";
-  sessionContext.surfaceAssistShortlist = shortlist.slice(0, 3);
-  saveSession(sessionId, sessionContext);
-
-  logInfo("vehicle_provided", {
-    hasMake,
-    hasModel,
-    hasYear: Boolean(v.vehicleYear),
-    mkLen: v.vehicleMake ? String(v.vehicleMake).length : 0,
-    mdLen: v.vehicleModel ? String(v.vehicleModel).length : 0,
-    yr: v.vehicleYear ? String(v.vehicleYear).slice(0, 4) : null,
-    shortlist: sessionContext.surfaceAssistShortlist,
-    sessionId: sessionId != null ? String(sessionId) : null
-  });
-
-  return endInteractionFn(interactionRef, {
-    type: "question",
-    message: buildSurfaceShortlistQuestion(sessionContext.surfaceAssistShortlist, sessionContext.responseLocale)
-  }, {
-    slots: { ...(sessionContext.slots || {}) },
-    decision: { action: "clarification", flowId: null, missingSlot: "surface" },
-    outputType: "question"
-  });
+  return null;
 }
 
 const OBJECT_SLOT_VALUES = ["cotiera", "scaun", "plafon", "bord", "oglinda", "geam", "parbriz", "oglinzi", "volan", "mocheta", "tapiterie", "glass"];
@@ -453,14 +817,13 @@ const OBJECT_MATCH_TERMS = {
   volan: ["volan", "steering wheel"],
   mocheta: ["mocheta", "carpet", "floor mat", "floor mats"],
   tapiterie: ["tapiterie", "upholstery"],
-  jante: ["jante", "jante", "wheels", "roti", "anvelope"],
+  anvelope: ["anvelope", "anvelopa", "anvelopelor", "cauciuc", "cauciucuri"],
+  jante: ["jante", "janta", "jantele", "wheels", "felgi", "roti", "rotile"],
   caroserie: ["caroserie", "caroseria", "carrosserie", "body"]
 };
 const OBJECT_SLOT_INFERENCE = {
   oglinda: { context: "exterior", surface: null },
   oglinzi: { context: "exterior", surface: null },
-  geam: { context: "exterior", surface: null },
-  parbriz: { context: "exterior", surface: null },
   bord: { context: "interior", surface: "plastic" },
   scaun: { context: "interior", surface: null },
   cotiera: { context: "interior", surface: null }
@@ -472,9 +835,7 @@ const OBJECT_CONTEXT_MAP = {
   plafon: "interior",
   jante: "exterior",
   roti: "exterior",
-  anvelope: "exterior",
-  parbriz: "exterior",
-  geam: "exterior"
+  anvelope: "exterior"
 };
 const OBJECT_SURFACE_MAP = {
   cotiera: ["textile", "piele", "alcantara", "plastic"],
@@ -502,29 +863,40 @@ const SLOT_DOMAIN_RULES = {
   plafon:    { context: "interior", allowedSurfaces: ["textile", "alcantara"] },
   caroserie: { context: "exterior", allowedSurfaces: ["paint"] },
   jante:     { context: "exterior", allowedSurfaces: ["wheels"] },
+  anvelope:  { context: "exterior", allowedSurfaces: ["wheels"] },
   geam:      { context: "exterior", allowedSurfaces: [] },
   parbriz:   { context: "exterior", allowedSurfaces: [] },
   oglinzi:   { context: "exterior", allowedSurfaces: [] },
   oglinda:   { context: "exterior", allowedSurfaces: [] }
 };
 const GLASS_OBJECT_ALIASES = ["sticla", "geam", "geamuri", "parbriz", "glass", "windshield"];
-const INSECT_SIGNAL_KEYWORDS = [
-  "insecte",
-  "musca",
-  "gandaci",
-  "buguri",
-  "urme de insecte",
-  "insecte pe parbriz"
+const PAINT_OBJECT_ALIASES = [
+  "vopsea",
+  "vopseaua",
+  "caroserie",
+  "caroseria",
+  "lac",
+  "clear coat",
+  "clearcoat",
+  "paint"
 ];
 
 function canonicalizeObjectValue(object) {
-  const normalized = String(object || "").toLowerCase().trim();
+  const normalized = normalizeRomanianTextForGate(object);
   if (!normalized) {
     return null;
   }
 
   if (GLASS_OBJECT_ALIASES.includes(normalized)) {
     return "glass";
+  }
+
+  if (["tires", "tyres", "tire"].includes(normalized)) {
+    return "anvelope";
+  }
+
+  if (PAINT_OBJECT_ALIASES.includes(normalized)) {
+    return "caroserie";
   }
 
   return normalized;
@@ -605,7 +977,7 @@ function hardFilterSurfaceKeyPart(slots) {
       if (obj === "glass") {
         return "glass";
       }
-      if (obj === "jante" || obj === "roti" || obj === "wheels") {
+      if (obj === "jante" || obj === "roti" || obj === "wheels" || obj === "anvelope") {
         return "wheels";
       }
       if (obj === "caroserie") {
@@ -632,54 +1004,36 @@ function slotSurfaceToProductTag(surface) {
   return surface || null;
 }
 
-function hasExplicitInsectSignal(message) {
-  const msg = String(message || "").toLowerCase();
-  return INSECT_SIGNAL_KEYWORDS.some(keyword => msg.includes(keyword));
-}
-
 function hasStrongGlassExteriorSignal(message) {
-  const msg = String(message || "").toLowerCase();
-  return (msg.includes("insecte") || msg.includes("urme de insecte")) && msg.includes("parbriz");
+  return hasExplicitInsectSignal(message) && messageMentionsGlassObjectSynonym(message);
 }
 
 function hasStrongGlassInteriorSignal(message) {
   const msg = String(message || "").toLowerCase();
+  if (msg.includes("pe interior") || msg.includes("in interior") || msg.includes("din interior")) {
+    if (msg.includes("geam") || msg.includes("sticla") || msg.includes("parbriz")) {
+      return true;
+    }
+  }
   return msg.includes("urme") && (msg.includes("geam") || msg.includes("sticla")) && msg.includes("interior");
 }
 
-function hasExplicitExteriorSignal(message) {
+function messageMentionsGlassObjectSynonym(message) {
   const msg = String(message || "").toLowerCase();
-  const terms = [
-    "exterior",
-    "exterioara",
-    "exterioare",
-    "afara",
-    "in exterior",
-    "trim exterior",
-    "ornament exterior"
-  ];
-
-  return terms.some(term => msg.includes(term));
+  return (
+    msg.includes("sticla") ||
+    msg.includes("sticlă") ||
+    msg.includes("geam") ||
+    msg.includes("parbriz") ||
+    msg.includes("windshield")
+  );
 }
 
-function shouldDefaultLeatherToInterior(message, slots = {}) {
-  const msg = String(message || "").toLowerCase();
-  const safeSlots = slots && typeof slots === "object" ? slots : {};
-  const hasLeatherSignal =
-    msg.includes("piele") ||
-    msg.includes("leather") ||
-    String(safeSlots.surface || "").toLowerCase() === "leather" ||
-    String(safeSlots.surface || "").toLowerCase() === "piele";
-
-  if (!hasLeatherSignal) {
-    return false;
+function resolveGlassObjectFromPendingAnswer(message) {
+  if (!messageMentionsGlassObjectSynonym(message)) {
+    return null;
   }
-
-  if (hasExplicitExteriorSignal(msg)) {
-    return false;
-  }
-
-  return true;
+  return "glass";
 }
 
 function shouldStripLeatherForTowelMessage(message, slots = {}) {
@@ -740,7 +1094,16 @@ function ensureApcProductIncluded(products, catalog, tags) {
     return safeProducts;
   }
 
-  const merged = [apcProduct, ...safeProducts].slice(0, Math.max(MAX_SELECTION_PRODUCTS, 3));
+  const injected = {
+    ...apcProduct,
+    selectionMeta: {
+      pipeline: "unified",
+      roleMatches: ["injected_apc"],
+      reasons: ["apc:policy_include"],
+      injected: true
+    }
+  };
+  const merged = [injected, ...safeProducts].slice(0, Math.max(MAX_SELECTION_PRODUCTS, 3));
   logInfo("APC_FORCE_INCLUDE", {
     forced: true,
     product: apcProduct?.name || null
@@ -944,7 +1307,7 @@ function getClarificationQuestion(missingSlot, slots, responseLocale = "ro") {
     }
     return loc === "en"
       ? "Is this for interior or exterior?"
-      : "Este pentru interior sau exterior?";
+      : "E pentru interior sau exterior?";
   }
 
   if (missingSlot === "surface") {
@@ -953,6 +1316,10 @@ function getClarificationQuestion(missingSlot, slots, responseLocale = "ro") {
 
   if (missingSlot === "object") {
     return loc === "en" ? "Which part are we talking about?" : "Despre ce element este vorba?";
+  }
+
+  if (missingSlot === "intent_level") {
+    return buildLowSignalClarificationQuestion("", "");
   }
 
   return loc === "en" ? "Can you share a bit more detail?" : "Poți sa-mi dai mai multe detalii?";
@@ -1025,16 +1392,20 @@ function assertDecisionInvariantsBeforeExecution(decision, slots, message) {
        throwInvariantFailure("INVALID STATE: clarification without missingSlot", safeDecision, safeSlots, message);
      }
 
-     if (!["context", "object", "surface"].includes(safeDecision.missingSlot)) {
+     const isIntentLevelClarification = safeDecision.missingSlot === "intent_level";
+
+     if (!isIntentLevelClarification && !["context", "object", "surface"].includes(safeDecision.missingSlot)) {
        throwInvariantFailure("INVALID STATE: invalid missingSlot type", safeDecision, safeSlots, message);
      }
 
-    if (safeDecision.missingSlot !== missingSlot) {
-      throwInvariantFailure("INVALID STATE: clarification missingSlot mismatch", safeDecision, safeSlots, message);
-    }
+    if (!isIntentLevelClarification) {
+      if (safeDecision.missingSlot !== missingSlot) {
+        throwInvariantFailure("INVALID STATE: clarification missingSlot mismatch", safeDecision, safeSlots, message);
+      }
 
-    if (safeSlots[safeDecision.missingSlot]) {
-      throwInvariantFailure("INVALID STATE: slot exists but marked missing", safeDecision, safeSlots, message);
+      if (safeSlots[safeDecision.missingSlot]) {
+        throwInvariantFailure("INVALID STATE: slot exists but marked missing", safeDecision, safeSlots, message);
+      }
     }
   }
 
@@ -1093,7 +1464,9 @@ function enforceClarificationContract(decision) {
      throw new Error("Invalid clarification: missingSlot is required");
    }
 
-   if (!isValidatorTriggered && !["context", "object", "surface"].includes(decision.missingSlot)) {
+   const isIntentLevel = decision.missingSlot === "intent_level";
+
+   if (!isValidatorTriggered && !isIntentLevel && !["context", "object", "surface"].includes(decision.missingSlot)) {
      console.error("INVARIANT_FAILURE", {
        decision,
        slots: null,
@@ -1197,9 +1570,38 @@ function forceFlowExecutionAtBoundary(interactionRef, sessionContext) {
 }
 
 function endInteraction(interactionRef, result, patch = {}) {
+  loggingV2.flushStagesForEarlyExit(interactionRef);
+
   if (patch.intentType != null) interactionRef.intentType = patch.intentType;
   if (patch.tags != null) interactionRef.tags = patch.tags;
   if (patch.slots != null) interactionRef.slots = patch.slots;
+  if (patch.safetyTelemetry) {
+    interactionRef.safetyTelemetry = patch.safetyTelemetry;
+  }
+  if (patch.knowledgeTelemetry) {
+    interactionRef.knowledgeTelemetry = patch.knowledgeTelemetry;
+  }
+  if (patch.lowSignalTelemetry) {
+    interactionRef.lowSignalTelemetry = patch.lowSignalTelemetry;
+  }
+  if (patch.slotCorrectionTelemetry) {
+    interactionRef.slotCorrectionTelemetry = patch.slotCorrectionTelemetry;
+  }
+  if (patch.clarificationEscalationTelemetry) {
+    interactionRef.clarificationEscalationTelemetry = patch.clarificationEscalationTelemetry;
+  }
+  if (patch.contextInferenceTelemetry) {
+    interactionRef.contextInferenceTelemetry = {
+      ...(interactionRef.contextInferenceTelemetry || {}),
+      ...patch.contextInferenceTelemetry
+    };
+  }
+  if (patch.intentRoutingTelemetry) {
+    interactionRef.intentRoutingTelemetry = {
+      ...(interactionRef.intentRoutingTelemetry || {}),
+      ...patch.intentRoutingTelemetry
+    };
+  }
   if (patch.decision) {
     interactionRef.decision = { ...interactionRef.decision, ...patch.decision };
   }
@@ -1207,6 +1609,7 @@ function endInteraction(interactionRef, result, patch = {}) {
   let finalResult = result;
   let finalOutputType = patch.outputType != null ? patch.outputType : inferOutputType(result);
   let finalProducts = patch.products != null ? patch.products : summarizeProductsForLog(result.products);
+  const explicitProductsReason = patch.productsReason != null ? String(patch.productsReason) : null;
   const sessionContext = interactionRef?.sessionId ? getSession(interactionRef.sessionId) : null;
   const hardGuardPrompt = "Ce vrei sa cureti mai exact (ex: geamuri, jante, bord, scaune)?";
   const resolveHardGuardMissingSlot = (slots) => {
@@ -1362,6 +1765,51 @@ function endInteraction(interactionRef, result, patch = {}) {
     };
   }
 
+  const recoveryPatch = buildKnowledgeDeadEndRecoveryPatch({
+    interactionRef,
+    sessionContext,
+    finalResult,
+    finalOutputType,
+    finalProducts,
+    getMissingSlot
+  });
+  if (recoveryPatch) {
+    finalResult = recoveryPatch.finalResult;
+    finalOutputType = recoveryPatch.finalOutputType;
+    finalProducts = recoveryPatch.finalProducts;
+    interactionRef.decision = { ...interactionRef.decision, ...recoveryPatch.decision };
+    interactionRef.knowledgeTelemetry = {
+      ...(interactionRef.knowledgeTelemetry || {}),
+      ...recoveryPatch.telemetry
+    };
+    if (sessionContext) {
+      if (recoveryPatch.pendingQuestion) {
+        sessionContext.pendingQuestion = recoveryPatch.pendingQuestion;
+      } else {
+        sessionContext.pendingQuestion = null;
+      }
+      if (recoveryPatch.sessionFlags) {
+        Object.assign(sessionContext, recoveryPatch.sessionFlags);
+      }
+      saveSession(interactionRef.sessionId, sessionContext);
+    }
+    if (interactionRef.decision.action === "clarification") {
+      interactionRef.decision = enforceClarificationContract(interactionRef.decision);
+    }
+  } else if (sessionContext && interactionRef?.decision?.action === "knowledge") {
+    const stillDead = isKnowledgeDeadEnd({
+      decision: interactionRef.decision,
+      outputType: finalOutputType,
+      finalProducts,
+      replyText: normalizeKnowledgeReplyText(finalResult),
+      queryType: interactionRef.queryType
+    });
+    if (!stillDead) {
+      sessionContext.knowledgeDeadEndRecoveryCount = 0;
+      saveSession(interactionRef.sessionId, sessionContext);
+    }
+  }
+
   assertDecisionOutputContract(
     interactionRef.decision,
     { type: finalOutputType },
@@ -1403,13 +1851,44 @@ function endInteraction(interactionRef, result, patch = {}) {
     sessionContext.lastUserMessage = interactionRef.message;
     sessionContext.lastResponseType = finalOutputType;
     sessionContext.previousAction = interactionRef?.decision?.action || null;
+    const shouldArmSelectionCarryoverContext =
+      interactionRef?.decision?.action === "recommend" ||
+      finalOutputType === "recommendation" ||
+      interactionRef?.queryType === "selection";
+    if (shouldArmSelectionCarryoverContext) {
+      const slotsForCarry = sessionContext.slots && typeof sessionContext.slots === "object"
+        ? sessionContext.slots
+        : {};
+      sessionContext.selectionFollowupCarryover = {
+        slots: {
+          context: slotsForCarry.context || null,
+          object: slotsForCarry.object || null,
+          surface: slotsForCarry.surface || null
+        }
+      };
+      sessionContext.selectionFollowupCarryoverContext = {
+        source: "selection_or_recommendation",
+        active: true
+      };
+    } else if (sessionContext.selectionFollowupCarryoverContext) {
+      sessionContext.selectionFollowupCarryoverContext = {
+        ...sessionContext.selectionFollowupCarryoverContext,
+        active: false
+      };
+    }
     saveSession(interactionRef.sessionId, sessionContext);
   }
+
+  const assistantReply =
+    finalResult && typeof finalResult === "object"
+      ? String(finalResult.reply ?? finalResult.message ?? "").trim() || null
+      : null;
 
   const entry = {
     timestamp: interactionRef.timestamp,
     sessionId: interactionRef.sessionId,
     message: interactionRef.message,
+    assistantReply,
     normalizedMessage: interactionRef.message ? String(interactionRef.message).toLowerCase().trim() : null,
     intent: {
       queryType: interactionRef.queryType,
@@ -1427,10 +1906,68 @@ function endInteraction(interactionRef, result, patch = {}) {
       type: finalOutputType,
       products: finalProducts,
       productsLength: Array.isArray(finalProducts) ? finalProducts.length : 0,
-      productsReason: interactionRef.decision.action === "flow" && Array.isArray(finalProducts) && finalProducts.length === 0 ? "no_matching_products" : null
+      productsReason:
+        explicitProductsReason ??
+        (interactionRef.decision.action === "flow" && Array.isArray(finalProducts) && finalProducts.length === 0
+          ? "no_matching_products"
+          : null)
     },
     pendingQuestion: sessionContext?.pendingQuestion || null,
-    feedback: interactionRef.feedback
+    clarificationAttemptCount:
+      interactionRef.clarificationEscalationTelemetry?.clarificationAttemptCount ??
+      sessionContext?.pendingQuestion?.attemptCount ??
+      null,
+    clarificationEscalated: Boolean(
+      interactionRef.clarificationEscalationTelemetry?.clarificationEscalated ??
+      sessionContext?.pendingQuestion?.escalated
+    ),
+    clarificationEscalationType:
+      interactionRef.clarificationEscalationTelemetry?.clarificationEscalationType ??
+      (sessionContext?.pendingQuestion?.escalated ? "chips" : null),
+    clarificationFailureReason:
+      interactionRef.clarificationEscalationTelemetry?.clarificationFailureReason ??
+      sessionContext?.pendingQuestion?.lastFailureReason ??
+      null,
+    chipSetId:
+      interactionRef.clarificationEscalationTelemetry?.chipSetId ??
+      null,
+    chipSelection:
+      interactionRef.clarificationEscalationTelemetry?.chipSelection ??
+      null,
+    feedback: interactionRef.feedback,
+    safetyGateTriggered: Boolean(interactionRef.safetyTelemetry?.safetyGateTriggered),
+    safetyReason: interactionRef.safetyTelemetry?.safetyReason ?? null,
+    missingCriticalField: interactionRef.safetyTelemetry?.missingCriticalField ?? null,
+    safetyAnswerType: interactionRef.safetyTelemetry?.safetyAnswerType ?? null,
+    askedClarification: Boolean(interactionRef.safetyTelemetry?.askedClarification),
+    blockedProductRouting: Boolean(interactionRef.safetyTelemetry?.blockedProductRouting),
+    knowledgeDeadEndDetected: Boolean(interactionRef.knowledgeTelemetry?.knowledgeDeadEndDetected),
+    knowledgeRecoveryApplied: Boolean(interactionRef.knowledgeTelemetry?.knowledgeRecoveryApplied),
+    knowledgeRecoveryReason: interactionRef.knowledgeTelemetry?.knowledgeRecoveryReason ?? null,
+    knowledgeRecoveryQuestionType: interactionRef.knowledgeTelemetry?.knowledgeRecoveryQuestionType ?? null,
+    lowSignalDetected: Boolean(interactionRef.lowSignalTelemetry?.lowSignalDetected),
+    lowSignalReason: interactionRef.lowSignalTelemetry?.lowSignalReason ?? null,
+    lowSignalRecoveryApplied: Boolean(interactionRef.lowSignalTelemetry?.lowSignalRecoveryApplied),
+    lowSignalQuestionType: interactionRef.lowSignalTelemetry?.lowSignalQuestionType ?? null,
+    slotCorrectionApplied: Boolean(interactionRef.slotCorrectionTelemetry?.slotCorrectionApplied),
+    slotCorrectionReason: interactionRef.slotCorrectionTelemetry?.slotCorrectionReason ?? null,
+    slotChanges: interactionRef.slotCorrectionTelemetry?.slotChanges ?? null,
+    pendingQuestionBefore: interactionRef.slotCorrectionTelemetry?.pendingQuestionBefore ?? null,
+    pendingQuestionAfter: interactionRef.slotCorrectionTelemetry?.pendingQuestionAfter ?? null,
+    contextInferenceAttempted: Boolean(interactionRef.contextInferenceTelemetry?.contextInferenceAttempted),
+    contextInferenceResult: interactionRef.contextInferenceTelemetry?.contextInferenceResult ?? null,
+    contextInferenceReason: interactionRef.contextInferenceTelemetry?.contextInferenceReason ?? null,
+    contextWasDefaulted: Boolean(interactionRef.contextInferenceTelemetry?.contextWasDefaulted),
+    contextClarificationAsked: Boolean(interactionRef.contextInferenceTelemetry?.contextClarificationAsked),
+    intentHeuristicOverrideApplied: Boolean(
+      interactionRef.intentRoutingTelemetry?.intentHeuristicOverrideApplied
+    ),
+    intentHeuristicOverrideFrom: interactionRef.intentRoutingTelemetry?.intentHeuristicOverrideFrom ?? null,
+    intentHeuristicOverrideTo: interactionRef.intentRoutingTelemetry?.intentHeuristicOverrideTo ?? null,
+    intentHeuristicReason: interactionRef.intentRoutingTelemetry?.intentHeuristicReason ?? null,
+    preprocessStrippedGreeting: Boolean(
+      interactionRef.intentRoutingTelemetry?.preprocessStrippedGreeting
+    )
   };
 
   appendInteractionLine(entry);
@@ -1444,6 +1981,8 @@ function endInteraction(interactionRef, result, patch = {}) {
     pendingQuestion: Boolean(sessionContext?.pendingQuestion),
     hardGuardApplied: interactionRef.decision.hardGuardFallback || false
   });
+
+  loggingV2.emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProducts);
 
   return finalResult;
 }
@@ -1526,8 +2065,6 @@ function extractObjectOverrides(message) {
 function extractSlotsFromMessage(message) {
   const text = String(message || "").toLowerCase();
   const objectOverride = extractObjectOverrides(text);
-  const interiorContextTerms = ["interior", "interioara", "interioare", "in interior", "inauntru", "din interior"];
-  const exteriorContextTerms = ["exterior", "exterioara", "exterioare", "in exterior", "afara", "din afara"];
 
   const OBJECT_KEYWORDS = {
     cotiera: ["cotiera", "armrest"],
@@ -1540,8 +2077,20 @@ function extractSlotsFromMessage(message) {
     oglinzi: ["oglinzi", "oglinda", "mirrors", "mirror"],
     mocheta: ["mocheta", "carpet", "floor mat", "floor mats"],
     tapiterie: ["tapiterie", "upholstery"],
-    jante: ["jante", "roti", "anvelope"],
-    caroserie: ["caroserie", "caroseria", "carrosserie", "body"]
+    anvelope: ["anvelope", "anvelopa", "cauciuc", "cauciucuri"],
+    jante: ["jante", "janta", "jantele", "wheels", "felgi", "roti", "rotile"],
+    caroserie: [
+      "caroserie",
+      "caroseria",
+      "carrosserie",
+      "body",
+      "vopsea",
+      "vopseaua",
+      "lac",
+      "clear coat",
+      "clearcoat",
+      "paint"
+    ]
   };
 
   let object = objectOverride.object || null;
@@ -1553,22 +2102,9 @@ function extractSlotsFromMessage(message) {
       }
     }
   }
+  if (!object && /\btires?\b/i.test(text)) object = "anvelope";
+  if (!object && /\btyres?\b/i.test(text)) object = "anvelope";
   object = canonicalizeObjectValue(object);
-
-  const hasInteriorContext = interiorContextTerms.some(term => text.includes(term));
-  const hasExteriorContext = exteriorContextTerms.some(term => text.includes(term));
-
-  let inferredContext = null;
-  if (hasInteriorContext && !hasExteriorContext) inferredContext = "interior";
-  if (hasExteriorContext && !hasInteriorContext) inferredContext = "exterior";
-
-  if (!inferredContext && object === "glass") {
-    if (hasStrongGlassExteriorSignal(text)) {
-      inferredContext = "exterior";
-    } else if (hasStrongGlassInteriorSignal(text)) {
-      inferredContext = "interior";
-    }
-  }
 
   const gateNorm = normalizeRomanianTextForGate(message);
   let inferredSurface = parseCtoSurfaceFromNormalizedGateText(gateNorm);
@@ -1576,27 +2112,32 @@ function extractSlotsFromMessage(message) {
     logSurfaceNormalized(message, inferredSurface);
   }
 
-  let resolvedContext =
-    objectOverride.context ||
-    inferredContext;
-
-  if (!resolvedContext && shouldDefaultLeatherToInterior(text, { surface: inferredSurface })) {
-    resolvedContext = "interior";
-    logInfo("LEATHER_CONTEXT_DEFAULT", {
-      applied: true,
-      context: resolvedContext,
-      surface: inferredSurface,
-      object: object || null,
-      message: text
+  let resolvedContext = objectOverride.context || null;
+  if (!resolvedContext) {
+    const inf = inferContext({
+      message,
+      normalizedMessage: gateNorm,
+      slots: { object, surface: inferredSurface, context: null },
+      slotMeta: null,
+      pendingQuestion: null
     });
+    if (inf.inferredContext && inf.confidence === "strong") {
+      resolvedContext = inf.inferredContext;
+      logContextInferenceTrace({
+        phase: "extract_slots",
+        inferredContext: inf.inferredContext,
+        reason: inf.reason,
+        confidence: inf.confidence
+      });
+    }
   }
 
-  return {
+  const baseSlots = {
     context: resolvedContext,
     surface: inferredSurface,
-
     object
   };
+  return applyWheelTireObjectToSlots(message, baseSlots);
 }
 
 function extractSlotsForSafetyQuery(message) {
@@ -1619,7 +2160,9 @@ function extractSlotsForSafetyQuery(message) {
   if (msg.includes("bord")) object = "bord";
   if (msg.includes("volan")) object = "volan";
   if (msg.includes("sticla") || msg.includes("geam") || msg.includes("geamuri")) object = object || "glass";
-  if (msg.includes("jante") || msg.includes("roti") || msg.includes("anvelope")) object = object || "jante";
+  if (msg.includes("anvelope") || msg.includes("anvelopa") || msg.includes("cauciuc")) object = object || "anvelope";
+  if (/\btires?\b/.test(msg) || /\btyres?\b/.test(msg)) object = object || "anvelope";
+  if (msg.includes("jante") || msg.includes("roti") || msg.includes("rotile")) object = object || "jante";
   if (msg.includes("caroserie") || msg.includes("carrosserie")) object = object || "caroserie";
   object = canonicalizeObjectValue(object);
 
@@ -1636,10 +2179,9 @@ function extractSlotsForSafetyQuery(message) {
     logSurfaceNormalized(msg, surface);
   }
 
-  // AUTO-INFER CONTEXT from object/surface when not explicit
+  // AUTO-INFER CONTEXT from object when not explicit (no surface-only inference for piele/textile)
   if (!context) {
-    if (object === "scaun" || object === "cotiera" || object === "mocheta" || object === "bord" || object === "volan" ||
-        surface === "piele" || surface === "textile" || surface === "alcantara" || surface === "plastic") {
+    if (object === "scaun" || object === "cotiera" || object === "mocheta" || object === "bord" || object === "volan") {
       context = "interior";
     }
     if (object === "jante" || object === "caroserie" || surface === "paint") {
@@ -1711,6 +2253,10 @@ function clearPendingClarificationSlots(sessionContext) {
     sessionContext.pendingClarification.state = null;
   }
   sessionContext.pendingSlots = null;
+}
+
+function createPendingQuestionState(previousPending, nextPending) {
+  return buildPendingQuestionState(previousPending, nextPending);
 }
 
 function seedPendingClarificationAtEmission(sessionContext, missingSlot) {
@@ -1837,7 +2383,14 @@ function shouldAsk(routingDecision, slots, message, sessionContext) {
 }
 
 function applyObjectSlotInference(slots) {
-  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const safeSlots = slots && typeof slots === "object" ? { ...slots } : {};
+  const obj = canonicalizeObjectValue(safeSlots.object);
+  if (obj) {
+    safeSlots.object = obj;
+  }
+  if (obj === "glass") {
+    return safeSlots;
+  }
   const inference = safeSlots.object ? OBJECT_SLOT_INFERENCE[safeSlots.object] : null;
 
   if (!inference) {
@@ -1851,16 +2404,31 @@ function applyObjectSlotInference(slots) {
   };
 }
 
-function applyObjectContextInferenceInPlace(slots) {
+function applyObjectContextInferenceInPlace(slots, slotMeta) {
   if (!slots || typeof slots !== "object") {
     return slots;
   }
 
-  if (!slots.context && slots.object) {
-    const inferredContext = OBJECT_CONTEXT_MAP[slots.object] || null;
-    if (inferredContext) {
-      slots.context = inferredContext;
-    }
+  const meta = slotMeta && typeof slotMeta === "object" ? slotMeta : null;
+  if (meta && meta.context === "confirmed") {
+    return slots;
+  }
+
+  const obj = canonicalizeObjectValue(slots.object);
+  if (obj) {
+    slots.object = obj;
+  }
+
+  if (slots.context) {
+    return slots;
+  }
+
+  if (obj === "glass" || obj === "oglinda" || obj === "oglinzi") {
+    return slots;
+  }
+
+  if (obj && OBJECT_CONTEXT_MAP[obj]) {
+    slots.context = OBJECT_CONTEXT_MAP[obj];
   }
 
   return slots;
@@ -1948,14 +2516,7 @@ function isCleaningFlow(message, sessionContext) {
 }
 
 function hasPersistedBugIntent(message, sessionContext) {
-  const msg = String(message || "").toLowerCase();
-
-  return (
-    msg.includes("insect") ||
-    msg.includes("insecte") ||
-    msg.includes("bugs") ||
-    sessionContext?.intentFlags?.bug === true
-  );
+  return hasExplicitInsectSignal(message) || sessionContext?.intentFlags?.bug === true;
 }
 
 function getFlowResolverMessage(message, sessionContext) {
@@ -2009,7 +2570,7 @@ function getMissingSlot(slots) {
   const obj = canonicalizeObjectValue(slotSource.object);
 
   if (ctx === "interior") {
-    if (obj === "glass" || obj === "jante" || obj === "caroserie") {
+    if (obj === "glass" || obj === "jante" || obj === "anvelope" || obj === "caroserie") {
       return null;
     }
     if (obj === "mocheta" || obj === "bord") {
@@ -2025,7 +2586,7 @@ function getMissingSlot(slots) {
       return null;
     }
     if (obj === "caroserie" && !surfRaw) return "surface";
-    if ((obj === "jante" || obj === "roti" || obj === "wheels") && !surfRaw) return "surface";
+    if ((obj === "jante" || obj === "roti" || obj === "wheels" || obj === "anvelope") && !surfRaw) return "surface";
     return null;
   }
 
@@ -2068,7 +2629,7 @@ function getMissingSlotForRequiredList(slots, requiredList) {
   }
   if (req.has("surface")) {
     if (ctx === "interior") {
-      if (obj === "glass" || obj === "jante" || obj === "caroserie") {
+      if (obj === "glass" || obj === "jante" || obj === "anvelope" || obj === "caroserie") {
         return null;
       }
       if (obj === "mocheta" || obj === "bord") {
@@ -2087,7 +2648,7 @@ function getMissingSlotForRequiredList(slots, requiredList) {
       if (obj === "caroserie" && !surfRaw) {
         return "surface";
       }
-      if ((obj === "jante" || obj === "roti" || obj === "wheels") && !surfRaw) {
+      if ((obj === "jante" || obj === "roti" || obj === "wheels" || obj === "anvelope") && !surfRaw) {
         return "surface";
       }
       return null;
@@ -2175,11 +2736,12 @@ function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sess
   const loc = normalizeResponseLocale(responseLocale);
   const raw = slots && typeof slots === "object" ? slots : {};
   const inferred = { ...raw };
-  applyObjectContextInferenceInPlace(inferred);
+  applyObjectContextInferenceInPlace(inferred, null);
   const s = inferred;
   let base;
+  const llmAssistInterior = resolveLlmSurfaceAssistFlag().effective && qualifiesForInteriorSurfaceAssist(s);
   if (s.context === "interior") {
-    base = getProceduralSurfaceEnumQuestion(loc);
+    base = llmAssistInterior ? getInteriorSurfaceLlmAssistBaseQuestion(loc) : getProceduralSurfaceEnumQuestion(loc);
   } else if (s.context === "exterior") {
     base =
       loc === "en"
@@ -2190,9 +2752,11 @@ function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sess
   }
   const flag = resolveSurfaceAssistFlag();
   const assistEligible = flag.effective && qualifiesForInteriorSurfaceAssist(s);
-  const message = assistEligible ? appendSurfaceAssistFallbackCTA(base, loc) : base;
+  const message =
+    assistEligible && !llmAssistInterior ? appendSurfaceAssistFallbackCTA(base, loc) : base;
   logInfo("SURFACE_ASSIST_CTA_ATTACHED", {
-    enabledEffective: Boolean(assistEligible),
+    enabledEffective: Boolean(assistEligible && !llmAssistInterior),
+    llmAssistInteriorCopy: Boolean(llmAssistInterior),
     enabledSources: flag.enabledSources,
     rawEnvValue: flag.rawEnvValue,
     missingSlot: "surface",
@@ -2204,24 +2768,14 @@ function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sess
 }
 
 function detectContextHint(message) {
-  const text = String(message || "").toLowerCase();
-
-  const interiorObjects = [
-    "cotiera", "scaun", "bord", "volan", "tapiterie", "mocheta", "interior", "interioara", "interioare", "in interior"
-  ];
-
-  const exteriorObjects = [
-    "caroserie", "caroseria", "jante", "roti", "vopsea", "exterior", "exterioara", "exterioare", "in exterior"
-  ];
-
-  if (interiorObjects.some(w => text.includes(w))) {
-    return "interior";
+  const inf = inferContext({
+    message,
+    slotMeta: null,
+    pendingQuestion: null
+  });
+  if (inf.inferredContext && inf.confidence === "strong") {
+    return inf.inferredContext;
   }
-
-  if (exteriorObjects.some(w => text.includes(w))) {
-    return "exterior";
-  }
-
   return null;
 }
 
@@ -2229,7 +2783,7 @@ function inferWheelsSurfaceFromObject(slots) {
   const safeSlots = slots && typeof slots === "object" ? slots : {};
   const object = String(safeSlots.object || "").toLowerCase();
 
-  if (!safeSlots.surface && (object === "wheels" || object === "jante")) {
+  if (!safeSlots.surface && (object === "wheels" || object === "jante" || object === "anvelope")) {
     return {
       ...safeSlots,
       surface: "wheels"
@@ -2530,8 +3084,16 @@ function buildMicroExplanation(product, slots = {}) {
   return "";
 }
 
-function returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots = null) {
-  const reply = "Nu sunt sigur ce produs se potrivește perfect aici, dar te pot ghida pas cu pas dacă vrei.";
+function returnSelectionFailSafe(
+  interactionRef,
+  sessionId,
+  selectionDecision,
+  selectionSlots = null,
+  options = {}
+) {
+  const reply =
+    options.reply ||
+    "Nu sunt sigur ce produs se potrivește perfect aici, dar te pot ghida pas cu pas dacă vrei.";
   const failSafeDecision = {
     ...(selectionDecision || {}),
     action: "knowledge",
@@ -2545,6 +3107,7 @@ function returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, s
   return endInteraction(interactionRef, { reply, products: [] }, {
     decision: failSafeDecision,
     outputType: "reply",
+    productsReason: options.productsReason || "none",
     products: []
   });
 }
@@ -2777,9 +3340,32 @@ function findProductsByRoleConfig(roleConfig, products) {
   const matchText = Array.isArray(safeRoleConfig.matchText)
     ? safeRoleConfig.matchText.map(text => String(text).toLowerCase())
     : [];
+  const requiredTags = Array.isArray(safeRoleConfig.requiredTags)
+    ? safeRoleConfig.requiredTags.map(tag => String(tag).toLowerCase())
+    : [];
+  const optionalTags = Array.isArray(safeRoleConfig.optionalTags)
+    ? safeRoleConfig.optionalTags.map(tag => String(tag).toLowerCase())
+    : [];
+  const excludeTags = Array.isArray(safeRoleConfig.excludeTags)
+    ? safeRoleConfig.excludeTags.map(tag => String(tag).toLowerCase())
+    : [];
   const safeProducts = Array.isArray(products) ? products : [];
+  const normalizeTags = (product) => Array.isArray(product?.tags)
+    ? product.tags.map(tag => String(tag).toLowerCase())
+    : [];
+  const passesTagRules = (product) => {
+    const tags = normalizeTags(product);
+    if (requiredTags.length > 0 && !requiredTags.every(tag => tags.includes(tag))) {
+      return false;
+    }
+    if (excludeTags.length > 0 && excludeTags.some(tag => tags.includes(tag))) {
+      return false;
+    }
+    return true;
+  };
 
   const strongMatches = safeProducts.filter((product) => {
+    if (!passesTagRules(product)) return false;
     const productName = String(product?.name || "").toLowerCase();
     const productCategory = String(product?.category || "").toLowerCase();
     const searchText = String(product?.searchText || "").toLowerCase();
@@ -2800,14 +3386,84 @@ function findProductsByRoleConfig(roleConfig, products) {
   }
 
   const weakMatches = safeProducts.filter((product) => {
-    const productTags = Array.isArray(product?.tags)
-      ? product.tags.map(tag => String(tag).toLowerCase())
-      : [];
-
-    return matchTags.some(tag => productTags.includes(tag));
+    if (!passesTagRules(product)) return false;
+    const productTags = normalizeTags(product);
+    if (matchTags.some(tag => productTags.includes(tag))) return true;
+    if (requiredTags.length > 0) return requiredTags.every(tag => productTags.includes(tag));
+    if (optionalTags.length > 0) return optionalTags.some(tag => productTags.includes(tag));
+    return false;
   });
 
   return weakMatches;
+}
+
+const COVERAGE_ROLE_SET = new Set([
+  "leather_cleaner",
+  "leather_protectant",
+  "tire_dressing",
+  "glass_cleaner",
+  "glass_rain_repellent",
+  "rubber_seal_protectant"
+]);
+
+function roleCoverageFallbackQuestion(role) {
+  if (role === "leather_cleaner" || role === "leather_protectant") {
+    return "Vrei sa cureti pielea sau sa o protejezi/hidratezi?";
+  }
+  if (role === "tire_dressing") {
+    return "Vrei luciu umed sau aspect satinat/mat pentru anvelope?";
+  }
+  if (role === "glass_cleaner" || role === "glass_rain_repellent") {
+    return "E pentru interior sau exterior? (ca sa evitam dungi)";
+  }
+  if (role === "rubber_seal_protectant") {
+    return "Vrei sa opresti scartaitul sau doar intretinere/protectie pentru chedere?";
+  }
+  return "Spune-mi ce rezultat urmaresti ca sa aleg produsul potrivit.";
+}
+
+function detectCoverageGapRole(message, slots = {}) {
+  const msg = String(message || "").toLowerCase();
+  const norm = msg
+    .replace(/[ăâ]/g, "a")
+    .replace(/î/g, "i")
+    .replace(/[șş]/g, "s")
+    .replace(/[țţ]/g, "t");
+  const object = String(slots?.object || "").toLowerCase();
+  const surface = String(slots?.surface || "").toLowerCase();
+
+  const leatherCue = /piele|leather/.test(norm) || surface === "piele" || object === "scaun";
+  const leatherClean = /curat|spal|murdar|pete/.test(norm);
+  const leatherProtect = /protej|hidrat|intretin|condition/.test(norm);
+  if (leatherCue && leatherClean) return { role: "leather_cleaner", ask: null };
+  if (leatherCue && leatherProtect) return { role: "leather_protectant", ask: null };
+  if (leatherCue && !leatherClean && !leatherProtect) {
+    return { role: null, ask: "Vrei sa o cureti sau sa o protejezi/hidratezi?" };
+  }
+
+  const tireDress = /anvelope|cauciuc|tire|tyre/.test(norm) && /luciu|shine|dressing|gel|blackener|innegr|negre/.test(norm);
+  if (tireDress) return { role: "tire_dressing", ask: null };
+
+  const glassCue = /geam|parbriz|sticla|glass/.test(norm) || object === "glass" || surface === "glass";
+  const glassHydrophobic = /hidrofob|rain repellent|ploaie/.test(norm);
+  if (glassCue && glassHydrophobic && productRoles.glass_rain_repellent) {
+    return { role: "glass_rain_repellent", ask: null };
+  }
+  if (glassCue) return { role: "glass_cleaner", ask: null };
+
+  const sealCue = /chedere|garnituri|cauciuc usi|scartai/.test(norm);
+  if (sealCue) return { role: "rubber_seal_protectant", ask: null };
+
+  return { role: null, ask: null };
+}
+
+function tryCoverageRoleRelaxedRetry(role, roleConfig, products, settings) {
+  if (!COVERAGE_ROLE_SET.has(role) || !roleConfig) return [];
+  const roleCandidates = findProductsByRoleConfig(roleConfig, products);
+  if (!Array.isArray(roleCandidates) || roleCandidates.length === 0) return [];
+  const ranked = applyRanking(roleCandidates, { tags: roleConfig.matchTags || [], priceRange: null }, settings);
+  const limited = enforceProductLimit(ranked, Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS));
+  return buildProductBundle(limited).slice(0, MAX_SELECTION_PRODUCTS);
 }
 
 function matchesRoleConfig(product, roleConfig) {
@@ -2933,6 +3589,10 @@ function applyDeterministicTagFallback(message, detectedTags) {
   const tags = new Set(normalizedTags);
   let fallbackUsed = !Array.isArray(detectedTags) || normalizedTags.length === 0;
 
+  for (const t of wheelTireTagBoost(message)) {
+    if (t) tags.add(t);
+  }
+
   if (!Array.isArray(detectedTags) || normalizedTags.length === 0) {
     if (text.includes("parbriz")) {
       tags.add("glass");
@@ -2941,9 +3601,12 @@ function applyDeterministicTagFallback(message, detectedTags) {
     }
 
     if (text.includes("jante")) {
-      tags.add("wheels");
-      tags.add("exterior");
-      fallbackUsed = true;
+      const wt = analyzeWheelTireMessage(message);
+      if (wt.wheelTireIntent !== "tire_dressing") {
+        tags.add("wheels");
+        tags.add("exterior");
+        fallbackUsed = true;
+      }
     }
 
     if (text.includes("interior")) {
@@ -3011,25 +3674,29 @@ function findRelevantProducts(tags, products, maxProducts, options = {}) {
 
     const { strictTagFilter = false } = options;
 
-    if (strictTagFilter) {
-      const requestedTags = Array.isArray(tags)
-        ? tags.map(tag => String(tag).toLowerCase())
-        : [];
-      const safeProducts = Array.isArray(products) ? products : [];
-      const filtered = safeProducts.filter((product) => {
-        const productTags = Array.isArray(product?.tags)
-          ? product.tags.map(tag => String(tag).toLowerCase())
-          : [];
+    info(SOURCE, `Selecting products (unified pipeline) with tags: ${tags.join(", ")}`);
 
-        return requestedTags.some(tag => productTags.includes(tag));
-      });
+    const selection = selectProducts({
+      tags,
+      catalog: products,
+      limit: maxProducts,
+      message: options.message || tags.join(" "),
+      slots: options.slots || {},
+      session: options.session || null,
+      intent: options.intent || null,
+      settings: options.settings || {},
+      constraints: {
+        strictTagFilter,
+        poolSize: options.poolSize || 40,
+        fallbackStrategy: options.fallbackStrategy || "relaxed_roles",
+        ranking: options.ranking !== false,
+        priceRange: options.priceRange || null,
+        applyInteriorExteriorFilter: options.applyInteriorExteriorFilter !== false,
+        applySlotObjectFilter: options.applySlotObjectFilter !== false
+      }
+    });
 
-      return filtered;
-    }
-
-    info(SOURCE, `Searching for products with tags: ${tags.join(", ")}`);
-
-    const found = searchProductsByTags(tags, products, maxProducts);
+    const found = selection.chosen || [];
     const withForcedApc = ensureApcProductIncluded(found, products, tags);
 
     if (withForcedApc.length === 0) {
@@ -3057,6 +3724,11 @@ function applyRanking(products, context, settings) {
   try {
     if (!Array.isArray(products) || products.length === 0) {
       return [];
+    }
+
+    if (products.every(p => p?.selectionMeta?.pipeline === "unified")) {
+      info(SOURCE, "Skipping secondary ranking (unified product selection pipeline)");
+      return products;
     }
 
     info(SOURCE, `Ranking ${products.length} products for conversion optimization`);
@@ -3285,8 +3957,15 @@ function isDirectPendingClarificationAnswer(message, pendingQuestion) {
   }
 
   if (pending.slot === "object") {
-    return ["mocheta", "cotiera", "scaun", "plafon", "parbriz", "jante", "roti", "anvelope", "geam", "sticla", "vopsea"]
+    return ["mocheta", "cotiera", "scaun", "plafon", "parbriz", "jante", "roti", "anvelope", "geam", "geamuri", "sticla", "vopsea"]
       .some(token => msg.includes(token));
+  }
+
+  if (pending.slot === "intent_level" && pending.source === "low_signal") {
+    if (classifyIntentLevelReply(message).kind !== "none") {
+      return true;
+    }
+    return isShortSlotValueMessage(message);
   }
 
   return false;
@@ -3306,6 +3985,300 @@ function shouldHardResetForNewRootQuery(message, sessionContext) {
   }
 
   return true;
+}
+
+/**
+ * Whether routing slots/tags from the prior turn should carry into this turn.
+ * Intentionally does NOT treat generic "short messages" as continuations — that caused
+ * cross-intent slot leakage (e.g. jante slots affecting a later "ce este apc?" turn).
+ */
+function shouldPreserveSlotsForContinuation({
+  userMessage,
+  sessionContext,
+  handledPendingQuestionAnswer,
+  handledPendingQuestionAnswerEarly,
+  previousState
+}) {
+  const msgTrim = String(userMessage || "").toLowerCase().trim();
+  const shortAffirmation =
+    isYes(userMessage) ||
+    isNo(userMessage) ||
+    msgTrim === "da" ||
+    msgTrim === "nu";
+
+  return (
+    Boolean(handledPendingQuestionAnswer) ||
+    Boolean(handledPendingQuestionAnswerEarly) ||
+    Boolean(sessionContext.state && sessionContext.state !== "IDLE") ||
+    Boolean(sessionContext.pendingQuestion) ||
+    (shortAffirmation &&
+      sessionContext.previousAction &&
+      String(sessionContext.previousAction).toLowerCase() !== "greeting") ||
+    previousState === "NEEDS_CONTEXT" ||
+    previousState === "NEEDS_OBJECT" ||
+    previousState === "NEEDS_SURFACE" ||
+    (isSelectionFollowupMessage(userMessage) && hasCarryoverSelectionContext(sessionContext))
+  );
+}
+
+/**
+ * Strong prior topic for knowledge → selection follow-ups (slots, carry-over blob, pending selection, wheel/tire tags).
+ * @param {Record<string, unknown>} sessionContext
+ * @returns {boolean}
+ */
+function hasCarryoverSelectionContext(sessionContext) {
+  const sc = sessionContext && typeof sessionContext === "object" ? sessionContext : {};
+  const carry = sc.selectionFollowupCarryover;
+  if (carry && typeof carry === "object" && carry.slots && typeof carry.slots === "object") {
+    const { object, context, surface } = carry.slots;
+    if (object || context || surface) {
+      return true;
+    }
+  }
+  const slots = sc.slots && typeof sc.slots === "object" ? sc.slots : {};
+  if (slots.object || slots.context || slots.surface) {
+    return true;
+  }
+  if (sc.pendingSelection === true) {
+    return true;
+  }
+  if (sc.pendingSelectionMissingSlot) {
+    return true;
+  }
+  const tags = Array.isArray(sc.tags) ? sc.tags : [];
+  const tagJoin = tags.map(t => String(t || "").toLowerCase()).join(" ");
+  if (/\b(anvelope|jante|roti|cauciuc|wheels|tires|tire|tyre)\b/.test(tagJoin)) {
+    return true;
+  }
+  return false;
+}
+
+function getSelectionCarryoverActivationState(sessionContext) {
+  const sc = sessionContext && typeof sessionContext === "object" ? sessionContext : {};
+  const prevAction = String(sc.previousAction || "").toLowerCase().trim();
+  const hasPendingQuestion = Boolean(sc?.pendingQuestion?.active === true);
+  const hasPendingSelection = Boolean(sc?.pendingSelection === true);
+  const hasExplicitCarryoverContext = Boolean(sc?.selectionFollowupCarryoverContext?.active === true);
+  const prevWasRecommendationExperience =
+    prevAction === "recommend" ||
+    prevAction === "product_search" ||
+    String(sc?.lastResponseType || "").toLowerCase() === "recommendation";
+  const allowExplicitCarryover = hasExplicitCarryoverContext && prevWasRecommendationExperience;
+
+  return {
+    hasPendingQuestion,
+    hasPendingSelection,
+    hasExplicitCarryoverContext,
+    prevAction,
+    allowExplicitCarryover,
+    carryoverAllowed: hasPendingQuestion || hasPendingSelection || allowExplicitCarryover
+  };
+}
+
+function selectionFollowupBypassesLowSignalIntentLevel(userMessage, sessionContext) {
+  const isSelectionFollowup = isSelectionFollowupMessage(userMessage);
+  const isLegacyShape = isLegacySelectionFollowupShape(userMessage);
+  const hasCarryover = hasCarryoverSelectionContext(sessionContext);
+  const hasPendingSelection = Boolean(sessionContext?.pendingSelection === true);
+  const activationState = getSelectionCarryoverActivationState(sessionContext);
+
+  // Tightened: bypass is only allowed when the follow-up truly has session anchor context
+  // (carry-over slots / pendingSelection / tags). Legacy shapes are not exempt from this.
+  if ((isSelectionFollowup || isLegacyShape) && (!hasCarryover || !activationState.carryoverAllowed)) {
+    if (hasCarryover && !activationState.carryoverAllowed) {
+      logInfo("FOLLOWUP_CONTEXT_CARRYOVER_SKIPPED", {
+        reason: "no_pending_state",
+        hasPendingQuestion: activationState.hasPendingQuestion,
+        hasPendingSelection: activationState.hasPendingSelection,
+        hasExplicitCarryoverContext: activationState.hasExplicitCarryoverContext,
+        prevAction: activationState.prevAction || null
+      });
+    }
+    logInfo("LOW_SIGNAL_FOLLOWUP_BYPASS_BLOCKED", {
+      reason: !hasCarryover
+        ? (isLegacyShape ? "legacy_shape_without_carryover" : "no_carryover_context")
+        : "no_pending_state",
+      hasCarryover,
+      hasPendingSelection,
+      hasPendingQuestion: activationState.hasPendingQuestion,
+      hasExplicitCarryoverContext: activationState.hasExplicitCarryoverContext,
+      prevAction: activationState.prevAction || null,
+      messagePreview: String(userMessage || "").slice(0, 120)
+    });
+    return false;
+  }
+
+  if (isLegacyShape) {
+    return true;
+  }
+
+  return isSelectionFollowup && hasCarryover;
+}
+
+function captureInformationalSelectionCarryover(sessionContext, userMessage, queryType, sessionId) {
+  if (queryType !== "informational") {
+    return;
+  }
+  const extracted = normalizeSlots(
+    applyObjectSlotInference(extractSlotsFromMessage(userMessage))
+  );
+  if (!(extracted.object || extracted.context || extracted.surface)) {
+    return;
+  }
+  sessionContext.selectionFollowupCarryover = {
+    slots: {
+      context: extracted.context || null,
+      object: extracted.object || null,
+      surface: extracted.surface || null
+    }
+  };
+  saveSession(sessionId, sessionContext);
+}
+
+function ensureExteriorContextForWheelObjects(slots) {
+  const s = slots && typeof slots === "object" ? slots : {};
+  const o = String(s.object || "").toLowerCase();
+  const wheelLike =
+    o === "anvelope" || o === "jante" || o === "roti" || o === "wheels";
+  if (!wheelLike || s.context) {
+    return s;
+  }
+  return { ...s, context: "exterior" };
+}
+
+function rememberLastNonNullSlots(sessionContext, candidateSlots) {
+  const candidate = candidateSlots && typeof candidateSlots === "object" ? candidateSlots : {};
+  const hasSignal = Boolean(candidate.context || candidate.object || candidate.surface);
+  if (!hasSignal) {
+    return false;
+  }
+  const previous = sessionContext?.lastNonNullSlots && typeof sessionContext.lastNonNullSlots === "object"
+    ? sessionContext.lastNonNullSlots
+    : {};
+  sessionContext.lastNonNullSlots = {
+    context: candidate.context ?? previous.context ?? null,
+    object: candidate.object ?? previous.object ?? null,
+    surface: candidate.surface ?? previous.surface ?? null
+  };
+  return true;
+}
+
+function hasStrongWheelTireSignal(slots) {
+  const s = slots && typeof slots === "object" ? slots : {};
+  const objectNorm = String(s.object || "").toLowerCase();
+  const surfaceNorm = String(s.surface || "").toLowerCase();
+  return (
+    objectNorm === "anvelope" ||
+    objectNorm === "jante" ||
+    objectNorm === "roti" ||
+    objectNorm === "wheels" ||
+    surfaceNorm === "wheels"
+  );
+}
+
+function seedSelectionSlotsFromRecentMemory(sessionContext) {
+  const fromCarryover = sessionContext?.selectionFollowupCarryover?.slots;
+  const fromMemory = sessionContext?.lastNonNullSlots;
+  const fromProcedural = sessionContext?.lastProceduralSlots;
+  const sources = [
+    { name: "selection_followup_carryover", slots: fromCarryover },
+    { name: "last_non_null_slots", slots: fromMemory },
+    { name: "last_procedural_slots", slots: fromProcedural }
+  ];
+
+  for (const source of sources) {
+    const candidate = source?.slots && typeof source.slots === "object" ? source.slots : null;
+    if (!candidate || !hasStrongWheelTireSignal(candidate)) {
+      continue;
+    }
+    const merged = normalizeSlots(
+      applyObjectSlotInference(
+        mergeSlots(sessionContext?.slots || {}, candidate)
+      )
+    );
+    const inferred = ensureExteriorContextForWheelObjects(inferWheelsSurfaceFromObject(merged));
+    if (inferred.context || inferred.object || inferred.surface) {
+      sessionContext.slots = inferred;
+      return { applied: true, source: source.name, slots: inferred };
+    }
+  }
+
+  const tagList = Array.isArray(sessionContext?.tags)
+    ? sessionContext.tags.map(tag => String(tag || "").toLowerCase())
+    : [];
+  const hasWheelTireTags = tagList.some(tag =>
+    ["anvelope", "jante", "roti", "wheels", "tires", "tire", "tyre", "cauciuc"].includes(tag)
+  );
+  if (hasWheelTireTags) {
+    const inferredFromTags = ensureExteriorContextForWheelObjects(
+      inferWheelsSurfaceFromObject(
+        mergeSlots(sessionContext?.slots || {}, { context: "exterior", object: "anvelope" })
+      )
+    );
+    sessionContext.slots = inferredFromTags;
+    return { applied: true, source: "session_tags_wheel_tire", slots: inferredFromTags };
+  }
+
+  return { applied: false, source: null, slots: sessionContext?.slots || {} };
+}
+
+function applySelectionFollowupCarryoverHydration(userMessage, sessionContext, sessionId) {
+  if (!isSelectionFollowupMessage(userMessage) || !hasCarryoverSelectionContext(sessionContext)) {
+    return;
+  }
+  const activationState = getSelectionCarryoverActivationState(sessionContext);
+  if (!activationState.carryoverAllowed) {
+    logInfo("FOLLOWUP_CONTEXT_CARRYOVER_SKIPPED", {
+      reason: "no_pending_state",
+      hasPendingQuestion: activationState.hasPendingQuestion,
+      hasPendingSelection: activationState.hasPendingSelection,
+      hasExplicitCarryoverContext: activationState.hasExplicitCarryoverContext,
+      prevAction: activationState.prevAction || null
+    });
+    return;
+  }
+  const carry = sessionContext.selectionFollowupCarryover;
+  if (!carry?.slots || typeof carry.slots !== "object") {
+    return;
+  }
+  const fromMsg = normalizeSlots(applyObjectSlotInference(extractSlotsFromMessage(userMessage)));
+  const msgHasAnchor = Boolean(fromMsg.object || fromMsg.context || fromMsg.surface);
+  if (msgHasAnchor) {
+    return;
+  }
+  const preferConfirmed = (key, prev, incoming) => {
+    const meta = sessionContext.slotMeta && typeof sessionContext.slotMeta === "object"
+      ? sessionContext.slotMeta
+      : null;
+    if (meta && meta[key] === "confirmed" && prev) {
+      return prev;
+    }
+    return incoming || prev || null;
+  };
+  const cur = sessionContext.slots && typeof sessionContext.slots === "object" ? sessionContext.slots : {};
+  let merged = {
+    context: preferConfirmed("context", cur.context, carry.slots.context),
+    object: preferConfirmed("object", cur.object, carry.slots.object),
+    surface: preferConfirmed("surface", cur.surface, carry.slots.surface),
+    vehicleMake: cur.vehicleMake ?? null,
+    vehicleModel: cur.vehicleModel ?? null,
+    vehicleYear: cur.vehicleYear ?? null
+  };
+  merged = normalizeSlots(applyObjectSlotInference(merged));
+  merged = inferWheelsSurfaceFromObject(merged);
+  merged = ensureExteriorContextForWheelObjects(merged);
+  sessionContext.slots = merged;
+  if (activationState.allowExplicitCarryover && sessionContext?.selectionFollowupCarryoverContext) {
+    sessionContext.selectionFollowupCarryoverContext = {
+      ...sessionContext.selectionFollowupCarryoverContext,
+      active: false
+    };
+  }
+  saveSession(sessionId, sessionContext);
+  logInfo("FOLLOWUP_CONTEXT_CARRYOVER_APPLIED", {
+    slots: merged,
+    source: "selectionFollowupCarryover"
+  });
 }
 
 function detectObject(message) {
@@ -3663,9 +4636,17 @@ function detectMetaIntent(message) {
     return "no_recommendations";
   }
 
+  // "De ce am nevoie de X?" is domain knowledge, not "why are you asking me".
+  if (isInformationalKnowledgeShape(message)) {
+    return null;
+  }
+
   if (
     msg.includes("de ce intrebi") ||
-    msg.includes("de ce")
+    msg.includes("de ce ma intrebi") ||
+    msg.includes("de ce mă întrebi") ||
+    msg.includes("de ce imi pui") ||
+    msg.includes("de ce îmi pui")
   ) {
     return "meta_question";
   }
@@ -3733,68 +4714,21 @@ function detectInterrupt(message) {
     return "dissatisfaction";
   }
 
+  if (isInformationalKnowledgeShape(message)) {
+    return null;
+  }
+
   if (
     msg.includes("de ce intrebi") ||
+    msg.includes("de ce ma intrebi") ||
+    msg.includes("de ce mă întrebi") ||
     msg.includes("ce vrei sa stii") ||
-    msg.includes("de ce")
+    msg.includes("ce vrei să știi")
   ) {
     return "meta";
   }
 
   return null;
-}
-
-function isLowSignal(message, intentConfidence = null) {
-  const msg = String(message || "").toLowerCase().trim();
-
-  if (!msg) return true;
-  if (msg.length < 5) return true;
-
-  const vagueInputs = [
-    "test",
-    "ceva",
-    "ajuta-ma",
-    "recomanda ceva",
-    "vreau ceva"
-  ];
-
-  if (vagueInputs.some(v => msg.includes(v))) {
-    return true;
-  }
-
-  const signalKeywords = [
-    "interior", "exterior", "curat", "spal", "jante", "roti", "anvelope",
-    "parbriz", "vopsea", "piele", "textil", "plastic", "insect", "cum",
-    "ce", "unde", "de ce", "pot", "folosi", "produs"
-  ];
-  const hasSignalKeyword = signalKeywords.some(keyword => msg.includes(keyword));
-  const words = msg.split(/\s+/).filter(Boolean);
-  const isSingleToken = words.length === 1;
-  const uniqueRatio = msg.length > 0 ? new Set(msg.replace(/\s+/g, "")).size / msg.replace(/\s+/g, "").length : 1;
-  const hasLongConsonantRun = /[bcdfghjklmnpqrstvwxyz]{5,}/i.test(msg);
-  const looksLikeGarbageToken = isSingleToken && msg.length >= 8 && !hasSignalKeyword && (uniqueRatio < 0.45 || hasLongConsonantRun);
-
-  if (looksLikeGarbageToken) {
-    return true;
-  }
-
-  if (typeof intentConfidence === "number" && intentConfidence < 0.6 && !hasSignalKeyword) {
-    return true;
-  }
-
-  return false;
-}
-
-function isSelectionFollowUp(message) {
-  const msg = String(message || "").toLowerCase();
-
-  return (
-    msg.includes("de care") ||
-    msg.includes("ce recomanzi") ||
-    msg.includes("link") ||
-    msg.includes("ce produs") ||
-    msg.includes("care e mai bun")
-  );
 }
 
 function normalizeRomanianText(text) {
@@ -3960,77 +4894,6 @@ function requiresSurface(intentType) {
   return intentType === "procedural" || intentType === "selection";
 }
 
-function isCompatibilitySafetyQuery(message) {
-  const msg = String(message || "").toLowerCase();
-  const esteBunPentru = /(este|e)\s+bun\s+pentru/.test(msg) || /(este|e)\s+ok\s+pentru/.test(msg);
-  const compatibilityPhrases = [
-    "pot folosi",
-    "pot sa dau",
-    "este sigur",
-    "e sigur",
-    "e ok",
-    "este ok",
-    "merge",
-    "compatibil",
-    "functioneaza pe",
-    "merge pe"
-  ];
-  const materialTokens = [
-    "piele",
-    "textil",
-    "textile",
-    "plastic",
-    "alcantara",
-    "vopsea",
-    "geam",
-    "parbriz"
-  ];
-  const productTokens = ["apc", "sampon", "wax", "polish", "solutie", "degres", "clay", "ceramic"];
-
-  const hasMaterial = materialTokens.some(token => msg.includes(token));
-  const hasProduct = productTokens.some(t => msg.includes(t));
-  const hasPhrase = esteBunPentru || compatibilityPhrases.some(phrase => msg.includes(phrase));
-
-  return hasPhrase && hasMaterial && (hasProduct || msg.includes("apc"));
-}
-
-function getCompatibilitySafetyReply(message) {
-  const msg = String(message || "").toLowerCase();
-
-  if (msg.includes("piele")) {
-    return "Pe piele, APC-ul se foloseste doar foarte diluat si testat pe o zona mica. Ideal este un cleaner dedicat pentru piele.";
-  }
-
-  if (msg.includes("textil")) {
-    return "Pe textil, APC-ul poate fi folosit diluat, cu test preliminar si fara sa imbibi excesiv materialul.";
-  }
-
-  if (msg.includes("plastic")) {
-    return "Pe plastic, APC-ul este in general ok daca este diluat corect si sters complet dupa aplicare.";
-  }
-
-  return "Pot sa te ajut cu compatibilitatea produselor, dar spune-mi exact materialul vizat.";
-}
-
-function isSafetyQuery(message) {
-  const msg = String(message || "").toLowerCase();
-
-  return (
-    isCompatibilitySafetyQuery(message) ||
-    msg.includes("pot sa") ||
-    msg.includes("pot folosi") ||
-    msg.includes("este sigur") ||
-    msg.includes("e sigur") ||
-    msg.includes("safe pe") ||
-    msg.includes("sigur pe") ||
-    msg.includes("merge pe") ||
-    msg.includes("compatibil") ||
-    msg.includes("afecteaza") ||
-    /(este|e)\s+bun\s+pentru/.test(msg) ||
-    /(este|e)\s+ok\s+pentru/.test(msg)
-  );
-}
-
 function detectProblemType(message) {
   const msg = String(message || "").toLowerCase();
 
@@ -4075,9 +4938,11 @@ function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   safeContext.proceduralSlots = {};
   safeContext.slots = {};
   safeContext.pendingQuestion = null;
+  safeContext.glassFlowContextLocked = false;
   clearPendingClarificationSlots(safeContext);
   safeContext.state = "IDLE";
   clearSurfaceAssistState(safeContext);
+  clearClarificationAskTracking(safeContext);
 
   saveSession(sessionId, safeContext);
 
@@ -4099,15 +4964,57 @@ function resetSessionAfterAbuse(sessionContext, sessionId) {
   safeContext.originalIntent = null;
   safeContext.lastFlow = null;
   safeContext.intentFlags = {};
+  safeContext.glassFlowContextLocked = false;
+  clearClarificationAskTracking(safeContext);
+  safeContext.slotMeta = { context: "unknown", surface: "unknown", object: "unknown" };
 
   saveSession(sessionId, safeContext);
   logInfo("PENDING_QUESTION_TRANSITION", {
     reason: "abuse_reset",
     pendingQuestion: null,
-    slots: safeContext.slots
+    slots: safeContext.slots,
+    abuseResetTriggered: true,
+    slotCorrectionReason: "abuse_reset"
   });
 
   return safeContext;
+}
+
+function tryClarificationLoopBreaker(sessionContext, interactionRef, sessionId, slotKey) {
+  if (!sessionContext || !["context", "object", "surface"].includes(slotKey)) {
+    return null;
+  }
+  if (!shouldBreakRepeatedAsk(sessionContext, slotKey)) {
+    return null;
+  }
+  sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+    slot: "intent_level",
+    source: "loop_breaker",
+    type: "intent_level"
+  });
+  saveSession(sessionId, sessionContext);
+  const q = buildLowSignalClarificationQuestion("", "");
+  return endInteraction(
+    interactionRef,
+    { type: "question", message: q },
+    {
+      decision: {
+        action: "clarification",
+        flowId: null,
+        missingSlot: "intent_level",
+        loopBreaker: true
+      },
+      outputType: "question",
+      slotCorrectionTelemetry: {
+        slotCorrectionApplied: true,
+        slotCorrectionReason: "loop_breaker",
+        slotChanges: [],
+        pendingQuestionBefore: null,
+        pendingQuestionAfter: { ...sessionContext.pendingQuestion }
+      },
+      slots: sessionContext.slots || {}
+    }
+  );
 }
 
 const NON_CLEANING_GREETINGS = ["salut", "salutare", "buna", "hello"];
@@ -4124,10 +5031,16 @@ function messageIncludesAny(text, terms) {
   return terms.some(term => text.includes(term));
 }
 
-function shouldResetForNonCleaningMessage(message) {
+function shouldResetForNonCleaningMessage(message, intentCore) {
   const text = normalizeMessageText(message);
 
   if (!text) {
+    return false;
+  }
+
+  const core = intentCore != null ? String(intentCore).trim() : "";
+  const hl = core ? inferHighLevelIntent(core) : "unknown";
+  if (hl === "product_search" || hl === "product_guidance") {
     return false;
   }
 
@@ -4148,7 +5061,7 @@ function getNonCleaningDomainReply(message) {
   const text = normalizeMessageText(message);
 
   if (messageIncludesAny(text, NON_CLEANING_DISCOUNT)) {
-    return "Nu am un cod de reducere activ in acest moment, dar te pot ajuta cu recomandari potrivite pentru ce vrei sa cureti.";
+    return "Cauti cod/campanie sau discount la un produs anume? Daca vrei recomandari de detailing, spune-mi interior sau exterior si ce zona vrei sa tratezi.";
   }
 
   if (messageIncludesAny(text, NON_CLEANING_SMALL_TALK)) {
@@ -4193,7 +5106,14 @@ const SINGLE_TOKEN_SLOT_VALUES = {
     geam: "glass",
     geamuri: "glass",
     sticla: "glass",
-    bancheta: "scaun"
+    bancheta: "scaun",
+    vopsea: "caroserie",
+    vopseaua: "caroserie",
+    caroserie: "caroserie",
+    caroseria: "caroserie",
+    lac: "caroserie",
+    paint: "caroserie",
+    clearcoat: "caroserie"
   }
 };
 
@@ -4218,26 +5138,36 @@ function getSingleTokenBindingForPendingQuestion(message, pendingQuestion) {
   }
 
   const token = extractSingleToken(message);
-  if (!token) {
-    return null;
-  }
-
   const mapForSlot = SINGLE_TOKEN_SLOT_VALUES[pending.slot] || null;
-  if (!mapForSlot || !Object.prototype.hasOwnProperty.call(mapForSlot, token)) {
-    return null;
-  }
 
   if (pending.slot === "surface") {
+    if (!token || !mapForSlot || !Object.prototype.hasOwnProperty.call(mapForSlot, token)) {
+      return null;
+    }
     const surfaceVal = mapForSlot[token];
     logSurfaceNormalized(token, surfaceVal);
     return { slot: "surface", value: surfaceVal };
   }
 
   if (pending.slot === "object") {
-    return { slot: "object", value: mapForSlot[token] };
+    if (token && mapForSlot && Object.prototype.hasOwnProperty.call(mapForSlot, token)) {
+      return { slot: "object", value: mapForSlot[token] };
+    }
+    const glassObj = resolveGlassObjectFromPendingAnswer(message);
+    if (glassObj) {
+      return { slot: "object", value: glassObj };
+    }
+    return null;
   }
 
-  return { slot: "context", value: mapForSlot[token] };
+  if (pending.slot === "context") {
+    if (!token || !mapForSlot || !Object.prototype.hasOwnProperty.call(mapForSlot, token)) {
+      return null;
+    }
+    return { slot: "context", value: mapForSlot[token] };
+  }
+
+  return null;
 }
 
 function hasStrongSlots(slots) {
@@ -4283,7 +5213,19 @@ function isKnownCleaningEntry(message) {
     "geam",
     "vopsea",
     "piele",
-    "textil"
+    "textil",
+    "polish",
+    "prosop",
+    "spuma activa",
+    "spumă activă",
+    "taler",
+    "carbuni",
+    "cărbuni",
+    "microfibra",
+    "microfibră",
+    "sampon",
+    "șampon",
+    "extractor"
   ].some(keyword => msg.includes(keyword));
 }
 
@@ -4309,7 +5251,7 @@ function resolveAction({
       slots: safeSlots
     });
     return {
-      action: "knowledge",
+      action: "safety",
       flowId: null,
       missingSlot: null
     };
@@ -4552,6 +5494,46 @@ function normalizeMessage(message) {
   return msg;
 }
 
+function shouldSkipProductIntentOverride(sessionContext) {
+  const p = sessionContext?.pendingQuestion;
+  if (!p || !p.slot) return false;
+  return ["context", "surface", "object"].includes(String(p.slot));
+}
+
+function applyIntentHeuristicToQueryType(interactionRef, queryType, intentCore, sessionContext) {
+  if (queryType === "safety") return queryType;
+  if (shouldSkipProductIntentOverride(sessionContext)) return queryType;
+  if (isInformationalKnowledgeShape(intentCore)) return queryType;
+
+  const hl = inferHighLevelIntent(intentCore);
+  if (hl !== "product_search" && hl !== "product_guidance") return queryType;
+
+  let next = queryType;
+  let reason = null;
+  if (queryType === "informational") {
+    if (hl === "product_search") {
+      next = "selection";
+      reason = "verb_noun_or_noun_only";
+    } else if (hl === "product_guidance") {
+      next = "procedural";
+      reason = "procedural_how_to_shape";
+    }
+  }
+
+  if (next !== queryType) {
+    const prevTelem = interactionRef.intentRoutingTelemetry || {};
+    interactionRef.intentRoutingTelemetry = {
+      ...prevTelem,
+      intentHeuristicOverrideApplied: true,
+      intentHeuristicOverrideFrom: queryType,
+      intentHeuristicOverrideTo: next,
+      intentHeuristicReason: reason
+    };
+    logInfo("INTENT_HEURISTIC_OVERRIDE", interactionRef.intentRoutingTelemetry);
+  }
+  return next;
+}
+
 /**
  * P1 - BASIC SAFETY: Profanity/insult detection (minimal list)
  * Returns true if message violates safety, false otherwise. No complex NLP upgrades.
@@ -4560,15 +5542,6 @@ const PROFANITY_INSULT_LIST = [
   "prost", "idiot", "imbecil", "dobitoc", "nenorocit",
   "dracu", "naiba", "dute dracu", "dute in p",
   "muie", "fut", "cacat", "cocaini", "pizda", "pula"
-];
-
-const SAFETY_PHRASE_PATTERNS = [
-  "pot folosi",
-  "pot sa folosesc",
-  "este sigur",
-  "e sigur",
-  "safe pe",
-  "sigur pe"
 ];
 
 function isSafetyViolation(message) {
@@ -4580,15 +5553,6 @@ function isSafetyViolation(message) {
   return /(\b(fut|pula|pizda|muie|cacat|dracu|naiba)\b)/i.test(text);
 }
 
-function isSafetyEntryMessage(message) {
-  const msg = String(message || "").toLowerCase();
-  if (isSafetyQuery(msg)) {
-    return true;
-  }
-
-  return SAFETY_PHRASE_PATTERNS.some(pattern => msg.includes(pattern));
-}
-
 function getSafetyViolationReply() {
   return "Te pot ajuta cu intrebari legate de curatarea masinii sau produse.";
 }
@@ -4596,20 +5560,34 @@ function getSafetyViolationReply() {
 /**
  * ROUTING PURITY: Detect knowledge-style questions that should NOT enter procedural slot-filling
  * Examples: "cat dureaza...", "cum...", "ce este...", "de ce...", etc.
+ * Uses greeting-stripped intent core so "Salut! Vreau polish" is not treated as knowledge.
  */
-function isKnowledgeQuestion(message) {
-  const text = String(message || "").toLowerCase().trim();
+function isKnowledgeQuestion(message, intentCore) {
+  const slang = applySlangNormalize(normalizeMessage(message));
+  const { text: stripped } = stripGreetingAndFillers(slang);
+  const core = intentCore != null && String(intentCore).trim() !== ""
+    ? String(intentCore).toLowerCase().trim()
+    : (stripped || slang).toLowerCase().trim();
+
+  if (isProceduralHowTo(core)) {
+    return false;
+  }
+  if (!isInformationalKnowledgeShape(core) && inferHighLevelIntent(core) === "product_search") {
+    return false;
+  }
+
+  const text = core;
   const knowledgePatterns = [
-    /^cat\s+(dureaza|cost|e|este)/,  // cat dureaza? cat e?
-    /^cum\s+/,                        // cum se curata? cum...?
-    /^ce\s+(este|e)\s+/,             // ce este acesta? ce e...?
-    /^de\s+ce/,                       // de ce?
-    /^care\s+(e|este)/,               // care e diferenta?
-    /^care\s+sunt\s+/,               // care sunt avantajele?
-    /^ce\s+diferenta/,                // ce diferenta?
-    /^ce\s+se\s+intampla/,            // ce se intampla?
-    /^cum\s+se\s+curata/,             // cum se curata?
-    /^care\s+(sunt|e|este)\s+diferentele/, // care sunt diferentele?
+    /^cat\s+(dureaza|cost|e|este)/, // cat dureaza? cat e?
+    /^cum\s+/, // cum se curata? cum...?
+    /^ce\s+(este|e)\s+/, // ce este acesta? ce e...?
+    /^de\s+ce/, // de ce?
+    /^care\s+(e|este)/, // care e diferenta?
+    /^care\s+sunt\s+/, // care sunt avantajele?
+    /^ce\s+diferenta/, // ce diferenta?
+    /^ce\s+se\s+intampla/, // ce se intampla?
+    /^cum\s+se\s+curata/, // cum se curata?
+    /^care\s+(sunt|e|este)\s+diferentele/ // care sunt diferentele?
   ];
   return knowledgePatterns.some(pattern => pattern.test(text));
 }
@@ -4666,69 +5644,6 @@ function createCanonicalRoutingDecision({
     missingSlot,
     pendingSelectionState
   };
-}
-
-/**
- * ROUTING PURITY: Detect explicit context from message before any defaults
- * Prevents procedural defaults from overriding explicit interior/exterior intent
- * Returns: "interior", "exterior", or null (if ambiguous or not detected)
- */
-function detectExplicitContext(message) {
-  const s = String(message || "").toLowerCase();
-  
-  const hasInterior =
-    s.includes("interior") || 
-    s.includes("interioara") || 
-    s.includes("interioare") || 
-    s.includes("in interior");
-  
-  const hasExterior =
-    s.includes("exterior") || 
-    s.includes("exterioara") || 
-    s.includes("exterioare") || 
-    s.includes("in exterior");
-  
-  // Clear winner: only interior keywords found
-  if (hasInterior && !hasExterior) return "interior";
-  
-  // Clear winner: only exterior keywords found
-  if (hasExterior && !hasInterior) return "exterior";
-  
-  // Ambiguous (both found) or neither found
-  return null;
-}
-
-function detectStrongContextOverride(message) {
-  const text = String(message || "").toLowerCase();
-
-  if (text.includes("jante")) {
-    return {
-      context: "exterior",
-      object: "jante",
-      surface: "wheels",
-      reason: "strong_keyword_jante"
-    };
-  }
-
-  if (text.includes("bord")) {
-    return {
-      context: "interior",
-      object: null,
-      surface: null,
-      reason: "strong_keyword_bord"
-    };
-  }
-
-  if (text.includes("scaun")) {
-    return {
-      context: "interior",
-      object: null,
-      surface: null,
-      reason: "strong_keyword_scaun"
-    };
-  }
-
-  return null;
 }
 
 function isWheelsObjectLike(slots) {
@@ -4804,7 +5719,7 @@ function validateCombination(context, object, surface) {
 
   // 3. Surface unknown + object implies exactly one surface → infer silently
   const effectiveSurface = surface || null;
-  if (!effectiveSurface && rule.allowedSurfaces.length === 1) {
+  if (!effectiveSurface && rule.allowedSurfaces.length === 1 && object !== "caroserie") {
     correctedSlots.surface = rule.allowedSurfaces[0];
     if (!reasonCode) reasonCode = "OBJ_INFERRED_SURFACE";
   }
@@ -4891,6 +5806,162 @@ function getIntentConfidenceValue(confidence) {
 }
 
 /**
+ * Option A safety trust: answer-first deterministic path, max one clarification, no product push.
+ */
+function buildSafetyTelemetry(payload) {
+  return {
+    safetyGateTriggered: payload.safetyGateTriggered,
+    safetyReason: payload.safetyReason,
+    missingCriticalField: payload.missingCriticalField ?? null,
+    safetyAnswerType: payload.safetyAnswerType ?? null,
+    askedClarification: payload.askedClarification,
+    blockedProductRouting: payload.blockedProductRouting
+  };
+}
+
+function handleSafetyTrustTurn({
+  userMessage,
+  routingMessage,
+  sessionContext,
+  sessionId
+}) {
+  const trust = sessionContext.safetyTrust && typeof sessionContext.safetyTrust === "object"
+    ? sessionContext.safetyTrust
+    : {};
+  const awaitingClarification = Boolean(trust.active && trust.clarificationAsked);
+
+  let analysis = analyzeSafetyQuery(routingMessage);
+  let answerContextMessage = routingMessage;
+
+  if (awaitingClarification && trust.anchorRouting) {
+    const merged = `${trust.anchorRouting} ${routingMessage}`.trim();
+    const mergedAnalysis = analyzeSafetyQuery(merged);
+    if (mergedAnalysis.triggered) {
+      analysis = mergedAnalysis;
+      answerContextMessage = merged;
+    }
+  }
+
+  if (!analysis.triggered && !awaitingClarification) {
+    return null;
+  }
+
+  if (!analysis.triggered && awaitingClarification) {
+    sessionContext.safetyTrust = { active: false, clarificationAsked: false, missingField: null, anchorRouting: null };
+    saveSession(sessionId, sessionContext);
+    const text = conservativeFollowUpReply();
+    const telem = {
+      safetyGateTriggered: true,
+      safetyReason: "safety_thread_conservative_followup",
+      missingCriticalField: null,
+      safetyAnswerType: "depends",
+      askedClarification: false,
+      blockedProductRouting: true
+    };
+    logSafetyFields(telem);
+    return {
+      result: { type: "reply", reply: text, message: text, products: [] },
+      patch: {
+        intentType: "product_guidance",
+        decision: { action: "safety", flowId: null, missingSlot: null },
+        outputType: "reply",
+        products: [],
+        safetyTelemetry: buildSafetyTelemetry(telem)
+      }
+    };
+  }
+
+  sessionContext.slots = {};
+  sessionContext.pendingQuestion = null;
+  clearPendingClarificationSlots(sessionContext);
+  sessionContext.state = "IDLE";
+  delete sessionContext.pendingSelection;
+  delete sessionContext.pendingSelectionMissingSlot;
+  sessionContext.originalIntent = null;
+  sessionContext.tags = [];
+
+  if (analysis.missingCriticalField && !trust.clarificationAsked) {
+    const q =
+      CLARIFICATION_BY_FIELD[analysis.missingCriticalField] ||
+      CLARIFICATION_BY_FIELD.surface_material;
+    sessionContext.safetyTrust = {
+      active: true,
+      clarificationAsked: true,
+      missingField: analysis.missingCriticalField,
+      anchorRouting: routingMessage
+    };
+    saveSession(sessionId, sessionContext);
+    const telemAsk = {
+      safetyGateTriggered: true,
+      safetyReason: analysis.reason,
+      missingCriticalField: analysis.missingCriticalField,
+      safetyAnswerType: null,
+      askedClarification: true,
+      blockedProductRouting: true
+    };
+    logSafetyFields(telemAsk);
+    return {
+      result: { type: "reply", reply: q, message: q, products: [] },
+      patch: {
+        intentType: "product_guidance",
+        decision: { action: "safety", flowId: null, missingSlot: null },
+        outputType: "reply",
+        products: [],
+        safetyTelemetry: buildSafetyTelemetry(telemAsk)
+      }
+    };
+  }
+
+  if (analysis.missingCriticalField && trust.clarificationAsked) {
+    const text = conservativeFollowUpReply();
+    sessionContext.safetyTrust = { active: false, clarificationAsked: false, missingField: null, anchorRouting: null };
+    saveSession(sessionId, sessionContext);
+    const telemSecond = {
+      safetyGateTriggered: true,
+      safetyReason: "safety_second_turn_conservative",
+      missingCriticalField: analysis.missingCriticalField,
+      safetyAnswerType: "depends",
+      askedClarification: false,
+      blockedProductRouting: true
+    };
+    logSafetyFields(telemSecond);
+    return {
+      result: { type: "reply", reply: text, message: text, products: [] },
+      patch: {
+        intentType: "product_guidance",
+        decision: { action: "safety", flowId: null, missingSlot: null },
+        outputType: "reply",
+        products: [],
+        safetyTelemetry: buildSafetyTelemetry(telemSecond)
+      }
+    };
+  }
+
+  const text = buildSafetyAnswerText(answerContextMessage, analysis);
+  sessionContext.safetyTrust = { active: false, clarificationAsked: false, missingField: null, anchorRouting: null };
+  saveSession(sessionId, sessionContext);
+  const telemAns = {
+    safetyGateTriggered: true,
+    safetyReason: analysis.reason,
+    missingCriticalField: null,
+    safetyAnswerType: analysis.safetyAnswerType || "depends",
+    askedClarification: false,
+    blockedProductRouting: true
+  };
+  logSafetyFields(telemAns);
+  return {
+    result: { type: "reply", reply: text, message: text, products: [] },
+    patch: {
+      intentType: "product_guidance",
+      decision: { action: "safety", flowId: null, missingSlot: null },
+      outputType: "reply",
+      products: [],
+      safetyTelemetry: buildSafetyTelemetry(telemAns)
+    }
+  };
+}
+
+/**
  * Main chat handler
  * New flow: Session → Intent → Context → Decision → [Guide Flow | Normal Flow]
  * Prioritizes session continuity and intelligent decision making
@@ -4904,6 +5975,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
   }
 
   let userMessage = message;
+  const chipSelectionValue =
+    typeof message === "object" && message != null
+      ? message.chipSelection ?? message.chipValue ?? message.value ?? message.uiSelection ?? null
+      : null;
 
   if (typeof message === "object" && message.message) {
     userMessage = message.message;
@@ -4924,6 +5999,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     });
   }
 
+  const slangRouting = applySlangNormalize(routingMessage);
+  const stripIntentResult = stripGreetingAndFillers(slangRouting);
+  const intentCore =
+    stripIntentResult.text.length > 0 ? stripIntentResult.text : slangRouting;
+  const preprocessStrippedGreeting = stripIntentResult.strippedGreeting;
+
   if (!Array.isArray(products) || products.length === 0) {
     products = Array.isArray(fallbackProductsCatalog) ? fallbackProductsCatalog : [];
   }
@@ -4938,6 +6019,22 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
   let interactionRef = null;
 
+  const traceId = loggingV2.createTraceId({ sessionId });
+  const requestId =
+    typeof message === "object" && message != null && message.requestId != null
+      ? String(message.requestId)
+      : null;
+
+  return runSessionExclusive(sessionId, async () => {
+  return loggingV2.runWithTraceContext(
+    {
+      traceId,
+      sessionId,
+      clientId: String(clientId ?? ""),
+      requestId,
+      service: "chatService"
+    },
+    async () => {
   try {
     let sessionContext = getSession(sessionId);
     const clarificationPendingAtEntry =
@@ -4951,7 +6048,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     });
 
     interactionRef = {
-      timestamp: new Date().toISOString(),
+      timestamp: getNowIso(),
+      traceId,
       sessionId,
       message: userMessage,
       queryType: null,
@@ -4960,8 +6058,29 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       slots: null,
       decision: { action: null, flowId: null, missingSlot: null },
       feedback: extractFeedback(typeof message === "object" ? message : null),
-      productsCatalog: products
+      productsCatalog: products,
+      safetyTelemetry: null,
+      knowledgeTelemetry: null,
+      lowSignalTelemetry: null,
+      slotCorrectionTelemetry: null,
+      clarificationEscalationTelemetry: null,
+      contextInferenceTelemetry: null,
+      intentRoutingTelemetry: {
+        preprocessStrippedGreeting,
+        intentHeuristicOverrideApplied: false,
+        intentHeuristicOverrideFrom: null,
+        intentHeuristicOverrideTo: null,
+        intentHeuristicReason: null
+      }
     };
+
+    loggingV2.emitTurnStart({
+      messageLen: userMessage.length,
+      ...(loggingV2.DEBUG_V2 ? { messagePreview: userMessage } : {})
+    });
+    loggingV2.startRoutingStage();
+
+    let handledPendingQuestionAnswerEarly = false;
 
     const previousAction = String(sessionContext?.previousAction || sessionContext?.activeIntent || "").toLowerCase().trim() || null;
     const messageTopicHint = getTopicHintFromMessage(userMessage);
@@ -4975,9 +6094,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     // P0 - SAFETY + ABUSE ENTRY: must run before normal intent/tagging/routing
     if (isSafetyViolation(routingMessage)) {
+      const pendingBeforeAbuse = sessionContext?.pendingQuestion
+        ? { ...sessionContext.pendingQuestion }
+        : null;
       logInfo("SAFETY_VIOLATION_DETECTED", {
         message: userMessage,
-        normalizedMessage: routingMessage
+        normalizedMessage: routingMessage,
+        abuseResetTriggered: true,
+        hadPendingQuestion: Boolean(sessionContext?.pendingQuestion)
       });
       sessionContext = resetSessionAfterAbuse(sessionContext, sessionId);
 
@@ -4987,39 +6111,20 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }, {
         slots: {},
         decision: { action: "safety", flowId: null, missingSlot: null, safetyViolation: true, abuseReset: true },
-        outputType: "reply"
-      });
-    }
-
-    if (isSafetyEntryMessage(userMessage)) {
-      interactionRef.queryType = "safety";
-      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
-      const compat = isCompatibilitySafetyQuery(userMessage);
-      if (compat) {
-        const cmsg = String(userMessage || "").toLowerCase();
-        logInfo("COMPATIBILITY_ROUTE", {
-          selected: true,
-          productSignal: cmsg.includes("apc") ? "apc" : "other",
-          materialSignal: ["piele", "textil", "textile", "plastic", "alcantara"].find(m => cmsg.includes(m)) || null
-        });
-      }
-      const safetyReply = compat
-        ? getCompatibilitySafetyReply(userMessage)
-        : "Este o intrebare buna de siguranta. Spune-mi materialul si produsul, iar eu iti spun dilutia/utilizarea corecta.";
-
-      return endInteraction(interactionRef, {
-        type: "reply",
-        message: safetyReply
-      }, {
-        slots: extractSlotsForSafetyQuery(userMessage),
-        decision: { action: "safety", flowId: null, missingSlot: null },
-        outputType: "reply"
+        outputType: "reply",
+        slotCorrectionTelemetry: {
+          slotCorrectionApplied: true,
+          slotCorrectionReason: "abuse_reset",
+          slotChanges: [],
+          pendingQuestionBefore: pendingBeforeAbuse,
+          pendingQuestionAfter: null
+        }
       });
     }
 
     // Non-cleaning interrupts (discount, greetings, etc.) clear procedural/clarification state
     // even mid–slot collection so users can escape clarification loops.
-    if (shouldResetForNonCleaningMessage(userMessage)) {
+    if (shouldResetForNonCleaningMessage(userMessage, intentCore)) {
       sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
 
       return endInteraction(interactionRef, {
@@ -5032,36 +6137,147 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    const lowSignalIntent = clarificationPendingAtEntry ? null : detectIntent(routingMessage, sessionId);
-    const lowSignalConfidence = clarificationPendingAtEntry
-      ? 1
-      : getIntentConfidenceValue(
-          typeof lowSignalIntent === "string" ? null : lowSignalIntent?.confidence
-        );
-    const lowSignalSlots = extractSlotsFromMessage(userMessage);
+    if (
+      sessionContext?.pendingQuestion?.slot === "intent_level" &&
+      sessionContext?.pendingQuestion?.source === "low_signal"
+    ) {
+      const earlySlots = extractSlotsFromMessage(userMessage);
+      if (
+        hasStrongSlots(earlySlots) ||
+        isKnownCleaningEntry(userMessage) ||
+        detectExplicitContext(userMessage)
+      ) {
+        sessionContext.pendingQuestion = null;
+        sessionContext.state = "IDLE";
+        clearPendingClarificationSlots(sessionContext);
+        saveSession(sessionId, sessionContext);
+        logInfo("LOW_SIGNAL_TRACE", {
+          branch: "intent_level_cleared_strong_followup",
+          message: userMessage
+        });
+      }
+    }
 
-    if (!clarificationPendingAtEntry && isLowSignal(userMessage, lowSignalConfidence) && !hasStrongSlots(lowSignalSlots)) {
+    const lowSignalIntent = clarificationPendingAtEntry ? null : detectIntent(intentCore, sessionId);
+    const lowSignalSlots = extractSlotsFromMessage(userMessage);
+    rememberLastNonNullSlots(sessionContext, lowSignalSlots);
+
+    const lowSignalNormalized = normalizeLowSignalText(intentCore);
+    let lowSignalCheck = !clarificationPendingAtEntry
+      ? isLowSignalMessage(
+          userMessage,
+          lowSignalNormalized,
+          lowSignalIntent,
+          lowSignalSlots,
+          Array.isArray(sessionContext?.tags) ? sessionContext.tags : []
+        )
+      : { lowSignal: false, reason: "pending_session" };
+
+    const lowSignalTelemetryFirst = {
+      lowSignalDetected: Boolean(lowSignalCheck.lowSignal),
+      lowSignalReason: lowSignalCheck.reason,
+      lowSignalRecoveryApplied: Boolean(lowSignalCheck.lowSignal),
+      lowSignalQuestionType: "intent_level"
+    };
+
+    const safetyAwaitingFollowUp = Boolean(
+      sessionContext?.safetyTrust?.active &&
+        sessionContext?.safetyTrust?.clarificationAsked
+    );
+
+    const selectionFollowupLowSignalBypass = selectionFollowupBypassesLowSignalIntentLevel(
+      userMessage,
+      sessionContext
+    );
+    if (
+      selectionFollowupLowSignalBypass &&
+      lowSignalCheck.lowSignal &&
+      isSelectionFollowupMessage(userMessage) &&
+      hasCarryoverSelectionContext(sessionContext)
+    ) {
+      logInfo("LOW_SIGNAL_BYPASSED_FOLLOWUP", {
+        reason: lowSignalCheck.reason,
+        legacyShape: Boolean(isLegacySelectionFollowupShape(userMessage)),
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
+    // If bypass is satisfied, do not let the "low-signal" early-exit fire.
+    // We want normal routing to compute a real decision, with selection context hydration applied later.
+    if (selectionFollowupLowSignalBypass && lowSignalCheck.lowSignal) {
+      lowSignalCheck = { lowSignal: false, reason: "selection_followup_bypass" };
+      lowSignalTelemetryFirst.lowSignalDetected = false;
+      lowSignalTelemetryFirst.lowSignalReason = "selection_followup_bypass";
+      lowSignalTelemetryFirst.lowSignalRecoveryApplied = true;
+      logInfo("LOW_SIGNAL_TRACE", {
+        branch: "bypass_disables_low_signal",
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
+    if (
+      !clarificationPendingAtEntry &&
+      !safetyAwaitingFollowUp &&
+      !selectionFollowupLowSignalBypass &&
+      lowSignalCheck.lowSignal &&
+      !hasStrongSlots(lowSignalSlots)
+    ) {
       sessionContext.slots = {};
       sessionContext.state = "IDLE";
-      sessionContext.pendingQuestion = null;
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+        slot: "intent_level",
+        source: "low_signal",
+        type: "intent_level"
+      });
       sessionContext.originalIntent = null;
+      sessionContext.pendingSelection = false;
+      clearPendingClarificationSlots(sessionContext);
       saveSession(sessionId, sessionContext);
+      interactionRef.lowSignalTelemetry = lowSignalTelemetryFirst;
       logInfo("LOW_SIGNAL_INPUT", {
         message: userMessage,
-        confidence: lowSignalConfidence
+        reason: lowSignalCheck.reason,
+        lowSignalDetected: true,
+        lowSignalQuestionType: "intent_level"
+      });
+      logInfo("LOW_SIGNAL_TRACE", {
+        branch: "emit_intent_level",
+        ...lowSignalTelemetryFirst
       });
 
-      return endInteraction(interactionRef, {
-        type: "question",
-        message: "Te pot ajuta cu interior sau exterior? Sau imi poti spune ce vrei sa cureti?"
-      }, {
-        decision: {
-          action: "clarification",
-          flowId: null,
-          missingSlot: "context"
+      const lowSignalQuestion = buildLowSignalClarificationQuestion(
+        userMessage,
+        lowSignalNormalized
+      );
+
+      // Invariant: low-signal early-exit must never return a null/undefined decision.action.
+      const lowSignalDecision = {
+        action: "clarification",
+        flowId: null,
+        missingSlot: "intent_level"
+      };
+      if (!lowSignalDecision.action) {
+        logInfo("LOW_SIGNAL_EARLYEXIT_DECISION_FIXED", {
+          originalDecision: lowSignalDecision,
+          forcedMissingSlot: "intent_level"
+        });
+        lowSignalDecision.action = "clarification";
+        lowSignalDecision.missingSlot = "intent_level";
+      }
+
+      return endInteraction(
+        interactionRef,
+        {
+          type: "question",
+          message: lowSignalQuestion
         },
-        outputType: "question"
-      });
+        {
+          decision: lowSignalDecision,
+          outputType: "question",
+          lowSignalTelemetry: interactionRef.lowSignalTelemetry,
+          slots: sessionContext.slots || {}
+        }
+      );
     }
 
     const interrupt = detectInterrupt(userMessage);
@@ -5103,9 +6319,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       };
     }
     sessionContext.intentFlags = sessionContext.intentFlags || {};
-    const isBugIntent =
-      userMessage.toLowerCase().includes("insect") ||
-      userMessage.toLowerCase().includes("insecte");
+    const isBugIntent = hasExplicitInsectSignal(userMessage);
 
     if (isBugIntent) {
       sessionContext.intentFlags.bug = true;
@@ -5117,15 +6331,20 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const needsStateContinuation =
       String(previousState || "").startsWith("NEEDS_") &&
       sessionContext?.pendingClarification?.active === true;
-    const pendingClarificationActive =
+    let pendingClarificationActive =
       Boolean(sessionContext?.pendingQuestion) || needsStateContinuation;
-    const isFollowUp =
-      isFollowUpMessage(userMessage) ||
-      (sessionContext.state && sessionContext.state !== "IDLE") ||
-      sessionContext.pendingQuestion;
+    const pendingIntentLevelLowSignal =
+      sessionContext?.pendingQuestion?.slot === "intent_level" &&
+      sessionContext?.pendingQuestion?.source === "low_signal";
+    let pendingSlotClarificationActive =
+      pendingClarificationActive && !pendingIntentLevelLowSignal;
+    const hadPendingSlotClarificationAtStart = pendingSlotClarificationActive;
 
     let didContextResetForLocale = false;
-    if (!pendingClarificationActive && shouldHardResetForNewRootQuery(userMessage, sessionContext)) {
+    if (
+      !pendingSlotClarificationActive &&
+      shouldHardResetForNewRootQuery(userMessage, sessionContext)
+    ) {
       didContextResetForLocale = true;
       sessionContext.slots = {};
       sessionContext.pendingQuestion = null;
@@ -5135,6 +6354,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.state = "IDLE";
       sessionContext.originalIntent = null;
       sessionContext.intentFlags = {};
+      delete sessionContext.selectionFollowupCarryover;
       console.log("CONTEXT_RESET", {
         triggered: true,
         reason: "new_root_query"
@@ -5209,6 +6429,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         type: "question",
         message: "Hai să clarificăm. Ce vrei exact să faci?"
       }, {
+        decision: { action: "clarification", flowId: null, missingSlot: "intent_level" },
         outputType: "question"
       });
     }
@@ -5254,8 +6475,169 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     selectionEscalation = escalationCheck.escalate === true;
     selectionEscalationTrigger = escalationCheck.matchedTrigger;
 
+    const safetyRoutingSnapshot = analyzeSafetyQuery(routingMessage);
+    const safetyAwaitingClarification = Boolean(
+      sessionContext.safetyTrust?.active && sessionContext.safetyTrust?.clarificationAsked
+    );
+    const safetyForcesRouting =
+      safetyRoutingSnapshot.triggered || safetyAwaitingClarification;
+
+    if (pendingIntentLevelLowSignal && !safetyForcesRouting) {
+      const norm = normalizeLowSignalText(intentCore);
+      const followUpIntent = detectIntent(intentCore, sessionId);
+      const followUpSlots = extractSlotsFromMessage(userMessage);
+      const lsAgain = isLowSignalMessage(
+        userMessage,
+        norm,
+        followUpIntent,
+        followUpSlots,
+        Array.isArray(sessionContext?.tags) ? sessionContext.tags : []
+      );
+      if (matchesInformationalBypass(userMessage, norm)) {
+        sessionContext.pendingQuestion = null;
+        saveSession(sessionId, sessionContext);
+        pendingClarificationActive =
+          Boolean(sessionContext?.pendingQuestion) || needsStateContinuation;
+        pendingSlotClarificationActive =
+          pendingClarificationActive &&
+          !(
+            sessionContext?.pendingQuestion?.slot === "intent_level" &&
+            sessionContext?.pendingQuestion?.source === "low_signal"
+          );
+        handledPendingQuestionAnswerEarly = true;
+        interactionRef.lowSignalTelemetry = {
+          lowSignalDetected: false,
+          lowSignalReason: "informational_bypass_after_intent_level",
+          lowSignalRecoveryApplied: true,
+          lowSignalQuestionType: "intent_level"
+        };
+        logInfo("LOW_SIGNAL_TRACE", {
+          branch: "informational_bypass_pending_cleared",
+          ...interactionRef.lowSignalTelemetry
+        });
+      } else {
+        const route = classifyIntentLevelReply(userMessage, norm);
+        const parsedSlots = normalizeSlots(
+          applyObjectSlotInference(extractSlotsFromMessage(userMessage))
+        );
+        const hasSlotSignal = Boolean(
+          parsedSlots.object || parsedSlots.context || parsedSlots.surface
+        );
+        let resolvedIntentLevel = false;
+        if (route.kind === "procedural") {
+          sessionContext.pendingQuestion = null;
+          sessionContext.originalIntent = "product_guidance";
+          sessionContext.pendingSelection = false;
+          resolvedIntentLevel = true;
+        } else if (route.kind === "selection") {
+          sessionContext.pendingQuestion = null;
+          sessionContext.originalIntent = "selection";
+          sessionContext.pendingSelection = true;
+          if (!hasSlotSignal) {
+            const seeded = seedSelectionSlotsFromRecentMemory(sessionContext);
+            if (seeded.applied) {
+              logInfo("INTENT_LEVEL_SELECTION_CONTEXT_SEEDED", {
+                source: seeded.source,
+                slots: seeded.slots
+              });
+            }
+          }
+          resolvedIntentLevel = true;
+        } else if (hasSlotSignal) {
+          sessionContext.pendingQuestion = null;
+          sessionContext.slots = mergeSlots(sessionContext.slots || {}, parsedSlots);
+          resolvedIntentLevel = true;
+        }
+        if (resolvedIntentLevel) {
+          handledPendingQuestionAnswerEarly = true;
+          saveSession(sessionId, sessionContext);
+          pendingClarificationActive =
+            Boolean(sessionContext?.pendingQuestion) || needsStateContinuation;
+          pendingSlotClarificationActive =
+            pendingClarificationActive &&
+            !(
+              sessionContext?.pendingQuestion?.slot === "intent_level" &&
+              sessionContext?.pendingQuestion?.source === "low_signal"
+            );
+          interactionRef.lowSignalTelemetry = {
+            lowSignalDetected: false,
+            lowSignalReason: "intent_level_resolved",
+            lowSignalRecoveryApplied: true,
+            lowSignalQuestionType: "intent_level"
+          };
+          logInfo("LOW_SIGNAL_TRACE", {
+            branch: "intent_level_resolved",
+            ...interactionRef.lowSignalTelemetry
+          });
+        } else if (lsAgain.lowSignal) {
+          sessionContext.pendingQuestion = null;
+          clearPendingClarificationSlots(sessionContext);
+          saveSession(sessionId, sessionContext);
+          pendingClarificationActive =
+            Boolean(sessionContext?.pendingQuestion) || needsStateContinuation;
+          pendingSlotClarificationActive =
+            pendingClarificationActive &&
+            !(
+              sessionContext?.pendingQuestion?.slot === "intent_level" &&
+              sessionContext?.pendingQuestion?.source === "low_signal"
+            );
+          interactionRef.lowSignalTelemetry = {
+            lowSignalDetected: true,
+            lowSignalReason: lsAgain.reason,
+            lowSignalRecoveryApplied: true,
+            lowSignalQuestionType: "object_menu"
+          };
+          logInfo("LOW_SIGNAL_TRACE", {
+            branch: "object_menu",
+            ...interactionRef.lowSignalTelemetry
+          });
+          return endInteraction(
+            interactionRef,
+            { type: "question", message: buildLowSignalMenuPrompt() },
+            {
+              decision: {
+                action: "clarification",
+                flowId: null,
+                missingSlot: "intent_level"
+              },
+              outputType: "question",
+              lowSignalTelemetry: interactionRef.lowSignalTelemetry,
+              slots: sessionContext.slots || {}
+            }
+          );
+        } else if (pendingIntentLevelLowSignal) {
+          const replayQ = buildLowSignalClarificationQuestion(userMessage, norm);
+          saveSession(sessionId, sessionContext);
+          interactionRef.lowSignalTelemetry = {
+            lowSignalDetected: false,
+            lowSignalReason: "intent_level_repeat_prompt",
+            lowSignalRecoveryApplied: true,
+            lowSignalQuestionType: "intent_level"
+          };
+          logInfo("LOW_SIGNAL_TRACE", {
+            branch: "intent_level_repeat_prompt",
+            ...interactionRef.lowSignalTelemetry
+          });
+          return endInteraction(
+            interactionRef,
+            { type: "question", message: replayQ },
+            {
+              decision: {
+                action: "clarification",
+                flowId: null,
+                missingSlot: "intent_level"
+              },
+              outputType: "question",
+              lowSignalTelemetry: interactionRef.lowSignalTelemetry,
+              slots: sessionContext.slots || {}
+            }
+          );
+        }
+      }
+    }
+
     const isPendingSelectionContinuation = sessionContext?.pendingSelection === true;
-    let queryType = isPendingSelectionContinuation ? "selection" : detectQueryType(routingMessage);
+    let queryType = isPendingSelectionContinuation ? "selection" : detectQueryType(routingMessage, intentCore);
 
     // Preserve selection path across clarification turns
     const SELECTION_WAIT_STATES = ["NEEDS_CONTEXT", "NEEDS_OBJECT", "NEEDS_SURFACE"];
@@ -5272,7 +6654,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    if (pendingClarificationActive) {
+    // Follow-up bypass: treat as selection so routing computes a proper decision (no low-signal early-exit).
+    if (selectionFollowupLowSignalBypass && !pendingSlotClarificationActive) {
+      queryType = "selection";
+      logInfo("QUERY_TYPE_OVERRIDE", {
+        reason: "low_signal_followup_bypass",
+        pendingSelection: sessionContext?.pendingSelection === true,
+        hasCarryover: hasCarryoverSelectionContext(sessionContext),
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
+    if (pendingSlotClarificationActive) {
       const lockedToSelection = sessionContext?.pendingSelection === true || sessionContext?.originalIntent === "selection";
       queryType = lockedToSelection ? "selection" : "procedural";
       logInfo("PENDING_CLARIFICATION_BYPASS", {
@@ -5284,29 +6677,177 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    if (selectionEscalation && !pendingClarificationActive) {
+    if (selectionEscalation && !pendingSlotClarificationActive) {
       queryType = "selection";
     }
 
+    if (safetyRoutingSnapshot.triggered || safetyAwaitingClarification) {
+      queryType = "safety";
+      selectionEscalation = false;
+    } else if (!isPendingSelectionContinuation && !pendingSlotClarificationActive) {
+      queryType = applyIntentHeuristicToQueryType(interactionRef, queryType, intentCore, sessionContext);
+    }
+
     interactionRef.queryType = queryType;
+    loggingV2.endRoutingStage({ queryType });
+    loggingV2.startClarificationStage();
+
     const isSafetyEnforced = queryType === "safety";
-    logInfo("ROUTING", { queryType });
+    logInfo("ROUTING", {
+      queryType,
+      safetyGateTriggered: isSafetyEnforced,
+      blockedProductRouting: isSafetyEnforced,
+      safetyReason: isSafetyEnforced ? safetyRoutingSnapshot.reason || "safety_followup_thread" : null
+    });
 
     if (isSafetyEnforced) {
       logInfo("ENFORCED_SAFETY", { message: userMessage });
+      interactionRef.slots = {};
+      interactionRef.tags = [];
+      saveSession(sessionId, sessionContext);
+      const safetyTurn = handleSafetyTrustTurn({
+        userMessage,
+        routingMessage,
+        sessionContext,
+        sessionId
+      });
+      if (safetyTurn) {
+        return endInteraction(interactionRef, safetyTurn.result, safetyTurn.patch);
+      }
+    }
+
+    const wtLocale = normalizeResponseLocale(sessionContext.responseLocale || sessionContext.language || "ro");
+    const wheelTireAnalysis = analyzeWheelTireMessage(userMessage);
+    if (
+      wheelTireAnalysis.wheelTireIntent ||
+      wheelTireAnalysis.mixedCleanAndDress ||
+      wheelTireAnalysis.ambiguousWheelTarget
+    ) {
+      logInfo("WHEEL_TIRE_ROUTING", {
+        query: userMessage,
+        detectedKeywords: wheelTireAnalysis.detectedKeywords,
+        chosenIntent: wheelTireAnalysis.wheelTireIntent || null,
+        chosenSlots: {
+          object: wheelTireAnalysis.objectSlot || null,
+          context: "exterior",
+          surface: wheelTireAnalysis.objectSlot === "anvelope" ? "tires" : "wheels"
+        },
+        clarificationTriggered: false,
+        clarificationReason: null
+      });
+    }
+    const comboWheelTire = maybeWheelTireCombinedWorkflowReply(
+      userMessage,
+      wtLocale === "en" ? "en" : "ro"
+    );
+    if (comboWheelTire && !isSafetyEnforced) {
+      const wt = analyzeWheelTireMessage(userMessage);
+      interactionRef.intentRoutingTelemetry = {
+        ...(interactionRef.intentRoutingTelemetry || {}),
+        wheelTireTelemetry: { mode: "combo_workflow", ...wt }
+      };
+      return endInteraction(
+        interactionRef,
+        { type: "reply", reply: comboWheelTire, message: comboWheelTire },
+        {
+          decision: { action: "knowledge", flowId: null, missingSlot: null },
+          outputType: "reply",
+          intentRoutingTelemetry: { wheelTireComboWorkflow: true }
+        }
+      );
+    }
+
+    const wheelTireAmbiguous = maybeWheelTireAmbiguousProductClarification(userMessage);
+    if (wheelTireAmbiguous && !isSafetyEnforced) {
+      const hlAmb = inferHighLevelIntent(intentCore);
+      if (hlAmb === "product_search") {
+        const wtA = analyzeWheelTireMessage(userMessage);
+        logInfo("WHEEL_TIRE_ROUTING", {
+          query: userMessage,
+          detectedKeywords: wtA.detectedKeywords,
+          chosenIntent: wtA.wheelTireIntent || null,
+          chosenSlots: {
+            object: wtA.objectSlot || null,
+            context: "exterior",
+            surface: wtA.objectSlot === "anvelope" ? "tires" : "wheels"
+          },
+          clarificationTriggered: true,
+          clarificationReason: wtA.ambiguousWheelTarget ? "generic_roti_ambiguous" : "mixed_targets"
+        });
+        interactionRef.intentRoutingTelemetry = {
+          ...(interactionRef.intentRoutingTelemetry || {}),
+          wheelTireTelemetry: { mode: "ambiguous_product", ...wtA }
+        };
+        return endInteraction(
+          interactionRef,
+          { type: "question", message: wheelTireAmbiguous },
+          {
+            decision: { action: "clarification", flowId: null, missingSlot: "object" },
+            outputType: "question"
+          }
+        );
+      }
     }
 
     const hadPendingQuestionAtStart = Boolean(sessionContext?.pendingQuestion);
-    const hadPendingClarificationAtStart = pendingClarificationActive;
 
-    if (pendingClarificationActive) {
-      const prevSlots = { ...getPendingClarificationSlots(sessionContext) };
+    if (pendingSlotClarificationActive) {
+      const pendingSnap = getPendingClarificationSlots(sessionContext);
+      const prevSlots = {
+        context: pendingSnap.context ?? sessionContext.slots?.context ?? null,
+        surface: pendingSnap.surface ?? sessionContext.slots?.surface ?? null,
+        object: pendingSnap.object ?? sessionContext.slots?.object ?? null,
+        vehicleMake: pendingSnap.vehicleMake ?? sessionContext.slots?.vehicleMake ?? null,
+        vehicleModel: pendingSnap.vehicleModel ?? sessionContext.slots?.vehicleModel ?? null,
+        vehicleYear: pendingSnap.vehicleYear ?? sessionContext.slots?.vehicleYear ?? null
+      };
       const parsedSlots = normalizeSlots(applyObjectSlotInference(extractSlotsFromMessage(userMessage)));
-      const mergedSlots = mergePendingClarificationSlots(prevSlots, parsedSlots);
+      sessionContext.slotMeta = sessionContext.slotMeta || {
+        context: "unknown",
+        surface: "unknown",
+        object: "unknown"
+      };
+      const pendingQBefore = sessionContext.pendingQuestion
+        ? { ...sessionContext.pendingQuestion }
+        : null;
+
+      const corr = applyUserCorrection({
+        prevSlots,
+        newExtraction: parsedSlots,
+        pendingQuestion: sessionContext.pendingQuestion,
+        message: userMessage,
+        slotMeta: sessionContext.slotMeta
+      });
+
+      sessionContext.slotMeta = { ...sessionContext.slotMeta, ...corr.slotMeta };
+      const mergedSlots = corr.nextSlots;
       const nextMissingSlot = getMissingSlot(mergedSlots);
 
       setPendingClarificationSlots(sessionContext, mergedSlots);
-      sessionContext.slots = mergePendingClarificationSlots(sessionContext.slots || {}, mergedSlots);
+      sessionContext.slots = mergeSlots(sessionContext.slots || {}, mergedSlots);
+
+      if (corr.pendingCleared) {
+        sessionContext.pendingQuestion = null;
+      }
+
+      for (const u of corr.updates) {
+        if (u.stateTo === "confirmed") {
+          resetAskCountForSlot(sessionContext, u.slot);
+        }
+      }
+
+      if (corr.reason) {
+        interactionRef.slotCorrectionTelemetry = {
+          slotCorrectionApplied: true,
+          slotCorrectionReason: corr.reason,
+          slotChanges: corr.updates,
+          pendingQuestionBefore: pendingQBefore,
+          pendingQuestionAfter: sessionContext.pendingQuestion
+            ? { ...sessionContext.pendingQuestion }
+            : null
+        };
+        logInfo("SLOT_CORRECTION_APPLIED", interactionRef.slotCorrectionTelemetry);
+      }
 
       logInfo("CLARIFICATION_SLOT_PROGRESS", {
         prevSlots,
@@ -5314,14 +6855,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         mergedSlots,
         nextMissingSlot
       });
-      if (hadPendingClarificationAtStart && nextMissingSlot == null) {
+      if (hadPendingSlotClarificationAtStart && nextMissingSlot == null) {
         logInfo("CLARIFICATION_SATISFIED", {
           mergedSlots,
           responseLocale: sessionContext.responseLocale || sessionContext.language || null
         });
       }
 
-      const surfaceAssistEarly = tryConsumeSurfaceAssistTurn({
+      const surfaceAssistEarly = await tryConsumeSurfaceAssistTurn({
         sessionId,
         sessionContext,
         userMessage,
@@ -5347,6 +6888,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (singleTokenBinding) {
         sessionContext.slots[singleTokenBinding.slot] = singleTokenBinding.value;
         updated = true;
+        sessionContext.slotMeta = sessionContext.slotMeta || {
+          context: "unknown",
+          surface: "unknown",
+          object: "unknown"
+        };
+        sessionContext.slotMeta[singleTokenBinding.slot] = "confirmed";
+        resetAskCountForSlot(sessionContext, singleTokenBinding.slot);
+        if (
+          singleTokenBinding.slot === "context" &&
+          canonicalizeObjectValue(sessionContext.slots?.object) === "glass"
+        ) {
+          sessionContext.glassFlowContextLocked = true;
+        }
       }
 
       if (updated) {
@@ -5358,11 +6912,130 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           slots: sessionContext.slots
         });
 
+        interactionRef.slotCorrectionTelemetry = {
+          slotCorrectionApplied: true,
+          slotCorrectionReason: "pending_answer",
+          slotChanges: [
+            {
+              slot: singleTokenBinding.slot,
+              to: singleTokenBinding.value,
+              stateTo: "confirmed"
+            }
+          ],
+          pendingQuestionBefore: previousPending,
+          pendingQuestionAfter: null
+        };
+
         logInfo("SLOT_FILLED_FROM_ANSWER", {
           slot: pending.slot,
-          value: sessionContext.slots
+          value: sessionContext.slots,
+          canonicalObject: canonicalizeObjectValue(sessionContext.slots?.object),
+          context: sessionContext.slots?.context || null,
+          bugSignalDetected: hasExplicitInsectSignal(userMessage)
         });
       } else {
+        if (["context", "object", "surface"].includes(String(pending.slot || "").toLowerCase())) {
+          const loopBrPending = tryClarificationLoopBreaker(
+            sessionContext,
+            interactionRef,
+            sessionId,
+            pending.slot
+          );
+          if (loopBrPending) {
+            return loopBrPending;
+          }
+
+          const escalation = evaluateClarificationEscalation({
+            pendingQuestion: pending,
+            userMessage,
+            isNewRootRequest: shouldHardResetForNewRootQuery(userMessage, sessionContext),
+            chipSelection: chipSelectionValue,
+            contextHint: sessionContext?.slots?.context || null,
+            slotFilled: false
+          });
+
+          sessionContext.pendingQuestion = escalation.pendingQuestion;
+          interactionRef.clarificationEscalationTelemetry = escalation.telemetry || null;
+          const missingNow = getMissingSlot(sessionContext.slots || {});
+          if (!missingNow && escalation.kind !== "exit_unknown") {
+            sessionContext.pendingQuestion = null;
+            updated = true;
+          }
+
+          if (escalation.kind === "success" && escalation.slotValue) {
+            sessionContext.slots[pending.slot] = escalation.slotValue;
+            sessionContext.pendingQuestion = null;
+            updated = true;
+          } else if (!updated && (escalation.kind === "chips" || escalation.kind === "chips_narrow")) {
+            saveSession(sessionId, sessionContext);
+            const chipsReply = escalation.reply || getClarificationQuestion(pending.slot, sessionContext.slots || {}, sessionContext.responseLocale);
+            return endInteraction(
+              interactionRef,
+              {
+                type: "question",
+                message: chipsReply,
+                reply: chipsReply,
+                ui: escalation.ui
+              },
+              {
+                decision: { action: "clarification", flowId: null, missingSlot: missingNow || pending.slot },
+                outputType: "question",
+                slots: sessionContext.slots || {},
+                clarificationEscalationTelemetry: escalation.telemetry
+              }
+            );
+          } else if (!updated && escalation.kind === "exit_unknown") {
+            sessionContext.pendingQuestion = null;
+            sessionContext.state = "IDLE";
+            saveSession(sessionId, sessionContext);
+            return endInteraction(
+              interactionRef,
+              {
+                type: "reply",
+                message: escalation.reply,
+                reply: escalation.reply
+              },
+              {
+                decision: { action: "knowledge", flowId: null, missingSlot: null },
+                outputType: "reply",
+                clarificationEscalationTelemetry: escalation.telemetry
+              }
+            );
+          } else if (!updated && escalation.kind === "other_prompt") {
+            saveSession(sessionId, sessionContext);
+            return endInteraction(
+              interactionRef,
+              {
+                type: "question",
+                message: escalation.reply,
+                reply: escalation.reply
+              },
+              {
+                decision: { action: "clarification", flowId: null, missingSlot: missingNow || pending.slot },
+                outputType: "question",
+                slots: sessionContext.slots || {},
+                clarificationEscalationTelemetry: escalation.telemetry
+              }
+            );
+          } else if (!updated) {
+            saveSession(sessionId, sessionContext);
+            const normalQuestion = getClarificationQuestion(missingNow || pending.slot, sessionContext.slots || {}, sessionContext.responseLocale);
+            return endInteraction(
+              interactionRef,
+              {
+                type: "question",
+                message: normalQuestion,
+                reply: normalQuestion
+              },
+              {
+                decision: { action: "clarification", flowId: null, missingSlot: missingNow || pending.slot },
+                outputType: "question",
+                slots: sessionContext.slots || {},
+                clarificationEscalationTelemetry: escalation.telemetry
+              }
+            );
+          }
+        }
         logInfo("PENDING_SLOT_UNRESOLVED", {
           slot: pending.slot,
           message: userMessage
@@ -5393,6 +7066,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         if (isYes(userMessage)) {
           sessionContext.slots = sessionContext.slots || {};
           sessionContext.slots.context = pq.value;
+          sessionContext.slotMeta = sessionContext.slotMeta || {
+            context: "unknown",
+            surface: "unknown",
+            object: "unknown"
+          };
+          sessionContext.slotMeta.context = "confirmed";
+          resetAskCountForSlot(sessionContext, "context");
+          if (canonicalizeObjectValue(sessionContext.slots?.object) === "glass") {
+            sessionContext.glassFlowContextLocked = true;
+          }
           sessionContext.pendingQuestion = null;
           sessionContext.state = null;
           handledPendingQuestionAnswer = true;
@@ -5418,11 +7101,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
 
       // --- After resolving pendingQuestion for selection, re-enter slot evaluation loop ---
-      const currentIntent = sessionContext.originalIntent || overrideIntent(routingMessage, detectIntent(routingMessage, sessionId));
+      const currentIntent = sessionContext.originalIntent || overrideIntent(intentCore, detectIntent(intentCore, sessionId));
       const intentType = typeof currentIntent === "string" ? currentIntent : currentIntent?.type;
       if (intentType === "selection") {
         // Re-enter selection slot evaluation immediately
-        const slotResult = processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingClarificationAtStart });
+        const slotResult = processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingSlotClarificationAtStart });
         const reentryPendingBeforeUpdate = sessionContext.pendingQuestion
           ? { ...sessionContext.pendingQuestion }
           : null;
@@ -5431,7 +7114,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.state = null;
           sessionContext.pendingQuestion = null;
         }
-        const reentrySlotMode = hadPendingClarificationAtStart ? "merge" : "replace";
+        const reentrySlotMode = hadPendingSlotClarificationAtStart ? "merge" : "replace";
         const reentryBeforeSlots = { ...(sessionContext.slots || {}) };
         console.log("SLOT_MODE", {
           mode: reentrySlotMode
@@ -5555,13 +7238,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     // Step 3: Detect basic user intent (greeting/product_search)
-    const shouldBypassIntentClassifier = pendingClarificationActive || handledPendingQuestionAnswer;
+    const shouldBypassIntentClassifier =
+      pendingClarificationActive ||
+      handledPendingQuestionAnswer ||
+      handledPendingQuestionAnswerEarly;
     const rawIntent = shouldBypassIntentClassifier
       ? (sessionContext.originalIntent || "product_guidance")
-      : detectIntent(routingMessage, sessionId);
+      : detectIntent(intentCore, sessionId);
     let intentResult = shouldBypassIntentClassifier
       ? rawIntent
-      : overrideIntent(routingMessage, rawIntent);
+      : overrideIntent(intentCore, rawIntent);
     const deterministicIntent = shouldBypassIntentClassifier ? null : getDeterministicIntent(userMessage);
     if (deterministicIntent) {
       const deterministicType =
@@ -5620,8 +7306,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     if (
-      isSelectionFollowUp(userMessage) &&
-      sessionContext.lastIntent === "informational"
+      isSelectionFollowupMessage(userMessage) &&
+      (sessionContext.lastIntent === "informational" ||
+        Boolean(sessionContext.selectionFollowupCarryover))
     ) {
       logInfo("INTENT_ESCALATION", {
         from: "informational",
@@ -5659,7 +7346,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       problemType: sessionContext.problemType || null
     });
 
-    if (getIntentConfidenceValue(typeof intentResult === "string" ? null : intentResult?.confidence) < 0.6) {
+    const routingConfidence =
+      intent === "selection" && queryType === "selection"
+        ? (typeof resolvedEffectiveIntentResult === "string"
+          ? null
+          : resolvedEffectiveIntentResult?.confidence)
+        : (typeof intentResult === "string" ? null : intentResult?.confidence);
+    if (getIntentConfidenceValue(routingConfidence) < 0.6) {
       return endInteraction(interactionRef, {
         type: "question",
         message: "Poți să-mi dai mai multe detalii ca să înțeleg exact ce ai nevoie?"
@@ -5699,16 +7392,40 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       : [];
     const coreTags = [...initialDetectedTags];
 
-    const shouldPreserveFollowUpState =
-      handledPendingQuestionAnswer ||
-      isFollowUp ||
-      previousState === "NEEDS_CONTEXT" ||
-      previousState === "NEEDS_OBJECT" ||
-      previousState === "NEEDS_SURFACE";
+    captureInformationalSelectionCarryover(sessionContext, userMessage, queryType, sessionId);
+
+    const shouldPreserveFollowUpState = shouldPreserveSlotsForContinuation({
+      userMessage,
+      sessionContext,
+      handledPendingQuestionAnswer,
+      handledPendingQuestionAnswerEarly,
+      previousState
+    });
 
     if (!shouldPreserveFollowUpState) {
+      const prevSlots = { ...(sessionContext.slots || {}) };
       sessionContext.slots = {};
       sessionContext.pendingQuestion = null;
+      sessionContext.pendingSelection = false;
+      sessionContext.pendingSelectionMissingSlot = null;
+      sessionContext.lastFlow = null;
+      sessionContext.glassFlowContextLocked = false;
+      sessionContext.originalIntent = null;
+      clearPendingClarificationSlots(sessionContext);
+      clearSurfaceAssistState(sessionContext);
+      sessionContext.slotMeta = {
+        context: "unknown",
+        surface: "unknown",
+        object: "unknown"
+      };
+      if (process.env.SESSION_DEBUG_LOG === "1") {
+        logInfo("SESSION_SLOT_SCOPE_RESET", {
+          sessionId,
+          reason: "new_turn_not_continuation",
+          clearedSlots: prevSlots,
+          messagePreview: String(userMessage || "").slice(0, 120)
+        });
+      }
       saveSession(sessionId, sessionContext);
     }
 
@@ -5720,6 +7437,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     sessionContext.tags = workingTags;
     saveSession(sessionId, sessionContext);
+
+    applySelectionFollowupCarryoverHydration(userMessage, sessionContext, sessionId);
 
     workingTags = filterContextTags(userMessage, workingTags);
 
@@ -5748,8 +7467,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     // EXCEPTION: Procedural how-to actions ("cum curat/spal/scot/aplic/folosesc") are protected from being
     // downgraded to informational, unless an explicit informational exception ("cum functioneaza", "ce este") applies.
     {
-      const knowledgeGateTriggered = isKnowledgeQuestion(userMessage);
-      const isHowToActionMsg = matchesHowToAction(userMessage);
+      const knowledgeGateTriggered = isKnowledgeQuestion(userMessage, intentCore);
+      const isHowToActionMsg = matchesHowToAction(userMessage) || isProceduralHowTo(intentCore);
       const isInformationalExceptionMsg = matchesInformationalException(userMessage);
       // Protect procedural how-to only when NOT a conceptual/informational exception
       const protectProcedural = queryType === "procedural" && isHowToActionMsg && !isInformationalExceptionMsg;
@@ -5789,7 +7508,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           object: currentMsgSlots.object || sessionContext.slots?.object || null,
           surface: currentMsgSlots.surface || sessionContext.slots?.surface || null
         };
-        applyObjectContextInferenceInPlace(clarificationSlots);
+        applyObjectContextInferenceInPlace(clarificationSlots, sessionContext.slotMeta);
         const mergedContext = clarificationSlots.context;
         const mergedObject = clarificationSlots.object;
         const mergedSurface = clarificationSlots.surface;
@@ -5806,9 +7525,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           // getMissingSlot(slots) === "surface" and the decision invariant passes.
           const mergedClarificationSlots = { context: mergedContext, object: mergedObject, surface: null };
           sessionContext.slots = { ...(sessionContext.slots || {}), ...mergedClarificationSlots };
-          sessionContext.pendingQuestion = { slot: "surface" };
+          sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, { slot: "surface" });
           sessionContext.state = "NEEDS_SURFACE";
+          const loopBrProc = tryClarificationLoopBreaker(
+            sessionContext,
+            interactionRef,
+            sessionId,
+            "surface"
+          );
+          if (loopBrProc) return loopBrProc;
+
           seedPendingClarificationAtEmission(sessionContext, "surface");
+          recordClarificationAsk(sessionContext, "surface");
           saveSession(sessionId, sessionContext);
           interactionRef.slots = { ...mergedClarificationSlots };
 
@@ -5829,8 +7557,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     // ROUTING LAYER (before slots)
+    const selectionPreviewMergeSession =
+      hadPendingSlotClarificationAtStart ||
+      sessionContext?.pendingSelection === true ||
+      (isSelectionFollowupMessage(userMessage) && hasCarryoverSelectionContext(sessionContext));
     const selectionPreview = queryType === "selection"
-      ? processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingClarificationAtStart })
+      ? processSlots(userMessage, "selection", sessionContext, {
+        mergeWithSession: selectionPreviewMergeSession
+      })
       : null;
     let routingDecision = routeRequest({
       queryType,
@@ -5848,12 +7582,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     sessionContext.objective.type = routingDecision.action;
     saveSession(sessionId, sessionContext);
 
-    if (selectionEscalation && !pendingClarificationActive) {
+    if (selectionEscalation && !pendingSlotClarificationActive) {
       const escalationTopic = messageTopicHint || sessionContext.currentTopic || null;
       const escalationContextHint = getContextHintForEscalation(userMessage);
 
       if (!escalationTopic) {
-        sessionContext.pendingQuestion = { slot: "context" };
+        sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, { slot: "context" });
         sessionContext.state = "NEEDS_CONTEXT";
         saveSession(sessionId, sessionContext);
         logInfo("SELECTION_ESCALATION_ROUTING", {
@@ -5877,7 +7611,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         escalationTags.push(escalationContextHint);
       }
 
-      const escalationCandidates = findRelevantProducts(escalationTags, products, MAX_SELECTION_PRODUCTS);
+      const escalationCandidates = loggingV2.withSearchPhaseSync(
+        () =>
+          findRelevantProducts(escalationTags, products, MAX_SELECTION_PRODUCTS, {
+            message: userMessage,
+            slots: { context: escalationContextHint || null, object: null, surface: null },
+            settings
+          }),
+        (c) => ({ productCount: Array.isArray(c) ? c.length : 0, path: "selection_escalation" })
+      );
       const escalationRanked = applyRanking(escalationCandidates, { tags: escalationTags, priceRange: null }, settings);
       const escalationFiltered = filterProducts(
         enrichProducts(escalationRanked, products),
@@ -5916,7 +7658,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     if (queryType === "informational" && previewAction === "knowledge") {
       sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
       const informationalTags = [...new Set(workingTags.filter(Boolean))];
-      const knowledgeResults = findRelevantKnowledge(userMessage, knowledgeBase);
+      const knowledgeResults = loggingV2.withSearchPhaseSync(
+        () => findRelevantKnowledge(userMessage, knowledgeBase),
+        (r) => ({ knowledgeHits: Array.isArray(r) ? r.length : 0 })
+      );
 
       if (knowledgeResults.length === 0) {
         const reply = "Nu am gasit informatii relevante. Poti reformula intrebarea?";
@@ -5963,7 +7708,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       queryType === "selection" &&
       previewAction === "selection"
     ) {
-      const slotResult = processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingClarificationAtStart });
+      const slotResult = processSlots(userMessage, "selection", sessionContext, {
+        mergeWithSession: hadPendingSlotClarificationAtStart || sessionContext?.pendingSelection === true
+      });
       let currentSlots = { ...(slotResult?.slots || {}) };
       currentSlots = inferWheelsSurfaceFromObject(currentSlots);
       slotResult.slots = currentSlots;
@@ -6070,10 +7817,26 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slotResult.slots || {}
       );
       const msg = userMessage.toLowerCase();
-      let role = null;
-      if (msg.includes("sampon")) role = "car_shampoo";
-      if (msg.includes("jante")) role = "wheel_cleaner";
-      if (msg.includes("geam")) role = "glass_cleaner";
+      let role = selectionRoleFromWheelTire(userMessage);
+      if (!role && msg.includes("sampon")) role = "car_shampoo";
+      if (!role && msg.includes("jante")) role = "wheel_cleaner";
+      if (!role && msg.includes("geam")) role = "glass_cleaner";
+      const coverageRoleDecision = !role
+        ? detectCoverageGapRole(userMessage, selectionSlots)
+        : { role: null, ask: null };
+      if (!role && coverageRoleDecision.ask) {
+        const coverageAsk = coverageRoleDecision.ask;
+        return endInteraction(
+          interactionRef,
+          { type: "question", message: coverageAsk, reply: coverageAsk, products: [] },
+          {
+            decision: { action: "clarification", flowId: null, missingSlot: "intent_level" },
+            outputType: "question",
+            productsReason: "none"
+          }
+        );
+      }
+      if (!role && coverageRoleDecision.role) role = coverageRoleDecision.role;
       const roleConfig = role ? productRoles[role] || null : null;
 
       logInfo("SELECTION_DEBUG", {
@@ -6087,9 +7850,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       const broadCandidates = roleConfig
         ? findProductsByRoleConfig(roleConfig, products)
-        : findRelevantProducts(selectionTags, products, MAX_SELECTION_PRODUCTS, {
-            strictTagFilter: !(sessionContext.objective?.needsCompletion && isContinuation)
-          });
+        : loggingV2.withSearchPhaseSync(
+            () =>
+              findRelevantProducts(selectionTags, products, MAX_SELECTION_PRODUCTS, {
+                strictTagFilter: !(sessionContext.objective?.needsCompletion && isContinuation),
+                message: userMessage,
+                slots: selectionSlots,
+                settings
+              }),
+            (c) => ({ productCount: Array.isArray(c) ? c.length : 0, path: "selection" })
+          );
 
       const hardFilterResult = applyHardFilter(broadCandidates, selectionSlots);
       logInfo("HARD_FILTER", hardFilterResult.meta);
@@ -6153,6 +7923,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
       let finalProducts = selectionBundle.slice(0, MAX_SELECTION_PRODUCTS);
       finalProducts = ensureApcProductIncluded(finalProducts, products, selectionTags).slice(0, MAX_SELECTION_PRODUCTS);
+      let productsReason = "strict";
 
       // Defensive: remove excluded-tag products that may have slipped through
       if (hardFilterResult.meta.applied && hardFilterResult.meta.exclude.length > 0) {
@@ -6175,8 +7946,22 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         });
       }
 
+      if (finalProducts.length === 0 && role && COVERAGE_ROLE_SET.has(role)) {
+        const relaxedProducts = tryCoverageRoleRelaxedRetry(role, roleConfig, products, settings);
+        if (relaxedProducts.length > 0) {
+          finalProducts = relaxedProducts;
+          productsReason = "relaxed_drop_context";
+        }
+      }
+
       if (finalProducts.length === 0) {
-        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
+        const fallbackReply = role && COVERAGE_ROLE_SET.has(role)
+          ? roleCoverageFallbackQuestion(role)
+          : null;
+        return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots, {
+          reply: fallbackReply || undefined,
+          productsReason: "none"
+        });
       }
 
       // Final check: remove any non-accessory product that violates the required gate
@@ -6251,16 +8036,45 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       return endInteraction(interactionRef, { reply, products: finalProducts }, {
         decision: selectionDecision,
         outputType: "recommendation",
+        productsReason,
         products: summarizeProductsForLog(finalProducts)
       });
     }
 
     if (queryType === "procedural" && previewAction === "procedural") {
-      const proceduralSlots = applyObjectSlotInference(
+      let proceduralSlots = applyObjectSlotInference(
         mergeSlots(sessionContext.slots || {}, extractSlotsFromMessage(userMessage))
       );
       const hadNoContextBeforePreviewInference = !proceduralSlots.context;
-      applyObjectContextInferenceInPlace(proceduralSlots);
+      applyObjectContextInferenceInPlace(proceduralSlots, sessionContext.slotMeta);
+
+      const previewBeforeCtx = sessionContext.slots?.context || null;
+      if (
+        sessionContext.slotMeta &&
+        sessionContext.slotMeta.context === "confirmed" &&
+        previewBeforeCtx &&
+        proceduralSlots.context &&
+        proceduralSlots.context !== previewBeforeCtx
+      ) {
+        const pendingCtx =
+          sessionContext.pendingQuestion &&
+          (sessionContext.pendingQuestion.slot === "context" ||
+            sessionContext.pendingQuestion.type === "confirm_context");
+        const allowContextFlip =
+          hasExplicitCorrectionPattern(userMessage) ||
+          Boolean(pendingCtx) ||
+          detectExplicitContext(userMessage) === proceduralSlots.context;
+        if (!allowContextFlip) {
+          const blocked = proceduralSlots.context;
+          proceduralSlots = { ...proceduralSlots, context: previewBeforeCtx };
+          logInfo("CONTEXT_CONFIRMED_LOCK", {
+            reason: "preserve_confirmed_context_preview",
+            preserved: previewBeforeCtx,
+            blocked
+          });
+        }
+      }
+
       let previewCorrectionMessage = null;
 
       // Run deterministic validation before preview disambiguation.
@@ -6378,12 +8192,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
               : disambiguation.state === "NEEDS_OBJECT"
                 ? "object"
                 : "context";
-          sessionContext.pendingQuestion = {
+          const loopBrDis = tryClarificationLoopBreaker(
+            sessionContext,
+            interactionRef,
+            sessionId,
+            disambigPendingSlot
+          );
+          if (loopBrDis) return loopBrDis;
+
+          sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
             slot: disambigPendingSlot,
             object: sessionContext.slots?.object || null,
             context: sessionContext.slots?.context || null
-          };
+          });
           seedPendingClarificationAtEmission(sessionContext, disambigPendingSlot);
+          recordClarificationAsk(sessionContext, disambigPendingSlot);
           saveSession(sessionId, sessionContext);
           logInfo("FLOW_DISAMBIGUATION", {
             candidates: candidateFlows.map(flow => flow.flowId).filter(Boolean)
@@ -6407,19 +8230,37 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     const storedOriginalIntent = sessionContext.originalIntent;
 
-    const slotResult = processSlots(userMessage, intent, sessionContext, { mergeWithSession: hadPendingClarificationAtStart });
+    const mainSlotMergeSession =
+      hadPendingSlotClarificationAtStart ||
+      (isSelectionFollowupMessage(userMessage) &&
+        hasCarryoverSelectionContext(sessionContext) &&
+        (queryType === "selection" || intent === "selection"));
+    const slotResult = processSlots(userMessage, intent, sessionContext, {
+      mergeWithSession: mainSlotMergeSession
+    });
     if (queryType === "selection") {
       slotResult.slots = inferWheelsSurfaceFromObject(slotResult.slots || {});
     }
     const wasInClarification = Boolean(previousState && previousState.startsWith("NEEDS"));
     const earlyGuidedRedirectMessage = getGuidedRedirectMessage(userMessage);
+    const heuristicHl = inferHighLevelIntent(intentCore);
+    const productHeuristicBlocksEarlyFallback =
+      heuristicHl === "product_search" || heuristicHl === "product_guidance";
+
     const shouldEarlySafeFallback =
       queryType === "procedural" &&
       !sessionContext.problemType &&
       !hasStrongSlots(slotResult.slots || {}) &&
-      !isKnownCleaningEntry(userMessage);
+      !isKnownCleaningEntry(userMessage) &&
+      !productHeuristicBlocksEarlyFallback;
 
-    if (queryType === "procedural" && earlyGuidedRedirectMessage && !sessionContext.problemType && !hasStrongSlots(slotResult.slots || {})) {
+    if (
+      queryType === "procedural" &&
+      earlyGuidedRedirectMessage &&
+      !sessionContext.problemType &&
+      !hasStrongSlots(slotResult.slots || {}) &&
+      !productHeuristicBlocksEarlyFallback
+    ) {
       console.log("SAFE_FALLBACK_TRIGGERED", {
         message: userMessage,
         slots: slotResult.slots || {}
@@ -6466,42 +8307,32 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    // ROUTING PURITY: Apply explicit context before any defaulting.
+    // ROUTING PURITY: Strong-signal context only (centralized inferContext).
     if (queryType === "procedural" && !slotResult.slots.context) {
-      const explicitContext = detectExplicitContext(userMessage);
-      
-      if (explicitContext !== null) {
-        slotResult.slots.context = explicitContext;
+      const inf = inferContext({
+        message: userMessage,
+        normalizedMessage: normalizeForContextInference(userMessage),
+        slots: slotResult.slots,
+        slotMeta: sessionContext.slotMeta,
+        pendingQuestion: sessionContext.pendingQuestion
+      });
+      if (inf.inferredContext && inf.confidence === "strong") {
+        slotResult.slots.context = inf.inferredContext;
         logInfo("SLOT_INFERENCE_EXPLICIT_CONTEXT", {
-          context: explicitContext,
-          message: userMessage
+          context: inf.inferredContext,
+          message: userMessage,
+          reason: inf.reason
         });
-        logInfo("SLOT_INFERENCE", { 
-          context: explicitContext, 
-          reason: "explicit_context_keyword"
+        logInfo("SLOT_INFERENCE", {
+          context: inf.inferredContext,
+          reason: inf.reason
         });
       } else {
-        const strongContextOverride = detectStrongContextOverride(userMessage);
-
-        if (strongContextOverride) {
-          slotResult.slots.context = strongContextOverride.context;
-          if (!slotResult.slots.object && strongContextOverride.object) {
-            slotResult.slots.object = strongContextOverride.object;
-          }
-          if (!slotResult.slots.surface && strongContextOverride.surface) {
-            slotResult.slots.surface = strongContextOverride.surface;
-          }
-          logInfo("SLOT_INFERENCE", {
-            context: strongContextOverride.context,
-            reason: strongContextOverride.reason
-          });
-        } else {
-          slotResult.slots.context = null;
-          logInfo("SLOT_INFERENCE", { 
-            context: null,
-            reason: "default_unknown" 
-          });
-        }
+        slotResult.slots.context = null;
+        logInfo("SLOT_INFERENCE", {
+          context: null,
+          reason: inf.reason || "default_unknown"
+        });
       }
     }
 
@@ -6538,7 +8369,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       ...sessionContext.objective.slots,
       ...slotResult.slots
     };
-    const slotMode = isSafetyQuery(userMessage) ? "override" : hadPendingClarificationAtStart ? "merge" : "replace";
+    const selectionFollowupSlotMerge =
+      isSelectionFollowupMessage(userMessage) &&
+      hasCarryoverSelectionContext(sessionContext) &&
+      (queryType === "selection" || intent === "selection");
+    const slotMode = isSafetyQuery(userMessage)
+      ? "override"
+      : hadPendingSlotClarificationAtStart || selectionFollowupSlotMerge || sessionContext?.pendingSelection === true
+        ? "merge"
+        : "replace";
     const beforeSlots = { ...(sessionContext.slots || {}) };
     console.log("SLOT_MODE", {
       mode: slotMode
@@ -6560,6 +8399,63 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         ? mergeSlots(sessionContext.slots || {}, slotResult.slots || {})
         : (slotResult.slots || {});
     }
+
+    if (
+      slotMode !== "override" &&
+      sessionContext.slotMeta &&
+      sessionContext.slotMeta.context === "confirmed" &&
+      beforeSlots.context &&
+      sessionContext.slots.context &&
+      sessionContext.slots.context !== beforeSlots.context
+    ) {
+      const pendingCtx =
+        pendingBeforeSlotUpdate &&
+        (pendingBeforeSlotUpdate.slot === "context" ||
+          pendingBeforeSlotUpdate.type === "confirm_context");
+      const explicitCtx = detectExplicitContext(userMessage);
+      const allowContextFlip =
+        hasExplicitCorrectionPattern(userMessage) ||
+        Boolean(pendingCtx) ||
+        explicitCtx === sessionContext.slots.context;
+      if (!allowContextFlip) {
+        const blocked = sessionContext.slots.context;
+        sessionContext.slots = {
+          ...sessionContext.slots,
+          context: beforeSlots.context
+        };
+        slotResult.slots = {
+          ...(slotResult.slots || {}),
+          context: beforeSlots.context
+        };
+        logInfo("CONTEXT_CONFIRMED_LOCK", {
+          reason: "preserve_confirmed_context",
+          preserved: beforeSlots.context,
+          blocked
+        });
+      }
+    }
+
+    if (sessionContext.glassFlowContextLocked && beforeSlots.context) {
+      const nextCtx = sessionContext.slots?.context;
+      if (nextCtx && nextCtx !== beforeSlots.context) {
+        const explicitCtx = detectExplicitContext(userMessage);
+        if (explicitCtx !== nextCtx) {
+          sessionContext.slots.context = beforeSlots.context;
+          slotResult.slots = { ...(slotResult.slots || {}), context: beforeSlots.context };
+          logInfo("GLASS_CONTEXT_LOCK", { preserved: beforeSlots.context, blocked: nextCtx });
+        }
+      }
+    }
+
+    if (
+      pendingBeforeSlotUpdate &&
+      pendingBeforeSlotUpdate.slot === "context" &&
+      canonicalizeObjectValue(sessionContext.slots?.object) === "glass" &&
+      sessionContext.slots?.context
+    ) {
+      sessionContext.glassFlowContextLocked = true;
+    }
+
     if (isPendingQuestionFulfilled(pendingBeforeSlotUpdate, sessionContext.slots)) {
       sessionContext.pendingQuestion = null;
       console.log("PENDING_CLEARED", {
@@ -6586,12 +8482,29 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.slots.object = "caroserie";
     }
 
-    applyObjectContextInferenceInPlace(sessionContext.slots);
+    applyObjectContextInferenceInPlace(sessionContext.slots, sessionContext.slotMeta);
     slotResult.slots = mergeSlots(slotResult.slots || {}, {
       context: sessionContext.slots.context,
       object: sessionContext.slots.object,
       surface: sessionContext.slots.surface
     });
+
+    {
+      const _ctxTel = inferContext({
+        message: userMessage,
+        normalizedMessage: normalizeForContextInference(userMessage),
+        slots: sessionContext.slots,
+        slotMeta: sessionContext.slotMeta,
+        pendingQuestion: sessionContext.pendingQuestion
+      });
+      interactionRef.contextInferenceTelemetry = {
+        contextInferenceAttempted: true,
+        contextInferenceResult: _ctxTel.inferredContext,
+        contextInferenceReason: _ctxTel.reason,
+        contextWasDefaulted: false,
+        contextClarificationAsked: false
+      };
+    }
 
     // --- Deterministic slot validation ---
     {
@@ -6956,19 +8869,22 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-      if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "context") {
+    if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "context") {
       sessionContext.state = "NEEDS_CONTEXT";
       logInfo("FLOW", getFlowLogPayload(intent, slotResult.slots, null, "missing_context"));
 
+      const loopBrCtx = tryClarificationLoopBreaker(sessionContext, interactionRef, sessionId, "context");
+      if (loopBrCtx) return loopBrCtx;
+
       const contextHint = detectContextHint(userMessage);
       if (contextHint === "interior") {
-        sessionContext.pendingQuestion = {
+        sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
           type: "confirm_context",
           value: "interior",
           slot: "context",
           object: sessionContext.slots?.object || null,
           context: sessionContext.slots?.context || null
-        };
+        });
         logInfo("PENDING_QUESTION_TRANSITION", {
           reason: "ask_context_confirmation",
           pendingQuestion: sessionContext.pendingQuestion
@@ -6978,25 +8894,31 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.pendingSelection = true;
           sessionContext.pendingSelectionMissingSlot = "context";
         }
+        recordClarificationAsk(sessionContext, "context");
         saveSession(sessionId, sessionContext);
         logResponseSummary("question", { products: 0 });
+        logInfo("CONTEXT_CLARIFICATION_TRACE", { branch: "confirm_interior_hint", contextHint });
         return endInteraction(interactionRef, {
           type: "question",
           message: "Este vorba despre interior (cotiera), corect?"
         }, {
           decision: resolvedAction,
-          outputType: "question"
+          outputType: "question",
+          contextInferenceTelemetry: {
+            ...(interactionRef.contextInferenceTelemetry || {}),
+            contextClarificationAsked: true
+          }
         });
       }
 
       if (contextHint === "exterior") {
-        sessionContext.pendingQuestion = {
+        sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
           type: "confirm_context",
           value: "exterior",
           slot: "context",
           object: sessionContext.slots?.object || null,
           context: sessionContext.slots?.context || null
-        };
+        });
         logInfo("PENDING_QUESTION_TRANSITION", {
           reason: "ask_context_confirmation",
           pendingQuestion: sessionContext.pendingQuestion
@@ -7006,22 +8928,28 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.pendingSelection = true;
           sessionContext.pendingSelectionMissingSlot = "context";
         }
+        recordClarificationAsk(sessionContext, "context");
         saveSession(sessionId, sessionContext);
         logResponseSummary("question", { products: 0 });
+        logInfo("CONTEXT_CLARIFICATION_TRACE", { branch: "confirm_exterior_hint", contextHint });
         return endInteraction(interactionRef, {
           type: "question",
           message: "Este vorba despre exterior, corect?"
         }, {
           decision: resolvedAction,
-          outputType: "question"
+          outputType: "question",
+          contextInferenceTelemetry: {
+            ...(interactionRef.contextInferenceTelemetry || {}),
+            contextClarificationAsked: true
+          }
         });
       }
 
-      sessionContext.pendingQuestion = {
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
         slot: "context",
         object: sessionContext.slots?.object || null,
         context: sessionContext.slots?.context || null
-      };
+      });
       logInfo("PENDING_QUESTION_TRANSITION", {
         reason: "ask_context",
         pendingQuestion: sessionContext.pendingQuestion
@@ -7031,35 +8959,45 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.pendingSelection = true;
         sessionContext.pendingSelectionMissingSlot = "context";
       }
+      recordClarificationAsk(sessionContext, "context");
       saveSession(sessionId, sessionContext);
       logResponseSummary("question", { products: 0 });
 
+      logInfo("CONTEXT_CLARIFICATION_TRACE", { branch: "ask_context_open", contextHint: null });
       return endInteraction(interactionRef, {
         type: "question",
         message: getClarificationQuestion("context", sessionContext.slots || {}, sessionContext.responseLocale)
       }, {
         decision: resolvedAction,
-        outputType: "question"
+        outputType: "question",
+        contextInferenceTelemetry: {
+          ...(interactionRef.contextInferenceTelemetry || {}),
+          contextClarificationAsked: true
+        }
       });
     }
 
     if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "object") {
       sessionContext.state = "NEEDS_OBJECT";
+      const loopBrObj = tryClarificationLoopBreaker(sessionContext, interactionRef, sessionId, "object");
+      if (loopBrObj) return loopBrObj;
+
       sessionContext.originalIntent = sessionContext.originalIntent || intent;
       if (queryType === "selection") {
         sessionContext.originalIntent = "selection";
         sessionContext.pendingSelection = true;
         sessionContext.pendingSelectionMissingSlot = "object";
       }
-      sessionContext.pendingQuestion = {
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
         slot: "object",
         object: sessionContext.slots?.object || null,
         context: sessionContext.slots?.context || null
-      };
+      });
       logInfo("PENDING_QUESTION_TRANSITION", {
         reason: "ask_object",
         pendingQuestion: sessionContext.pendingQuestion
       });
+      recordClarificationAsk(sessionContext, "object");
       saveSession(sessionId, sessionContext);
       logInfo("FLOW", getFlowLogPayload(intent, slotResult.slots, null, "missing_object"));
 
@@ -7078,22 +9016,26 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "surface") {
       sessionContext.state = "NEEDS_SURFACE";
+      const loopBrSurf = tryClarificationLoopBreaker(sessionContext, interactionRef, sessionId, "surface");
+      if (loopBrSurf) return loopBrSurf;
+
       sessionContext.originalIntent = sessionContext.originalIntent || intent;
       if (queryType === "selection") {
         sessionContext.originalIntent = "selection";
         sessionContext.pendingSelection = true;
         sessionContext.pendingSelectionMissingSlot = "surface";
       }
-      sessionContext.pendingQuestion = {
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
         slot: "surface",
         object: sessionContext.slots?.object || null,
         context: sessionContext.slots?.context || null
-      };
+      });
       seedPendingClarificationAtEmission(sessionContext, "surface");
       logInfo("PENDING_QUESTION_TRANSITION", {
         reason: "ask_surface",
         pendingQuestion: sessionContext.pendingQuestion
       });
+      recordClarificationAsk(sessionContext, "surface");
       saveSession(sessionId, sessionContext);
       logInfo("FLOW", getFlowLogPayload(intent, slotResult.slots, null, "missing_surface"));
 
@@ -7200,6 +9142,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const flowId = resolvedAction.flowId;
         const executedFlowDecision = resolvedAction;
 
+        if (
+          flowId === "glass_clean_basic" ||
+          flowId === "bug_removal_quick" ||
+          canonicalizeObjectValue(sessionContext.slots?.object) === "glass"
+        ) {
+          logInfo("GLASS_ROUTE_TRACE", {
+            canonicalObject: canonicalizeObjectValue(sessionContext.slots?.object),
+            context: sessionContext.slots?.context || null,
+            selectedFlowId: flowId,
+            bugSignalDetected: hasExplicitInsectSignal(userMessage),
+            pendingQuestionSlot: sessionContext.pendingQuestion?.slot || null,
+            abuseResetTriggered: false
+          });
+        }
+
         const flowLocale = sessionContext.responseLocale || sessionContext.language || "ro";
         const flowResult = executeFlow(resolvedPrioritizedFlow, products, sessionContext.slots || {}, {
           responseLocale: flowLocale
@@ -7303,7 +9260,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       let knowledgeContext = "";
       if (hasRequiredKnowledgeSlots(safeMessage, sessionContext.slots || {})) {
-        const matchedKnowledge = getRelevantKnowledge(safeMessage, knowledgeBase, finalTags, sessionContext.slots || {});
+        const matchedKnowledge = loggingV2.withSearchPhaseSync(
+          () => getRelevantKnowledge(safeMessage, knowledgeBase, finalTags, sessionContext.slots || {}),
+          (r) => ({ knowledgeHits: Array.isArray(r) ? r.length : 0, path: "safety_guidance_knowledge" })
+        );
         if (matchedKnowledge.length > 0) {
           knowledgeContext = matchedKnowledge.map(k => k.content).join("\n");
         }
@@ -7320,7 +9280,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       let safetyProducts = [];
       if (shouldInjectProducts) {
-        safetyProducts = findRelevantProducts(finalTags, products, settings.max_products || 3);
+        safetyProducts = loggingV2.withSearchPhaseSync(
+          () =>
+            findRelevantProducts(finalTags, products, settings.max_products || 3, {
+              message: userMessage,
+              slots: sessionContext.slots || {},
+              settings
+            }),
+          (c) => ({ productCount: Array.isArray(c) ? c.length : 0, path: "safety_guidance_products" })
+        );
         safetyProducts = enforceProductLimit(safetyProducts, settings.max_products || 3);
         const filteredSafetyProducts = filterProducts(safetyProducts, sessionContext.slots || {});
         const safetyBundle = buildProductBundle(filteredSafetyProducts);
@@ -7333,7 +9301,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           selected: safetyBundle.map(product => product?.name || null).filter(Boolean),
           roles: safetyBundle.map(product => product?.tags || [])
         });
-        if (safetyBundle.length < 2) {
+        if (safetyBundle.length > 0 && safetyBundle.length < 2) {
+          logInfo("SAFEFALLBACK_BLOCKED_PRODUCTS_EXIST", {
+            path: "safety_guidance",
+            productCount: safetyBundle.length
+          });
+        }
+        if (safetyBundle.length === 0) {
           const reply = getSafeFallbackReply();
           updateSessionWithProducts(sessionId, [], "guidance");
           clearProblemType(sessionContext, sessionId);
@@ -7480,7 +9454,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
         let knowledgeContext = "";
         if (hasRequiredKnowledgeSlots(userMessage, sessionContext.slots || {})) {
-          const knowledgeResults = getRelevantKnowledge(userMessage, knowledgeBase, finalTags, sessionContext.slots || {});
+          const knowledgeResults = loggingV2.withSearchPhaseSync(
+            () => getRelevantKnowledge(userMessage, knowledgeBase, finalTags, sessionContext.slots || {}),
+            (r) => ({ knowledgeHits: Array.isArray(r) ? r.length : 0, path: "decision_knowledge" })
+          );
           knowledgeContext = knowledgeResults.map(k => k.content).join("\n");
         }
 
@@ -7517,17 +9494,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           });
         }
 
-        // Step 7: Search for products based on detected tags
-        let found = findRelevantProducts(detectedTags, products, settings.max_products || 3);
-
-        // Step 8: Apply fallback if no products found
-        found = found.length > 0 ? found : applyFallbackProducts(products);
-
-        // If no products found, retry with broader tags
-        if (found.length === 0) {
-          const retryTags = ["cleaning", "interior"];
-          found = findRelevantProducts(retryTags, products, settings.max_products || 3);
-        }
+        // Step 7–8: Search for products (tagged phase for logging v2)
+        const selectionOpts = {
+          message: userMessage,
+          slots: sessionContext.slots || {},
+          settings
+        };
+        let found = loggingV2.withSearchPhaseSync(() => {
+          let f = findRelevantProducts(detectedTags, products, settings.max_products || 3, selectionOpts);
+          f = f.length > 0 ? f : applyFallbackProducts(products);
+          if (f.length === 0) {
+            const retryTags = ["cleaning", "interior"];
+            f = findRelevantProducts(retryTags, products, settings.max_products || 3, selectionOpts);
+          }
+          return f;
+        }, (f) => ({ productCount: Array.isArray(f) ? f.length : 0, path: "product_search" }));
 
         // If still no products, ask only when intent is unclear AND cleaning is not already known
         if (found.length === 0) {
@@ -7562,7 +9543,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           selected: searchBundle.map(product => product?.name || null).filter(Boolean),
           roles: searchBundle.map(product => product?.tags || [])
         });
-        if (searchBundle.length < 2) {
+        if (searchBundle.length > 0 && searchBundle.length < 2) {
+          logInfo("SAFEFALLBACK_BLOCKED_PRODUCTS_EXIST", {
+            path: "product_search",
+            productCount: searchBundle.length
+          });
+        }
+        if (searchBundle.length === 0) {
           const reply = getSafeFallbackReply();
           updateSessionWithProducts(sessionId, [], "guidance");
           emit("ai_response", { response: reply });
@@ -7609,6 +9596,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
   } catch (err) {
+    loggingV2.emitError(err, { stage: "handleChat" });
     console.error("EXECUTION_ERROR", {
       message: err.message,
       stack: err.stack,
@@ -7617,7 +9605,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     throw err;
   }
+    });
+  });
 }
 
 
-module.exports = { handleChat, detectLanguage };
+module.exports = {
+  handleChat,
+  detectLanguage,
+  extractSlotsFromMessage,
+  __test: {
+    detectCoverageGapRole,
+    tryCoverageRoleRelaxedRetry,
+    roleCoverageFallbackQuestion,
+    findProductsByRoleConfig,
+    tryConsumeSurfaceAssistTurn,
+    tryConsumeLlmSurfaceAssistTurn
+  }
+};

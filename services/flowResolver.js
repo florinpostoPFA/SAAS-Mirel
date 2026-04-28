@@ -1,5 +1,6 @@
 const config = require("../config");
 const { logInfo } = require("./logger");
+const { hasExplicitInsectSignal, normalizeForInsectMatch } = require("./insectSignal");
 
 function normalizeValue(value) {
   return String(value || "").toLowerCase().trim();
@@ -57,15 +58,53 @@ function normalizeRequest(input, legacySlots = {}) {
   };
 }
 
+const LEATHER_INK_FLOW_KEYWORDS = [
+  "pix",
+  "cerneala",
+  "ink",
+  "marker",
+  "urme de pix"
+];
+
 const flowKeywords = {
   bug_removal_quick: ["insecte", "musca", "gandaci", "buguri", "urme de insecte", "insecte pe parbriz"],
   glass_clean_basic: ["sticla", "geam", "geamuri", "parbriz"],
   wheel_tire_deep_clean: ["jante", "roti", "anvelope"],
-  interior_clean_basic: ["scaun", "cotiera", "interior"]
+  interior_clean_basic: ["scaun", "cotiera", "interior"],
+  leather_ink_removal: LEATHER_INK_FLOW_KEYWORDS
 };
 
+function hasLeatherInkIntent(message, slots = {}) {
+  const msg = normalizeValue(message);
+  if (!msg) {
+    return false;
+  }
+  const msgNorm = typeof message === "string" ? normalizeForInsectMatch(message) : "";
+  const hasInk = LEATHER_INK_FLOW_KEYWORDS.some(
+    kw => msg.includes(kw) || (msgNorm && msgNorm.includes(normalizeForInsectMatch(kw)))
+  );
+  if (!hasInk) {
+    return false;
+  }
+
+  const slotSurface = normalizeValue(slots?.surface);
+  if (slotSurface === "leather" || slotSurface === "piele") {
+    return true;
+  }
+  const surfaceCandidates = surfaceSlotValuesForTriggerMatch(slots?.surface);
+  if (surfaceCandidates.some(s => s === "leather" || s === "piele")) {
+    return true;
+  }
+
+  return (
+    msg.includes("piele") ||
+    msg.includes("tapiterie") ||
+    msg.includes("pielii") ||
+    msg.includes("pielei")
+  );
+}
+
 const glassAliases = ["sticla", "geam", "geamuri", "parbriz", "glass", "windshield"];
-const explicitInsectSignals = ["insecte", "musca", "gandaci", "buguri", "urme de insecte", "insecte pe parbriz"];
 const TOOL_CARE_KEYWORDS = [
   "prosop",
   "prosoape",
@@ -107,15 +146,6 @@ function canonicalizeObjectValue(value) {
   }
 
   return normalized;
-}
-
-function hasExplicitInsectSignal(message) {
-  const msg = normalizeValue(message);
-  if (!msg) {
-    return false;
-  }
-
-  return explicitInsectSignals.some(keyword => msg.includes(keyword));
 }
 
 function hasToolCareKeywords(message) {
@@ -189,11 +219,14 @@ function getFlowSpecificityScore(flow, slots, message) {
   const slotSurface = normalizeValue(slots?.surface);
   const slotContext = normalizeValue(slots?.context);
   const msg = typeof message === "string" ? message.toLowerCase() : "";
+  const msgNorm = typeof message === "string" ? normalizeForInsectMatch(message) : "";
 
   let score = 0;
 
   const keywords = flowKeywords[flow?.flowId] || [];
-  const matchedKeyword = keywords.find(kw => msg.includes(kw));
+  const matchedKeyword = keywords.find(
+    kw => msg.includes(kw) || (msgNorm && msgNorm.includes(normalizeForInsectMatch(kw)))
+  );
   if (matchedKeyword) {
     console.log("KEYWORD_MATCH", {
       flowId: flow?.flowId,
@@ -201,6 +234,10 @@ function getFlowSpecificityScore(flow, slots, message) {
       message: msg
     });
     score += 5;
+  }
+
+  if (flow?.flowId === "leather_ink_removal" && matchedKeyword && hasLeatherInkIntent(message, slots)) {
+    score += 12;
   }
 
   if (flow?.flowId === "bug_removal_quick" && hasExplicitInsectSignal(message)) {
@@ -244,6 +281,19 @@ function getBestMatchingFlow(candidates, slots, message) {
   matchedFlows.sort((a, b) => b.score - a.score);
 
   let flowCandidate = matchedFlows[0]?.flow || null;
+
+  if (flowCandidate?.flowId === "bug_removal_quick" && !hasExplicitInsectSignal(message)) {
+    const alternate = matchedFlows.find(
+      (m) => m.flow?.flowId && m.flow.flowId !== "bug_removal_quick"
+    );
+    flowCandidate = alternate?.flow || null;
+    logInfo("FLOW_GUARD", {
+      flowId: "bug_removal_quick",
+      blocked: true,
+      reason: "best_match_insect_gate",
+      fallbackFlowId: flowCandidate?.flowId || null
+    });
+  }
 
   // Fallback: if scoring output is malformed but matches exist, pick first matched flow.
   if (!flowCandidate && candidates.length > 0) {
@@ -374,6 +424,14 @@ function findMatchingFlows(request, allowPartial = false) {
       }
     }
 
+    if (flowId === "leather_ink_removal" && !hasLeatherInkIntent(request?.message, request?.slots || {})) {
+      logInfo("FLOW_EXCLUDED", {
+        flowId,
+        reason: "leather_ink_requires_ink_and_leather_signal"
+      });
+      continue;
+    }
+
     if ((slotObject === "parbriz" || slotObject === "glass") && flowId === "exterior_wash_beginner") {
       continue;
     }
@@ -411,7 +469,10 @@ function findMatchingFlows(request, allowPartial = false) {
 
     if (flowId === "glass_clean_basic") {
       const msg = normalizeValue(request?.message || "");
-      const glassKw = flowKeywords.glass_clean_basic.find(kw => msg.includes(kw));
+      const msgNorm = normalizeForInsectMatch(request?.message || "");
+      const glassKw = flowKeywords.glass_clean_basic.find(
+        kw => msg.includes(kw) || msgNorm.includes(normalizeForInsectMatch(kw))
+      );
       const glassObj =
         slotObject === "glass" ||
         slotObject === "oglinda" ||

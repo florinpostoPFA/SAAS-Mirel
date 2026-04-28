@@ -23,6 +23,13 @@
       "goal": "Sterge uniform si finiseaza cu partea uscata pentru claritate.",
       "knowledgeIds": ["glass_cleaning"],
       "roles": ["microfiber"]
+    },
+    {
+      "id": "final_check",
+      "title": "Verificare finala",
+      "goal": "Controleaza la lumina daca nu au ramas urme sau dare; reia usor daca e nevoie.",
+      "knowledgeIds": ["glass_cleaning"],
+      "roles": []
     }
   ]
 }

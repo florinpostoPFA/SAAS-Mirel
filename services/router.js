@@ -18,7 +18,7 @@ function getMissingSlot(slots) {
   const hasCtoSurface = surfRaw !== "" && CTO_SURFACE_SET.has(surfRaw.toLowerCase());
 
   if (ctx === "interior") {
-    if (obj === "glass" || obj === "jante" || obj === "caroserie") return null;
+    if (obj === "glass" || obj === "jante" || obj === "anvelope" || obj === "caroserie") return null;
     if (obj === "mocheta" || obj === "bord") return null;
     if (!hasCtoSurface) return "surface";
     return null;
@@ -28,7 +28,7 @@ function getMissingSlot(slots) {
     const glassObjects = new Set(["glass", "geam", "parbriz", "oglinzi", "oglinda"]);
     if (glassObjects.has(obj)) return null;
     if (obj === "caroserie" && !surfRaw) return "surface";
-    if ((obj === "jante" || obj === "roti" || obj === "wheels") && !surfRaw) return "surface";
+    if ((obj === "jante" || obj === "roti" || obj === "wheels" || obj === "anvelope") && !surfRaw) return "surface";
     return null;
   }
 

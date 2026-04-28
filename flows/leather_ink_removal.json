@@ -1,0 +1,30 @@
+{
+  "flowId": "leather_ink_removal",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["interior"],
+    "surfaces": ["leather"],
+    "objects": ["scaun", "bancheta", "tapiterie", "cotiera", "volan"]
+  },
+  "title": "Indepartare urme de pix de pe piele (sigur)",
+  "steps": [
+    {
+      "id": "confirm_and_test",
+      "title": "Confirma materialul + test pe zona ascunsa",
+      "roles": [],
+      "knowledgeIds": ["leather_ink_removal_safe"]
+    },
+    {
+      "id": "gentle_clean",
+      "title": "Curatare blanda (fara frecare agresiva)",
+      "roles": ["leather_cleaner"],
+      "knowledgeIds": ["leather_cleaning"]
+    },
+    {
+      "id": "recondition",
+      "title": "Re-hidratare dupa curatare",
+      "roles": ["leather_protectant"],
+      "knowledgeIds": ["leather_conditioner_usage"]
+    }
+  ]
+}

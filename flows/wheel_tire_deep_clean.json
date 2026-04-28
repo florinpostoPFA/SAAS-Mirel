@@ -3,7 +3,7 @@
   "type": "micro",
   "triggers": {
     "contexts": ["exterior"],
-    "objects": ["jante"]
+    "objects": ["jante", "anvelope"]
   },
   "title": "Curatare jante si anvelope",
   "steps": [
@@ -11,7 +11,7 @@
       "id": "wheel_clean",
       "title": "Curatare jante",
       "goal": "Indeparteaza contaminarea de pe jante in siguranta.",
-      "knowledgeIds": ["curatare_jante_indicator_rosu"],
+      "knowledgeIds": ["curatare_jante_indicator_rosu", "solutie_jante_acida"],
       "roles": ["wheel_cleaner"]
     },
     {

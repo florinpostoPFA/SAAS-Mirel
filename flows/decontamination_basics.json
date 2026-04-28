@@ -1,0 +1,30 @@
+{
+  "flowId": "decontamination_basics",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["exterior"],
+    "surfaces": ["paint"],
+    "objects": ["caroserie", "jante"]
+  },
+  "title": "Decontaminare de baza (chimica + mecanica)",
+  "steps": [
+    {
+      "id": "iron_stage",
+      "title": "Decontaminare chimica",
+      "roles": ["decontamination_chemical"],
+      "knowledgeIds": ["prewash_importanta"]
+    },
+    {
+      "id": "tar_stage",
+      "title": "Curatare contaminanti persistenti",
+      "roles": ["decontamination_chemical"],
+      "knowledgeIds": ["sampon_neutru_rol"]
+    },
+    {
+      "id": "clay_stage",
+      "title": "Decontaminare mecanica cu argila",
+      "roles": ["decontamination_mechanical"],
+      "knowledgeIds": ["clay_bar_usage"]
+    }
+  ]
+}

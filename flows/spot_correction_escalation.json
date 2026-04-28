@@ -1,0 +1,30 @@
+{
+  "flowId": "spot_correction_escalation",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["exterior"],
+    "surfaces": ["paint", "glass"],
+    "objects": ["caroserie", "parbriz"]
+  },
+  "title": "Escaladare corectie punctuala",
+  "steps": [
+    {
+      "id": "inspect_and_decon",
+      "title": "Inspectie si decontaminare",
+      "roles": ["decontamination_chemical"],
+      "knowledgeIds": ["clay_bar_usage"]
+    },
+    {
+      "id": "safe_wash_reset",
+      "title": "Reset cu spalare sigura",
+      "roles": ["contact_cleaner"],
+      "knowledgeIds": ["sampon_neutru_rol"]
+    },
+    {
+      "id": "dry_and_recheck",
+      "title": "Uscare si reevaluare",
+      "roles": ["drying_tool"],
+      "knowledgeIds": ["laveta_uscare_auto"]
+    }
+  ]
+}

@@ -1,23 +1,24 @@
-const sessions = {};
+/**
+ * Unified session persistence (single lifecycle). Implementation: sessionLifecycle.js
+ * Slot / clarification rules: docs/SESSION_SCOPES.md
+ *
+ * @deprecated Direct imports are fine; this module is a thin facade over sessionLifecycle.
+ */
+
+const L = require("./sessionLifecycle");
 
 function getSession(sessionId) {
-  if (!sessions[sessionId]) {
-    sessions[sessionId] = {
-      state: "IDLE",
-      tags: [],
-      activeProducts: [],
-      lastResponse: null
-    };
-  }
-
-  return sessions[sessionId];
+  return L.loadSession(sessionId);
 }
 
 function saveSession(sessionId, sessionData) {
-  sessions[sessionId] = sessionData;
+  L.persistSession(sessionId, sessionData);
 }
 
 module.exports = {
   getSession,
-  saveSession
+  saveSession,
+  setSessionMutationHook: L.setSessionMutationHook,
+  resetGoldenConversationSessions: L.resetAllSessions,
+  seedGoldenConversationSession: L.seedSession
 };

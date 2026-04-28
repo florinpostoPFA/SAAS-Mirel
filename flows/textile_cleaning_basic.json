@@ -1,0 +1,18 @@
+{
+  "flowId": "textile_cleaning_basic",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["interior"],
+    "surfaces": ["textile"],
+    "objects": ["scaun", "bancheta", "mocheta"]
+  },
+  "title": "Curatare textile (de baza)",
+  "steps": [
+    {
+      "id": "textile_cleaning",
+      "title": "Curatare textil",
+      "roles": ["textile_cleaner"],
+      "knowledgeIds": ["textile_cleaning"]
+    }
+  ]
+}

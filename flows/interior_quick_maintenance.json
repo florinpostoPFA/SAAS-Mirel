@@ -1,0 +1,30 @@
+{
+  "flowId": "interior_quick_maintenance",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["interior"],
+    "surfaces": ["textile", "leather", "plastic"],
+    "objects": ["scaun", "bancheta", "bord", "cotiera", "mocheta"]
+  },
+  "title": "Intretinere rapida interior",
+  "steps": [
+    {
+      "id": "vacuum",
+      "title": "Aspirare rapida",
+      "roles": ["interior_tool"],
+      "knowledgeIds": ["interior_vacuum"]
+    },
+    {
+      "id": "general_clean",
+      "title": "Curatare usoara",
+      "roles": ["interior_cleaner"],
+      "knowledgeIds": ["interior_apc"]
+    },
+    {
+      "id": "protect",
+      "title": "Protectie finala",
+      "roles": ["interior_protection"],
+      "knowledgeIds": ["interior_protect"]
+    }
+  ]
+}

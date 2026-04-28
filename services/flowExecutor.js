@@ -87,6 +87,28 @@ function scoreDeterministicFallbackProduct(product, fallbackTags) {
 }
 
 function selectFallbackProductsForFlow(products, flowId, slots = {}) {
+  if (flowId === "glass_clean_basic") {
+    const safeProducts = Array.isArray(products) ? products : [];
+    const ranked = safeProducts
+      .map(product => ({
+        product,
+        score: scoreDeterministicFallbackProduct(product, ["glass_cleaner", "glass", "cleaner", "microfiber"])
+      }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return String(a.product?.name || "").localeCompare(String(b.product?.name || ""));
+      })
+      .map(item => item.product);
+    const selected = uniqueProducts(ranked).slice(0, 2);
+    return {
+      strictCount: selected.length,
+      fallbackCount: ranked.length,
+      selected,
+      reason: selected.length > 0 ? "glass_clean_basic_tag_fallback" : "no_matching_products"
+    };
+  }
+
   if (flowId !== "bug_removal_quick" || normalizeText(slots?.surface) !== "glass") {
     return { strictCount: 0, fallbackCount: 0, selected: [], reason: null };
   }

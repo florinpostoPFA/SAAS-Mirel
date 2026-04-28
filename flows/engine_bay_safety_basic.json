@@ -1,0 +1,29 @@
+{
+  "flowId": "engine_bay_safety_basic",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["exterior"],
+    "objects": ["motor", "caroserie"]
+  },
+  "title": "Curatare compartiment motor (siguranta)",
+  "steps": [
+    {
+      "id": "pre_clean_safety",
+      "title": "Pregatire si siguranta",
+      "roles": ["engine_bay_cleaner"],
+      "knowledgeIds": ["prewash_importanta"]
+    },
+    {
+      "id": "controlled_cleaning",
+      "title": "Curatare controlata",
+      "roles": ["engine_bay_cleaner"],
+      "knowledgeIds": ["sampon_neutru_rol"]
+    },
+    {
+      "id": "drying_control",
+      "title": "Uscare si verificare",
+      "roles": ["drying_tool"],
+      "knowledgeIds": ["laveta_uscare_auto"]
+    }
+  ]
+}

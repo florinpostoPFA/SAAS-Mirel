@@ -1,0 +1,119 @@
+{
+  "caseId": "low-signal-intent-level",
+  "meta": {
+    "description": "Vague single-token input triggers low-signal intent_level clarification"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "input": {
+        "clientId": "C1",
+        "message": "test"
+      },
+      "outcome": {
+        "assistantReply": "Vrei pași (cum se face) sau vrei recomandare de produse?",
+        "decision": {
+          "action": "clarification",
+          "flowId": null,
+          "hardGuardFallback": false,
+          "missingSlot": "intent_level"
+        },
+        "intent": {
+          "queryType": null,
+          "tags": null,
+          "type": null
+        },
+        "lowSignalDetected": true,
+        "output": {
+          "products": [],
+          "productsLength": 0,
+          "productsReason": null,
+          "type": "question"
+        },
+        "pendingQuestion": {
+          "slot": "intent_level",
+          "source": "low_signal",
+          "type": "intent_level"
+        }
+      },
+      "sessionMutations": [],
+      "sessionServiceAfter": {
+        "activeProducts": [],
+        "conversationHistory": [],
+        "lastResponse": null,
+        "lastResponseType": "question",
+        "lastUserMessage": "test",
+        "messageCount": 0,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-low-signal-1",
+          "updatedAtMs": 1700000000000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {},
+          "type": null
+        },
+        "originalIntent": null,
+        "pendingQuestion": {
+          "slot": "intent_level",
+          "source": "low_signal",
+          "type": "intent_level"
+        },
+        "pendingSelection": false,
+        "pendingSlots": null,
+        "previousAction": "clarification",
+        "questionCount": 0,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {},
+        "state": "IDLE",
+        "tags": []
+      },
+      "sessionStoreAfter": {
+        "activeProducts": [],
+        "conversationHistory": [],
+        "lastResponse": null,
+        "lastResponseType": "question",
+        "lastUserMessage": "test",
+        "messageCount": 0,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-low-signal-1",
+          "updatedAtMs": 1700000000000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {},
+          "type": null
+        },
+        "originalIntent": null,
+        "pendingQuestion": {
+          "slot": "intent_level",
+          "source": "low_signal",
+          "type": "intent_level"
+        },
+        "pendingSelection": false,
+        "pendingSlots": null,
+        "previousAction": "clarification",
+        "questionCount": 0,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {},
+        "state": "IDLE",
+        "tags": []
+      }
+    }
+  ],
+  "version": 1
+}

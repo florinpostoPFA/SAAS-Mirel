@@ -20,8 +20,32 @@
     "maxProducts": 1
   },
   "glass_cleaner": {
-    "matchTags": ["glass_cleaner"],
-    "matchText": ["geam"]
+    "requiredTags": ["glass"],
+    "optionalTags": ["cleaner", "cleaning"],
+    "excludeTags": ["leather", "tires"],
+    "matchTags": ["glass_cleaner", "glass", "cleaner", "cleaning"],
+    "matchText": ["geam", "parbriz", "sticla"]
+  },
+  "glass_rain_repellent": {
+    "requiredTags": ["glass"],
+    "optionalTags": ["sealant", "protection", "hydrofob", "rain_repellent"],
+    "excludeTags": ["interior"],
+    "matchTags": ["glass", "sealant", "protection", "rain_repellent"],
+    "matchText": ["hidrofob", "rain repellent", "parbriz"]
+  },
+  "leather_cleaner": {
+    "requiredTags": ["leather"],
+    "optionalTags": ["cleaner", "cleaning"],
+    "excludeTags": ["tires", "wheel_cleaner", "glass"],
+    "matchTags": ["leather", "leather_cleaner", "cleaner", "cleaning"],
+    "matchText": ["piele", "leather cleaner", "curatare piele"]
+  },
+  "leather_protectant": {
+    "requiredTags": ["leather"],
+    "optionalTags": ["protectant", "protection", "conditioner", "dressing"],
+    "excludeTags": ["tires", "wheel_cleaner", "glass"],
+    "matchTags": ["leather", "protectant", "protection", "conditioner", "dressing", "leather_conditioner"],
+    "matchText": ["protectie piele", "hidratare piele", "conditioner piele"]
   },
   "microfiber": {
     "matchTags": ["microfiber", "drying_towel"],
@@ -29,8 +53,24 @@
     "maxProducts": 1
   },
   "wheel_cleaner": {
-    "matchTags": ["wheel_cleaner"],
-    "matchText": ["jante"]
+    "matchTags": ["wheel_cleaner", "cleaner", "cleaning", "metal"],
+    "matchText": ["jante", "wheel", "iron", "frana"]
+  },
+  "tire_dressing": {
+    "requiredTags": ["dressing"],
+    "optionalTags": ["tires", "rubber", "protection"],
+    "excludeTags": ["wheel_cleaner", "metal", "glass"],
+    "matchTags": ["dressing", "tires", "rubber", "protection"],
+    "matchText": ["anvelope", "tire", "luciu", "gel"],
+    "maxProducts": 2
+  },
+  "rubber_seal_protectant": {
+    "requiredTags": ["rubber"],
+    "optionalTags": ["protectant", "protection", "dressing", "sealant"],
+    "excludeTags": ["wheel_cleaner", "metal", "glass"],
+    "matchTags": ["rubber", "protectant", "protection", "dressing", "sealant"],
+    "matchText": ["chedere", "garnituri", "cauciuc usi", "garnitura usa"],
+    "maxProducts": 2
   },
   
   "interior_cleaner": {

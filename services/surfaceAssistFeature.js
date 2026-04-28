@@ -53,9 +53,34 @@ function envIndicatesSurfaceAssistEnabled(env = process.env) {
   return parseEnvSurfaceAssistRaw(env).enabled;
 }
 
+function parseEnvLlmSurfaceAssistRaw(env) {
+  const envObj = env && typeof env === "object" ? env : process.env;
+  if (!Object.prototype.hasOwnProperty.call(envObj, "SURFACE_ASSIST_LLM")) {
+    return { raw: null, enabled: false };
+  }
+  const rawVal = envObj.SURFACE_ASSIST_LLM;
+  if (rawVal === undefined || rawVal === null) {
+    return { raw: null, enabled: false };
+  }
+  const str = String(rawVal);
+  const v = str.toLowerCase().trim();
+  const enabled = v === "true" || v === "1" || v === "yes" || v === "on";
+  return { raw: str, enabled };
+}
+
+function resolveLlmSurfaceAssistFlag(env = process.env) {
+  const { raw: rawEnvValue, enabled } = parseEnvLlmSurfaceAssistRaw(env);
+  return {
+    effective: enabled,
+    rawEnvValue
+  };
+}
+
 module.exports = {
   parseEnvSurfaceAssistRaw,
   computeSurfaceAssistEnabled,
   isSurfaceAssistEnabled,
-  envIndicatesSurfaceAssistEnabled
+  envIndicatesSurfaceAssistEnabled,
+  parseEnvLlmSurfaceAssistRaw,
+  resolveLlmSurfaceAssistFlag
 };

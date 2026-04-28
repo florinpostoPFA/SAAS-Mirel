@@ -124,7 +124,10 @@ describe("AI eCommerce Assistant API", () => {
       expect(res.body.reply).toBeTruthy();
       expect(res.body.reply).not.toMatch(/the|recommended|for your/i);
       const entry = lastInteraction();
-      expect(["clarification", "knowledge"]).toContain(entry?.decision?.action);
+      // Clear recommendation + product noun can route to flow (Phase A product heuristics).
+      expect(["clarification", "knowledge", "flow"]).toContain(
+        entry?.decision?.action
+      );
       if (entry?.decision?.action === "clarification") {
         expect(res.body.reply.toLowerCase()).toMatch(/interior|exterior/);
       }

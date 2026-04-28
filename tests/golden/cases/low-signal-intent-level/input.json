@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "meta": {
+    "description": "Vague single-token input triggers low-signal intent_level clarification"
+  },
+  "sessionId": "golden-low-signal-1",
+  "clientId": "C1",
+  "products": "minimal",
+  "runtime": {
+    "nowMs": 1700000000000
+  },
+  "steps": [
+    {
+      "message": "test"
+    }
+  ]
+}
