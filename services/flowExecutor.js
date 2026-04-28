@@ -157,12 +157,23 @@ function selectFallbackProductsForFlow(products, flowId, slots = {}) {
   };
 }
 
-function selectGenericSafeFallbackProduct(products = []) {
+function selectGenericSafeFallbackProduct(products = [], context = {}) {
   const safeProducts = Array.isArray(products) ? products : [];
+  const flowId = normalizeText(context?.flowId);
+  const slots = context?.slots && typeof context.slots === "object" ? context.slots : {};
+  const slotContext = normalizeText(slots.context);
+  const slotSurface = normalizeText(slots.surface);
+  const slotObject = normalizeText(slots.object);
+  const isPaintDecon =
+    flowId === "decontamination_basics" ||
+    (slotContext === "exterior" && (slotSurface === "paint" || slotObject === "caroserie"));
+  const scoringTags = isPaintDecon
+    ? ["decontamination", "iron_remover", "tar_remover", "clay", "car_shampoo", "cleaner", "exterior"]
+    : ["cleaner", "interior", "microfiber"];
   const ranked = safeProducts
     .map(product => ({
       product,
-      score: scoreDeterministicFallbackProduct(product, ["cleaner", "glass", "interior", "microfiber"])
+      score: scoreDeterministicFallbackProduct(product, scoringTags)
     }))
     .filter(item => item.score > 0)
     .sort((a, b) => {
@@ -452,6 +463,7 @@ function executeFlow(flow, products, slots = {}, options = {}) {
   const lines = [];
   const allProducts = [];
   const structuredSteps = [];
+  let hasUnknownRole = false;
 
   lines.push(`${shell.titlePrefix} ${String(safeFlow.title || safeFlow.flowId || "Flow")}`);
   lines.push(shell.stepsHeader);
@@ -484,6 +496,7 @@ function executeFlow(flow, products, slots = {}, options = {}) {
         roleRequirements: stepRoles.map(role => {
           const cfg = productRoles[role];
           if (!cfg) {
+            hasUnknownRole = true;
             return { role, unknownRole: true, matchText: [], matchTags: [] };
           }
           return {
@@ -554,7 +567,7 @@ function executeFlow(flow, products, slots = {}, options = {}) {
 
   let finalProducts = uniqueProducts(allProducts);
   if (finalProducts.length === 0) {
-    const safeFallback = selectGenericSafeFallbackProduct(products);
+    const safeFallback = selectGenericSafeFallbackProduct(products, { flowId, slots });
     if (safeFallback) {
       finalProducts = [safeFallback];
       lines.push("");
@@ -566,15 +579,21 @@ function executeFlow(flow, products, slots = {}, options = {}) {
       logInfo("FLOW_GENERIC_FALLBACK", {
         flowId,
         product: safeFallback?.name || null,
-        reason: "no_matching_products"
+        reason: hasUnknownRole ? "unknown_role_with_safe_fallback" : "no_matching_products"
       });
     } else {
       lines.push("");
-      lines.push(shell.noSafe);
+      lines.push(
+        hasUnknownRole
+          ? (normalizeFlowLocale(responseLocale) === "en"
+            ? "Role mapping is missing for this flow step. Please update product role mapping."
+            : "Lipseste maparea de roluri pentru acest pas de flow. Actualizeaza maparea de roluri produs.")
+          : shell.noSafe
+      );
       logInfo("FLOW_GENERIC_FALLBACK", {
         flowId,
         product: null,
-        reason: "no_safe_product_found"
+        reason: hasUnknownRole ? "unknown_role_no_safe_product_found" : "no_safe_product_found"
       });
     }
   }

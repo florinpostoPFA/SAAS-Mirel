@@ -940,6 +940,9 @@ function parseCtoSurfaceFromNormalizedGateText(norm) {
   if (t.includes("alcantara") || t.includes("alcantar")) {
     return "alcantara";
   }
+  if (/\b(vopsea|vopseaua|lac|lacul|paint|clear coat|clearcoat)\b/.test(t)) {
+    return "paint";
+  }
   return null;
 }
 
@@ -954,7 +957,10 @@ function coerceLegacySurfaceToCto(surface) {
   if (s === "leather") {
     return "piele";
   }
-  if (s === "glass" || s === "paint" || s === "wheels") {
+  if (s === "paint") {
+    return "paint";
+  }
+  if (s === "glass" || s === "wheels") {
     return null;
   }
   return null;
@@ -2108,6 +2114,22 @@ function extractSlotsFromMessage(message) {
 
   const gateNorm = normalizeRomanianTextForGate(message);
   let inferredSurface = parseCtoSurfaceFromNormalizedGateText(gateNorm);
+  const hasPaintLexeme = /\b(vopsea|vopseaua|lac|lacul|paint|clear coat|clearcoat)\b/.test(gateNorm);
+  const hasGlassLexeme = /\b(geam|geamuri|parbriz|sticla|glass|windshield)\b/.test(gateNorm);
+  const tokenCount = gateNorm ? gateNorm.split(/\s+/).filter(Boolean).length : 0;
+  const hasExteriorPaintContext = /\b(exterior|exteriorul|exterioara|afara|caroserie|masin[aei]?)\b/.test(gateNorm);
+  if (hasPaintLexeme) {
+    if (tokenCount <= 2 && !hasExteriorPaintContext) {
+      // Keep single-word paint replies object-only; pending clarification logic handles next step.
+      inferredSurface = inferredSurface === "paint" ? null : inferredSurface;
+    } else if (!hasGlassLexeme) {
+      inferredSurface = "paint";
+    } else if (object === "caroserie") {
+      inferredSurface = "paint";
+    } else if (object === "glass") {
+      inferredSurface = inferredSurface === "paint" ? null : inferredSurface;
+    }
+  }
   if (inferredSurface) {
     logSurfaceNormalized(message, inferredSurface);
   }

@@ -72,6 +72,62 @@
     "matchText": ["chedere", "garnituri", "cauciuc usi", "garnitura usa"],
     "maxProducts": 2
   },
+  "textile_cleaner": {
+    "requiredTags": ["textile"],
+    "optionalTags": ["cleaner", "cleaning", "interior"],
+    "excludeTags": ["glass", "tires"],
+    "matchTags": ["textile", "cleaner", "cleaning", "interior_cleaner"],
+    "matchText": ["textil", "tapiterie", "mocheta", "curatare textile"],
+    "maxProducts": 2
+  },
+  "decontamination_chemical": {
+    "requiredTags": ["exterior"],
+    "optionalTags": ["cleaner", "decontamination", "iron_remover", "tar_remover"],
+    "excludeTags": ["interior", "leather", "glass_cleaner"],
+    "matchTags": ["decontamination", "iron_remover", "tar_remover", "cleaner", "exterior"],
+    "matchText": ["decontamin", "iron remover", "fallout", "tar", "bitum"],
+    "maxProducts": 2
+  },
+  "decontamination_mechanical": {
+    "requiredTags": ["exterior"],
+    "optionalTags": ["clay", "clay_bar", "decontamination"],
+    "excludeTags": ["interior", "glass_cleaner"],
+    "matchTags": ["clay", "clay_bar", "decontamination", "exterior"],
+    "matchText": ["argila", "clay bar", "decontaminare mecanica"],
+    "maxProducts": 1
+  },
+  "protective_shampoo": {
+    "requiredTags": ["exterior"],
+    "optionalTags": ["car_shampoo", "wax", "protection"],
+    "excludeTags": ["interior", "glass_cleaner"],
+    "matchTags": ["car_shampoo", "shampoo", "exterior", "wax", "protection"],
+    "matchText": ["sampon", "wash and wax", "sampon cu ceara"],
+    "maxProducts": 1
+  },
+  "engine_bay_cleaner": {
+    "requiredTags": ["exterior"],
+    "optionalTags": ["cleaner", "degreaser", "apc"],
+    "excludeTags": ["interior", "glass_cleaner", "leather"],
+    "matchTags": ["engine_bay", "engine", "degreaser", "cleaner", "apc"],
+    "matchText": ["motor", "compartiment motor", "degresant motor"],
+    "maxProducts": 1
+  },
+  "tire_cleaner": {
+    "requiredTags": ["tires"],
+    "optionalTags": ["cleaner", "rubber", "wheels"],
+    "excludeTags": ["glass_cleaner", "leather"],
+    "matchTags": ["tires", "rubber", "cleaner", "wheel_cleaner"],
+    "matchText": ["anvelope", "tire cleaner", "curatare anvelope"],
+    "maxProducts": 1
+  },
+  "bug_remover": {
+    "requiredTags": ["exterior"],
+    "optionalTags": ["bug_remover", "cleaner", "decontamination"],
+    "excludeTags": ["interior", "leather"],
+    "matchTags": ["bug_remover", "cleaner", "exterior"],
+    "matchText": ["insecte", "bug remover", "curatare insecte"],
+    "maxProducts": 1
+  },
   
   "interior_cleaner": {
   "matchTags": ["interior_cleaner"],
