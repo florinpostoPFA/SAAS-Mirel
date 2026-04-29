@@ -13,7 +13,7 @@ jest.mock("../services/interactionLog", () => ({
 const { askLLM } = require("../services/llm");
 const { executeFlow } = require("../services/flowExecutor");
 const { appendInteractionLine } = require("../services/interactionLog");
-const { handleChat } = require("../services/chatService");
+const { handleChat, __test: chatServiceTest } = require("../services/chatService");
 const { getSession, saveSession } = require("../services/sessionStore");
 const {
   applyUserCorrection,
@@ -166,5 +166,67 @@ describe("Slot correction integration (handleChat)", () => {
     if (progress) {
       expect(progress.nextMissingSlot).toBe("surface");
     }
+  });
+});
+
+describe("Wheels slot validator (deterministic)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    askLLM.mockResolvedValue("Explicatie scurta.");
+    executeFlow.mockImplementation((flow) => ({
+      reply: `Flow ${flow.flowId}`,
+      products: [{ id: 1, name: "Produs test", tags: ["exterior"] }]
+    }));
+  });
+
+  it("prevents leaked interior surface on wheels intent and sets validator clarification", async () => {
+    const mergedSlots = {
+      context: "exterior",
+      object: "jante",
+      surface: "textile"
+    };
+
+    const result = chatServiceTest.validateCombination(
+      mergedSlots,
+      { context: "unknown", object: "inferred", surface: "confirmed" },
+      {}
+    );
+
+    expect(result.status).toBe("INVALID");
+    expect(result.reasonCode).toBe("WHEELS_SURFACE_INVALID");
+    expect(result.correctedSlots).toEqual({ surface: null });
+    expect(result.pendingQuestion?.source).toBe("slot_validator_wheels_surface");
+    expect(result.missingSlot).toBe("intent_level");
+    expect(result.validatorTelemetry).toEqual({
+      validatorTriggered: true,
+      validatorRuleId: "WHEELS_SURFACE_INVALID",
+      validatorClearedSlots: ["surface"],
+      validatorPendingQuestionSet: true
+    });
+  });
+
+  it("does not silently keep wheels+interior when user answers interior in validator chain", async () => {
+    const result = chatServiceTest.validateCombination(
+      { context: "interior", object: "jante", surface: null },
+      { context: "confirmed", object: "confirmed", surface: "unknown" },
+      {}
+    );
+
+    expect(result.status).toBe("INVALID");
+    expect(result.pendingQuestion?.slot).toBe("intent_level");
+    expect(result.pendingQuestion?.source).toBe("slot_validator_wheels_surface");
+    expect(result.missingSlot).toBe("intent_level");
+    expect(result.correctedSlots).toEqual({ context: null });
+  });
+
+  it("does not force non-wheels textile requests to exterior", async () => {
+    const result = chatServiceTest.validateCombination(
+      { context: null, object: "scaun", surface: "textile" },
+      { context: "unknown", object: "inferred", surface: "inferred" },
+      {}
+    );
+
+    expect(result.reasonCode).not.toBe("WHEELS_SURFACE_INVALID");
+    expect(result.validatorTelemetry?.validatorTriggered).toBe(false);
   });
 });

@@ -887,6 +887,24 @@ function canonicalizeObjectValue(object) {
     return null;
   }
 
+  if (normalized === "janta" || normalized === "jante") {
+    return "jante";
+  }
+
+  if (
+    normalized === "roata" ||
+    normalized === "roti" ||
+    normalized === "rotile" ||
+    normalized === "wheels" ||
+    normalized === "wheel"
+  ) {
+    return "jante";
+  }
+
+  if (normalized === "anvelopa" || normalized === "anvelope") {
+    return "anvelope";
+  }
+
   if (GLASS_OBJECT_ALIASES.includes(normalized)) {
     return "glass";
   }
@@ -1593,6 +1611,9 @@ function endInteraction(interactionRef, result, patch = {}) {
   if (patch.slotCorrectionTelemetry) {
     interactionRef.slotCorrectionTelemetry = patch.slotCorrectionTelemetry;
   }
+  if (patch.slotValidatorTelemetry) {
+    interactionRef.slotValidatorTelemetry = patch.slotValidatorTelemetry;
+  }
   if (patch.clarificationEscalationTelemetry) {
     interactionRef.clarificationEscalationTelemetry = patch.clarificationEscalationTelemetry;
   }
@@ -1960,6 +1981,10 @@ function endInteraction(interactionRef, result, patch = {}) {
     slotChanges: interactionRef.slotCorrectionTelemetry?.slotChanges ?? null,
     pendingQuestionBefore: interactionRef.slotCorrectionTelemetry?.pendingQuestionBefore ?? null,
     pendingQuestionAfter: interactionRef.slotCorrectionTelemetry?.pendingQuestionAfter ?? null,
+    validatorTriggered: Boolean(interactionRef.slotValidatorTelemetry?.validatorTriggered),
+    validatorRuleId: interactionRef.slotValidatorTelemetry?.validatorRuleId ?? null,
+    validatorClearedSlots: interactionRef.slotValidatorTelemetry?.validatorClearedSlots ?? [],
+    validatorPendingQuestionSet: Boolean(interactionRef.slotValidatorTelemetry?.validatorPendingQuestionSet),
     contextInferenceAttempted: Boolean(interactionRef.contextInferenceTelemetry?.contextInferenceAttempted),
     contextInferenceResult: interactionRef.contextInferenceTelemetry?.contextInferenceResult ?? null,
     contextInferenceReason: interactionRef.contextInferenceTelemetry?.contextInferenceReason ?? null,
@@ -4031,6 +4056,7 @@ function shouldPreserveSlotsForContinuation({
   return (
     Boolean(handledPendingQuestionAnswer) ||
     Boolean(handledPendingQuestionAnswerEarly) ||
+    Boolean(sessionContext?.pendingSelection === true) ||
     Boolean(sessionContext.state && sessionContext.state !== "IDLE") ||
     Boolean(sessionContext.pendingQuestion) ||
     (shortAffirmation &&
@@ -5044,9 +5070,57 @@ const NON_CLEANING_SMALL_TALK = ["ce faci", "cum esti"];
 const NON_CLEANING_DISCOUNT = ["cod de reducere", "reducere", "discount"];
 const NON_CLEANING_META = ["o sa inlocuiesti", "vorbesc cu clientii", "baietii"];
 const NON_CLEANING_PROFANITY = ["prost", "idiot", "dracu", "naiba", "dute"];
+const WHEELS_VALIDATOR_RULE_ID = "WHEELS_SURFACE_INVALID";
+const WHEELS_VALIDATOR_QUESTION_RO = "E vorba de exterior (jante/anvelope) sau vrei de fapt ceva pentru interior (textile/piele)?";
 
 function normalizeMessageText(message) {
   return String(message || "").toLowerCase().trim();
+}
+
+function hasExplicitSelectionIntent(message) {
+  const text = normalizeRomanianTextForGate(message);
+  if (!text) return false;
+
+  const explicitPhrases = [
+    "recomandare",
+    "ce mi recomanzi",
+    "ce imi recomanzi",
+    "ce mi dai",
+    "ce imi dai",
+    "vreau produs",
+    "vreau produse",
+    "ce produs",
+    "ce produse",
+    "da mi 2",
+    "da mi 2 3 optiuni",
+    "2 3 optiuni"
+  ];
+
+  if (explicitPhrases.some((p) => text.includes(p))) {
+    return true;
+  }
+
+  // Conservative fallback: recommendation verb + product noun.
+  if (
+    (text.includes("recomanzi") || text.includes("recomand")) &&
+    (text.includes("produs") || text.includes("produse") || text.includes("optiuni") || text.includes("optiune"))
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function parseCoverageGoalReply(message) {
+  const norm = normalizeRomanianTextForGate(message);
+  if (!norm) return null;
+
+  const isClean = /\b(curatare|curat|cureti|curata|spalare|spal)\b/.test(norm);
+  const isProtect = /\b(protectie|protectiei|protej|hidrat|hidratare|hidratezi|intretin|condition)\b/.test(norm);
+
+  if (isClean && !isProtect) return "clean";
+  if (isProtect && !isClean) return "protect";
+  return null;
 }
 
 function messageIncludesAny(text, terms) {
@@ -5678,12 +5752,107 @@ function isWheelsObjectLike(slots) {
  * Deterministic slot combination validator.
  * Returns { status: "VALID"|"INVALID"|"CORRECTABLE", correctedSlots?, userMessage?, ask?, reasonCode }
  */
-function validateCombination(context, object, surface) {
+function validateCombination(slotsOrContext, slotMetaOrObject = null, sessionContextOrSurface = null) {
+  let slots;
+  let slotMeta;
+  if (slotsOrContext && typeof slotsOrContext === "object" && !Array.isArray(slotsOrContext)) {
+    slots = {
+      context: slotsOrContext.context ?? null,
+      object: slotsOrContext.object ?? null,
+      surface: slotsOrContext.surface ?? null
+    };
+    slotMeta =
+      slotMetaOrObject && typeof slotMetaOrObject === "object" && !Array.isArray(slotMetaOrObject)
+        ? slotMetaOrObject
+        : {};
+  } else {
+    slots = {
+      context: slotsOrContext ?? null,
+      object: slotMetaOrObject ?? null,
+      surface: sessionContextOrSurface ?? null
+    };
+    slotMeta = {};
+  }
+
+  const validatorTelemetryBase = {
+    validatorTriggered: false,
+    validatorRuleId: null,
+    validatorClearedSlots: [],
+    validatorPendingQuestionSet: false
+  };
+
+  const object = canonicalizeObjectValue(slots.object);
+  const context = slots.context;
+  const surface = slots.surface;
+  const normalizedSurface = String(surface || "").toLowerCase().trim();
+  const interiorOnlySurfaces = new Set(CTO_SURFACE_ENUM);
+  const isWheelsObject = object === "jante" || object === "anvelope";
+
+  if (isWheelsObject) {
+    const correctedSlots = {};
+    const contextMeta = String(slotMeta?.context || "unknown").toLowerCase();
+    const hasKnownContext = typeof context === "string" && context.trim() !== "";
+
+    if (!hasKnownContext && contextMeta !== "confirmed") {
+      correctedSlots.context = "exterior";
+    }
+
+    const hasInvalidInteriorSurface =
+      Boolean(normalizedSurface) && interiorOnlySurfaces.has(normalizedSurface);
+    const hasInteriorContextConflict = String(context || "").toLowerCase().trim() === "interior";
+
+    if (hasInvalidInteriorSurface || hasInteriorContextConflict) {
+      if (hasInteriorContextConflict) {
+        correctedSlots.context = null;
+      }
+      if (hasInvalidInteriorSurface) {
+        correctedSlots.surface = null;
+      }
+      return {
+        status: "INVALID",
+        ask: { question: WHEELS_VALIDATOR_QUESTION_RO },
+        reasonCode: WHEELS_VALIDATOR_RULE_ID,
+        missingSlot: "intent_level",
+        pendingQuestion: {
+          slot: "intent_level",
+          type: "intent_level",
+          source: "slot_validator_wheels_surface",
+          question: WHEELS_VALIDATOR_QUESTION_RO
+        },
+        correctedSlotMeta:
+          contextMeta !== "confirmed" && correctedSlots.context === "exterior"
+            ? { context: "inferred" }
+            : null,
+        correctedSlots: Object.keys(correctedSlots).length > 0 ? correctedSlots : undefined,
+        validatorTelemetry: {
+          validatorTriggered: true,
+          validatorRuleId: WHEELS_VALIDATOR_RULE_ID,
+          validatorClearedSlots: hasInvalidInteriorSurface ? ["surface"] : [],
+          validatorPendingQuestionSet: true
+        }
+      };
+    }
+
+    if (Object.keys(correctedSlots).length > 0) {
+      return {
+        status: "CORRECTABLE",
+        correctedSlots,
+        correctedSlotMeta: { context: "inferred" },
+        reasonCode: "OBJ_INFERRED_CONTEXT",
+        validatorTelemetry: validatorTelemetryBase
+      };
+    }
+  }
+
   const rule = object ? SLOT_DOMAIN_RULES[object] : null;
 
   if (!rule) {
     // Object unknown or not in domain rules – skip validation, let routing handle it
-    return { status: "VALID", reasonCode: "OBJ_UNKNOWN_SKIP_VALIDATION" };
+    return {
+      status: "VALID",
+      reasonCode: "OBJ_UNKNOWN_SKIP_VALIDATION",
+      validatorTelemetry: validatorTelemetryBase
+    };
   }
 
   const correctedSlots = {};
@@ -5699,7 +5868,8 @@ function validateCombination(context, object, surface) {
         status: "CORRECTABLE",
         correctedSlots,
         userMessage: "Jantele sunt la exterior. Te ajut cu curatarea lor.",
-        reasonCode
+        reasonCode,
+        validatorTelemetry: validatorTelemetryBase
       };
     }
   }
@@ -5735,7 +5905,8 @@ function validateCombination(context, object, surface) {
       status: "CORRECTABLE",
       correctedSlots,
       userMessage: userMessage || undefined,
-      reasonCode
+      reasonCode,
+      validatorTelemetry: validatorTelemetryBase
     };
   }
 
@@ -5774,15 +5945,16 @@ function validateCombination(context, object, surface) {
       status: "INVALID",
       ask,
       reasonCode,
-      correctedSlots: Object.keys(correctedSlots).length > 0 ? correctedSlots : undefined
+      correctedSlots: Object.keys(correctedSlots).length > 0 ? correctedSlots : undefined,
+      validatorTelemetry: validatorTelemetryBase
     };
   }
 
   if (Object.keys(correctedSlots).length === 0) {
-    return { status: "VALID", reasonCode: "VALID" };
+    return { status: "VALID", reasonCode: "VALID", validatorTelemetry: validatorTelemetryBase };
   }
 
-  return { status: "CORRECTABLE", correctedSlots, reasonCode };
+  return { status: "CORRECTABLE", correctedSlots, reasonCode, validatorTelemetry: validatorTelemetryBase };
 }
 
 function overrideIntent(message, detectedIntent) {
@@ -6085,6 +6257,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       knowledgeTelemetry: null,
       lowSignalTelemetry: null,
       slotCorrectionTelemetry: null,
+      slotValidatorTelemetry: null,
       clarificationEscalationTelemetry: null,
       contextInferenceTelemetry: null,
       intentRoutingTelemetry: {
@@ -6180,12 +6353,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
-    const lowSignalIntent = clarificationPendingAtEntry ? null : detectIntent(intentCore, sessionId);
+    const continuationGuardActive =
+      sessionContext?.pendingSelection === true ||
+      String(sessionContext?.state || "").startsWith("NEEDS_") ||
+      Boolean(sessionContext?.pendingQuestion);
+
+    const lowSignalIntent = (clarificationPendingAtEntry || continuationGuardActive)
+      ? null
+      : detectIntent(intentCore, sessionId);
     const lowSignalSlots = extractSlotsFromMessage(userMessage);
     rememberLastNonNullSlots(sessionContext, lowSignalSlots);
 
     const lowSignalNormalized = normalizeLowSignalText(intentCore);
-    let lowSignalCheck = !clarificationPendingAtEntry
+    let lowSignalCheck = !(clarificationPendingAtEntry || continuationGuardActive)
       ? isLowSignalMessage(
           userMessage,
           lowSignalNormalized,
@@ -6193,7 +6373,20 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           lowSignalSlots,
           Array.isArray(sessionContext?.tags) ? sessionContext.tags : []
         )
-      : { lowSignal: false, reason: "pending_session" };
+      : { lowSignal: false, reason: continuationGuardActive ? "pending_continuation" : "pending_session" };
+
+    if (continuationGuardActive) {
+      logInfo("LOW_SIGNAL_BYPASSED_CONTINUATION", {
+        reason: "pending_selection_or_needs_or_pending_question",
+        pendingSelection: sessionContext?.pendingSelection === true,
+        state: sessionContext?.state || null,
+        pendingSlot: sessionContext?.pendingQuestion?.slot || null,
+        pendingSource: sessionContext?.pendingQuestion?.source || null,
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
+    const explicitSelectionIntent = hasExplicitSelectionIntent(userMessage);
 
     const lowSignalTelemetryFirst = {
       lowSignalDetected: Boolean(lowSignalCheck.lowSignal),
@@ -6237,8 +6430,20 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
+    if (explicitSelectionIntent && lowSignalCheck.lowSignal) {
+      lowSignalCheck = { lowSignal: false, reason: "explicit_selection_phrase" };
+      lowSignalTelemetryFirst.lowSignalDetected = false;
+      lowSignalTelemetryFirst.lowSignalReason = "explicit_selection_phrase";
+      lowSignalTelemetryFirst.lowSignalRecoveryApplied = true;
+      logInfo("LOW_SIGNAL_BYPASSED_EXPLICIT_SELECTION", {
+        reason: "explicit_selection_phrase",
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
     if (
       !clarificationPendingAtEntry &&
+      !continuationGuardActive &&
       !safetyAwaitingFollowUp &&
       !selectionFollowupLowSignalBypass &&
       lowSignalCheck.lowSignal &&
@@ -6703,6 +6908,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       queryType = "selection";
     }
 
+    if (explicitSelectionIntent && !pendingSlotClarificationActive) {
+      queryType = "selection";
+      logInfo("QUERY_TYPE_OVERRIDE", {
+        reason: "explicit_selection_phrase",
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
     if (safetyRoutingSnapshot.triggered || safetyAwaitingClarification) {
       queryType = "safety";
       selectionEscalation = false;
@@ -7127,7 +7340,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const intentType = typeof currentIntent === "string" ? currentIntent : currentIntent?.type;
       if (intentType === "selection") {
         // Re-enter selection slot evaluation immediately
-        const slotResult = processSlots(userMessage, "selection", sessionContext, { mergeWithSession: hadPendingSlotClarificationAtStart });
+        const continuationSlotGuard =
+          sessionContext?.pendingSelection === true ||
+          Boolean(sessionContext?.pendingQuestion) ||
+          String(sessionContext?.state || "").startsWith("NEEDS_");
+        const slotResult = processSlots(userMessage, "selection", sessionContext, {
+          mergeWithSession: hadPendingSlotClarificationAtStart || continuationSlotGuard
+        });
         const reentryPendingBeforeUpdate = sessionContext.pendingQuestion
           ? { ...sessionContext.pendingQuestion }
           : null;
@@ -7136,7 +7355,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.state = null;
           sessionContext.pendingQuestion = null;
         }
-        const reentrySlotMode = hadPendingSlotClarificationAtStart ? "merge" : "replace";
+        const reentrySlotMode = hadPendingSlotClarificationAtStart || continuationSlotGuard ? "merge" : "replace";
         const reentryBeforeSlots = { ...(sessionContext.slots || {}) };
         console.log("SLOT_MODE", {
           mode: reentrySlotMode
@@ -7158,7 +7377,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         });
         if (!slotResult.missing) {
           sessionContext.state = null;
-          sessionContext.pendingQuestion = null;
+          const isCoverageGoalPending =
+            sessionContext?.pendingQuestion?.slot === "intent_level" &&
+            sessionContext?.pendingQuestion?.source === "coverage_role_goal";
+          if (!isCoverageGoalPending) {
+            sessionContext.pendingQuestion = null;
+          }
         }
         saveSession(sessionId, sessionContext);
         const problemType = sessionContext.problemType || null;
@@ -7730,6 +7954,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       queryType === "selection" &&
       previewAction === "selection"
     ) {
+      const pendingCoverageGoalQuestionAtEntry =
+        sessionContext?.pendingQuestion?.source === "coverage_role_goal"
+          ? sessionContext.pendingQuestion
+          : null;
       const slotResult = processSlots(userMessage, "selection", sessionContext, {
         mergeWithSession: hadPendingSlotClarificationAtStart || sessionContext?.pendingSelection === true
       });
@@ -7843,18 +8071,91 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (!role && msg.includes("sampon")) role = "car_shampoo";
       if (!role && msg.includes("jante")) role = "wheel_cleaner";
       if (!role && msg.includes("geam")) role = "glass_cleaner";
+
+      const pendingCoverageGoalReply = pendingCoverageGoalQuestionAtEntry
+        ? parseCoverageGoalReply(userMessage)
+        : null;
+      if (!role && pendingCoverageGoalReply === "clean") {
+        role = "leather_cleaner";
+      } else if (!role && pendingCoverageGoalReply === "protect") {
+        role = "leather_protectant";
+      }
+
+      if (pendingCoverageGoalReply) {
+        sessionContext.coverageGoal = pendingCoverageGoalReply;
+        sessionContext.pendingQuestion = null;
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = null;
+        saveSession(sessionId, sessionContext);
+        logInfo("COVERAGE_GOAL_REPLY_PARSED", {
+          goal: pendingCoverageGoalReply,
+          mappedRole: role,
+          object: selectionSlots?.object || null,
+          surface: selectionSlots?.surface || null
+        });
+      }
+
       const coverageRoleDecision = !role
         ? detectCoverageGapRole(userMessage, selectionSlots)
         : { role: null, ask: null };
       if (!role && coverageRoleDecision.ask) {
         const coverageAsk = coverageRoleDecision.ask;
+        const targetedMissingSlot = getMissingSlot(selectionSlots);
+
+        if (["context", "object", "surface"].includes(targetedMissingSlot)) {
+          sessionContext.state =
+            targetedMissingSlot === "context" ? "NEEDS_CONTEXT" :
+            targetedMissingSlot === "object" ? "NEEDS_OBJECT" :
+            "NEEDS_SURFACE";
+          sessionContext.originalIntent = "selection";
+          sessionContext.pendingSelection = true;
+          sessionContext.pendingSelectionMissingSlot = targetedMissingSlot;
+          sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+            slot: targetedMissingSlot,
+            object: sessionContext.slots?.object || null,
+            context: sessionContext.slots?.context || null
+          });
+          saveSession(sessionId, sessionContext);
+          return endInteraction(
+            interactionRef,
+            {
+              type: "question",
+              message: getClarificationQuestion(targetedMissingSlot, selectionSlots, sessionContext.responseLocale)
+            },
+            {
+              decision: { action: "clarification", flowId: null, missingSlot: targetedMissingSlot },
+              outputType: "question",
+              productsReason: "none",
+              slots: selectionSlots
+            }
+          );
+        }
+
+        sessionContext.originalIntent = "selection";
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = "intent_level";
+        sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+          slot: "intent_level",
+          source: "coverage_role_goal",
+          question: coverageAsk,
+          roleFamily: "leather",
+          object: selectionSlots?.object || null,
+          context: selectionSlots?.context || null,
+          surface: selectionSlots?.surface || null
+        });
+        saveSession(sessionId, sessionContext);
+
         return endInteraction(
           interactionRef,
-          { type: "question", message: coverageAsk, reply: coverageAsk, products: [] },
           {
-            decision: { action: "clarification", flowId: null, missingSlot: "intent_level" },
+            type: "question",
+            message: coverageAsk
+          },
+          {
+            decision: { action: "recommend", flowId: null, missingSlot: null },
             outputType: "question",
-            productsReason: "none"
+            productsReason: "none",
+            slots: selectionSlots
           }
         );
       }
@@ -8102,11 +8403,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       // Run deterministic validation before preview disambiguation.
       // This prevents impossible or corrected combinations from bypassing validator logic.
       {
-        const _previewVc = validateCombination(
-          proceduralSlots.context,
-          proceduralSlots.object,
-          proceduralSlots.surface
-        );
+        const _previewVc = validateCombination(proceduralSlots, sessionContext.slotMeta, sessionContext);
         const previewUserMessage = _previewVc.userMessage || null;
 
         if (_previewVc.correctedSlots) {
@@ -8115,11 +8412,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
         // Re-run once after safe corrections so single-surface objects can settle.
         const _previewVc2 = _previewVc.correctedSlots
-          ? validateCombination(
-              proceduralSlots.context,
-              proceduralSlots.object,
-              proceduralSlots.surface
-            )
+          ? validateCombination(proceduralSlots, sessionContext.slotMeta, sessionContext)
           : _previewVc;
 
         if (_previewVc2.correctedSlots) {
@@ -8153,8 +8446,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         });
 
         if (previewValidation.status === "INVALID") {
+          if (previewValidation.pendingQuestion) {
+            sessionContext.pendingQuestion = createPendingQuestionState(
+              sessionContext.pendingQuestion,
+              previewValidation.pendingQuestion
+            );
+          }
+          if (previewValidation.correctedSlotMeta) {
+            sessionContext.slotMeta = {
+              ...(sessionContext.slotMeta || {}),
+              ...previewValidation.correctedSlotMeta
+            };
+          }
           sessionContext.slots = proceduralSlots;
           saveSession(sessionId, sessionContext);
+          interactionRef.slotValidatorTelemetry = previewValidation.validatorTelemetry || null;
           const questionText = previewValidation.ask
             ? previewValidation.ask.question
             : (previewValidation.userMessage || "Nu am putut determina combinatia corecta. Poti reformula?");
@@ -8163,21 +8469,38 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             message: questionText
           }, {
             slots: sessionContext.slots,
-            decision: { action: "clarification", flowId: null, missingSlot: null },
+            decision: {
+              action: "clarification",
+              flowId: null,
+              missingSlot: previewValidation.missingSlot || null
+            },
+            slotValidatorTelemetry: interactionRef.slotValidatorTelemetry,
             outputType: "question"
           });
         }
 
         if (previewValidation.status === "CORRECTABLE") {
           if (previewValidation.ask) {
+            if (previewValidation.pendingQuestion) {
+              sessionContext.pendingQuestion = createPendingQuestionState(
+                sessionContext.pendingQuestion,
+                previewValidation.pendingQuestion
+              );
+            }
             sessionContext.slots = proceduralSlots;
             saveSession(sessionId, sessionContext);
+            interactionRef.slotValidatorTelemetry = previewValidation.validatorTelemetry || null;
             return endInteraction(interactionRef, {
               type: "question",
               message: previewValidation.ask.question
             }, {
               slots: sessionContext.slots,
-              decision: { action: "clarification", flowId: null, missingSlot: null },
+              decision: {
+                action: "clarification",
+                flowId: null,
+                missingSlot: previewValidation.missingSlot || null
+              },
+              slotValidatorTelemetry: interactionRef.slotValidatorTelemetry,
               outputType: "question"
             });
           }
@@ -8254,6 +8577,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     const mainSlotMergeSession =
       hadPendingSlotClarificationAtStart ||
+      sessionContext?.pendingSelection === true ||
+      Boolean(sessionContext?.pendingQuestion) ||
+      String(sessionContext?.state || "").startsWith("NEEDS_") ||
       (isSelectionFollowupMessage(userMessage) &&
         hasCarryoverSelectionContext(sessionContext) &&
         (queryType === "selection" || intent === "selection"));
@@ -8395,9 +8721,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       isSelectionFollowupMessage(userMessage) &&
       hasCarryoverSelectionContext(sessionContext) &&
       (queryType === "selection" || intent === "selection");
+    const continuationSlotGuard =
+      sessionContext?.pendingSelection === true ||
+      Boolean(sessionContext?.pendingQuestion) ||
+      String(sessionContext?.state || "").startsWith("NEEDS_");
     const slotMode = isSafetyQuery(userMessage)
       ? "override"
-      : hadPendingSlotClarificationAtStart || selectionFollowupSlotMerge || sessionContext?.pendingSelection === true
+      : hadPendingSlotClarificationAtStart || selectionFollowupSlotMerge || continuationSlotGuard
         ? "merge"
         : "replace";
     const beforeSlots = { ...(sessionContext.slots || {}) };
@@ -8530,11 +8860,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     // --- Deterministic slot validation ---
     {
-      const _vc = validateCombination(
-        sessionContext.slots.context,
-        sessionContext.slots.object,
-        sessionContext.slots.surface
-      );
+      const _vc = validateCombination(sessionContext.slots, sessionContext.slotMeta, sessionContext);
+      interactionRef.slotValidatorTelemetry = _vc.validatorTelemetry || null;
       logInfo("SLOT_VALIDATION_RESULT", {
         inputs: {
           context: sessionContext.slots.context,
@@ -8552,17 +8879,29 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         if (_vc.correctedSlots) {
           Object.assign(sessionContext.slots, _vc.correctedSlots);
         }
+        if (_vc.correctedSlotMeta) {
+          sessionContext.slotMeta = {
+            ...(sessionContext.slotMeta || {}),
+            ..._vc.correctedSlotMeta
+          };
+        }
+        if (_vc.pendingQuestion) {
+          sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, _vc.pendingQuestion);
+        }
 
         if (_vc.status === "INVALID") {
+          const invalidMissingSlot = _vc.missingSlot || null;
           // Do not proceed to normal routing
-          saveSession(sessionId, sessionContext);
+          if (!["knowledge", "meta_question", "safety"].includes(String(queryType || "").toLowerCase())) {
+            saveSession(sessionId, sessionContext);
+          }
           const invalidDecision = createCanonicalRoutingDecision({
             queryType,
             action: "clarification",
             reason: _vc.reasonCode,
             slots: sessionContext.slots,
             flowId: null,
-            missingSlot: null,
+            missingSlot: invalidMissingSlot,
             pendingSelectionState: null
           });
           logInfo("ROUTING_DECISION", invalidDecision);
@@ -8575,7 +8914,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             message: questionText
           }, {
             slots: sessionContext.slots,
-            decision: { action: "clarification", flowId: null, missingSlot: null },
+            decision: { action: "clarification", flowId: null, missingSlot: invalidMissingSlot },
+            slotValidatorTelemetry: interactionRef.slotValidatorTelemetry,
             outputType: "question"
           });
         }
@@ -8749,6 +9089,43 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         resolvedAction.action = "procedural";
         resolvedAction.missingSlot = null;
       }
+    }
+
+    const recommendLockedDecision =
+      resolvedAction.action === "recommend" ||
+      routingDecision.action === "recommend";
+    if (
+      recommendLockedDecision &&
+      resolvedAction.action === "clarification" &&
+      resolvedAction.missingSlot === "intent_level"
+    ) {
+      const computedMissingSlot = getMissingSlot(sessionContext.slots || {});
+      const allowedMissingSlot = ["context", "object", "surface"].includes(computedMissingSlot)
+        ? computedMissingSlot
+        : null;
+
+      if (allowedMissingSlot) {
+        resolvedAction.missingSlot = allowedMissingSlot;
+        sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+          slot: allowedMissingSlot,
+          object: sessionContext.slots?.object || null,
+          context: sessionContext.slots?.context || null
+        });
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = allowedMissingSlot;
+        saveSession(sessionId, sessionContext);
+      } else {
+        resolvedAction.action = "recommend";
+        resolvedAction.flowId = null;
+        resolvedAction.missingSlot = null;
+      }
+
+      logInfo("RECOMMEND_DECISION_LOCK", {
+        routingAction: routingDecision.action,
+        finalAction: resolvedAction.action,
+        finalMissingSlot: resolvedAction.missingSlot || null,
+        computedMissingSlot: computedMissingSlot || null
+      });
     }
 
     if (selectionEscalation) {
@@ -9642,6 +10019,7 @@ module.exports = {
     roleCoverageFallbackQuestion,
     findProductsByRoleConfig,
     tryConsumeSurfaceAssistTurn,
-    tryConsumeLlmSurfaceAssistTurn
+    tryConsumeLlmSurfaceAssistTurn,
+    validateCombination
   }
 };

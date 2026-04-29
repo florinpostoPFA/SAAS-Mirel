@@ -55,6 +55,28 @@ describe("Low-signal intent-level handling", () => {
     expect(log.decision.missingSlot).toBe("intent_level");
   });
 
+  it("A3: explicit recommendation phrase avoids intent_level (vreau recomandare de produs)", async () => {
+    const sessionId = `lowsig-a3-${Date.now()}`;
+    await handleChat("vreau recomandare de produs", "C1", [], sessionId);
+    const log = lastLogEntry();
+
+    expect(log.decision.missingSlot).not.toBe("intent_level");
+    if (log.decision.action === "clarification") {
+      expect(["context", "object", "surface"]).toContain(log.decision.missingSlot);
+    }
+  });
+
+  it("A4: explicit recommendation phrase avoids intent_level (recomandare de produse)", async () => {
+    const sessionId = `lowsig-a4-${Date.now()}`;
+    await handleChat("recomandare de produse", "C1", [], sessionId);
+    const log = lastLogEntry();
+
+    expect(log.decision.missingSlot).not.toBe("intent_level");
+    if (log.decision.action === "clarification") {
+      expect(["context", "object", "surface"]).toContain(log.decision.missingSlot);
+    }
+  });
+
   it("B: follow-up produse routes to selection (not intent_level / low-signal menu)", async () => {
     const sessionId = `lowsig-b-${Date.now()}`;
     await handleChat("recomanda ceva", "C1", [], sessionId);
@@ -89,5 +111,16 @@ describe("Low-signal intent-level handling", () => {
     expect(askLLM).toHaveBeenCalled();
     expect(log.decision.missingSlot).not.toBe("intent_level");
     expect(Boolean(log.lowSignalDetected)).toBe(false);
+  });
+
+  it("E: mixed domain + ce-mi dai bun avoids intent_level", async () => {
+    const sessionId = `lowsig-e-${Date.now()}`;
+    await handleChat("salut vreau sa curat plasticul din interiorul masinii. ce-mi dai bun?", "C1", [], sessionId);
+    const log = lastLogEntry();
+
+    expect(log.decision.missingSlot).not.toBe("intent_level");
+    if (log.decision.action === "clarification") {
+      expect(["context", "object", "surface"]).toContain(log.decision.missingSlot);
+    }
   });
 });
