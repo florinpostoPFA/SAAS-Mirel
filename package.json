@@ -7,7 +7,12 @@
     "test": "jest --runInBand --forceExit",
     "test:golden": "node scripts/golden-replay.js",
     "test:watch": "jest --watch",
-    "start:frontend": "react-scripts start"
+    "start:frontend": "react-scripts start",
+    "import:products": "node scripts/importProducts.js",
+    "tag:products": "node scripts/autoTagProducts.js",
+    "catalog:refresh": "npm run import:products && npm run tag:products && npm test",
+    "coverage:report": "node scripts/coverage-report.js",
+    "coverage:report:llm": "ENABLE_LLM_FALLBACK=1 node scripts/coverage-report.js"
   },
   "keywords": [],
   "author": "",
