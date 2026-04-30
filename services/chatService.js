@@ -101,6 +101,7 @@ const {
   buildPendingQuestionState,
   evaluateClarificationEscalation
 } = require("./clarificationEscalationService");
+const { getArtifactVersions } = require("./artifactVersions");
 
 const SOURCE = "ChatService";
 const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "piele"];
@@ -1998,7 +1999,10 @@ function endInteraction(interactionRef, result, patch = {}) {
     intentHeuristicReason: interactionRef.intentRoutingTelemetry?.intentHeuristicReason ?? null,
     preprocessStrippedGreeting: Boolean(
       interactionRef.intentRoutingTelemetry?.preprocessStrippedGreeting
-    )
+    ),
+    catalogVersion: interactionRef.artifactVersions?.catalogVersion || null,
+    rolesVersion: interactionRef.artifactVersions?.rolesVersion || null,
+    flowsVersion: interactionRef.artifactVersions?.flowsVersion || null
   };
 
   appendInteractionLine(entry);
@@ -2010,7 +2014,10 @@ function endInteraction(interactionRef, result, patch = {}) {
     productsLength: Array.isArray(finalProducts) ? finalProducts.length : 0,
     productsReason: entry.output.productsReason,
     pendingQuestion: Boolean(sessionContext?.pendingQuestion),
-    hardGuardApplied: interactionRef.decision.hardGuardFallback || false
+    hardGuardApplied: interactionRef.decision.hardGuardFallback || false,
+    catalogVersion: interactionRef.artifactVersions?.catalogVersion || null,
+    rolesVersion: interactionRef.artifactVersions?.rolesVersion || null,
+    flowsVersion: interactionRef.artifactVersions?.flowsVersion || null
   });
 
   loggingV2.emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProducts);
@@ -6246,6 +6253,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       traceId,
       sessionId,
       message: userMessage,
+      artifactVersions: getArtifactVersions(),
       queryType: null,
       intentType: null,
       tags: null,

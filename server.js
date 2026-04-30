@@ -24,6 +24,7 @@ const {
   getTimeline
 } = require("./services/trackingService");
 const { logInfo, error: logError, warn: logWarn } = require("./services/logger");
+const { getArtifactVersions } = require("./services/artifactVersions");
 
 const surfaceAssistStartup = computeSurfaceAssistEnabled({
   env: process.env,
@@ -174,6 +175,8 @@ if (require.main === module) {
   }
 
   app.listen(config.server.port, () => {
+    const artifactVersions = getArtifactVersions();
+    logInfo("ARTIFACT_VERSIONS", artifactVersions);
     logInfo("SERVER", { event: "startup", port: config.server.port });
   });
 }

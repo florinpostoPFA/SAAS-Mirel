@@ -310,6 +310,7 @@ function emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProd
     finalResult && typeof finalResult === "object"
       ? String(finalResult.reply ?? finalResult.message ?? "").length
       : 0;
+  const artifactVersions = interactionRef?.artifactVersions || null;
 
   writeRow(
     baseFields("TURN_SUMMARY", {
@@ -325,7 +326,10 @@ function emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProd
           clarification,
           productCount,
           outputType: finalOutputType ?? null,
-          replyLen
+          replyLen,
+          catalogVersion: artifactVersions?.catalogVersion ?? null,
+          rolesVersion: artifactVersions?.rolesVersion ?? null,
+          flowsVersion: artifactVersions?.flowsVersion ?? null
         }
       }
     })

@@ -605,4 +605,7 @@ function executeFlow(flow, products, slots = {}, options = {}) {
   };
 }
 
-module.exports = { executeFlow };
+module.exports = {
+  executeFlow,
+  resolveProductsForRole
+};
