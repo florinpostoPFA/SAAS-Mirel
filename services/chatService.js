@@ -6355,7 +6355,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     const continuationGuardActive =
       sessionContext?.pendingSelection === true ||
-      String(sessionContext?.state || "").startsWith("NEEDS_") ||
       Boolean(sessionContext?.pendingQuestion);
 
     const lowSignalIntent = (clarificationPendingAtEntry || continuationGuardActive)
@@ -6430,7 +6429,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    if (explicitSelectionIntent && lowSignalCheck.lowSignal) {
+    if (explicitSelectionIntent && lowSignalCheck.lowSignal && selectionFollowupLowSignalBypass) {
       lowSignalCheck = { lowSignal: false, reason: "explicit_selection_phrase" };
       lowSignalTelemetryFirst.lowSignalDetected = false;
       lowSignalTelemetryFirst.lowSignalReason = "explicit_selection_phrase";
@@ -8579,7 +8578,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       hadPendingSlotClarificationAtStart ||
       sessionContext?.pendingSelection === true ||
       Boolean(sessionContext?.pendingQuestion) ||
-      String(sessionContext?.state || "").startsWith("NEEDS_") ||
       (isSelectionFollowupMessage(userMessage) &&
         hasCarryoverSelectionContext(sessionContext) &&
         (queryType === "selection" || intent === "selection"));
@@ -8723,8 +8721,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       (queryType === "selection" || intent === "selection");
     const continuationSlotGuard =
       sessionContext?.pendingSelection === true ||
-      Boolean(sessionContext?.pendingQuestion) ||
-      String(sessionContext?.state || "").startsWith("NEEDS_");
+      Boolean(sessionContext?.pendingQuestion);
     const slotMode = isSafetyQuery(userMessage)
       ? "override"
       : hadPendingSlotClarificationAtStart || selectionFollowupSlotMerge || continuationSlotGuard
