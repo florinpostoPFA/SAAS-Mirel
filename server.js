@@ -23,7 +23,8 @@ const {
   getConversions,
   getTimeline
 } = require("./services/trackingService");
-const { logInfo, error: logError, warn: logWarn } = require("./services/logger");
+const logger = require("./services/logger");
+const { normalizeChatSessionIdFromBody } = require("./services/chatSessionId");
 const { getArtifactVersions } = require("./services/artifactVersions");
 
 const surfaceAssistStartup = computeSurfaceAssistEnabled({
@@ -31,7 +32,7 @@ const surfaceAssistStartup = computeSurfaceAssistEnabled({
   settings: settingsService.getSettings(),
   config
 });
-logInfo("SURFACE_ASSIST_FEATURE_STARTUP", {
+logger.logInfo("SURFACE_ASSIST_FEATURE_STARTUP", {
   effective: surfaceAssistStartup.effective,
   enabledSources: surfaceAssistStartup.enabledSources,
   rawEnvValue: surfaceAssistStartup.rawEnvValue
@@ -93,8 +94,9 @@ const chatLimiter = rateLimit({
   legacyHeaders: false
 });
 app.post("/chat", chatLimiter, async (req, res) => {
+  let canonicalSessionId;
   try {
-    const { message, sessionId, feedback } = req.body;
+    const { message, feedback } = req.body;
 
     if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "Te rog să scrii un mesaj pentru asistent." });
@@ -103,19 +105,35 @@ app.post("/chat", chatLimiter, async (req, res) => {
       return res.status(400).json({ error: "Mesaj prea lung. Te rog să reformulezi." });
     }
 
+    const normalized = normalizeChatSessionIdFromBody(req.body);
+    canonicalSessionId = normalized.canonicalSessionId;
+    if (normalized.prodWarnTestSession && process.env.NODE_ENV === "production") {
+      logger.warn("SERVER", "Chat session id rejected (test-session) in production; assigned new id", {
+        badSessionId: true,
+        originalValue: "test-session",
+        path: req.path
+      });
+    }
+
     const result = await chatService.handleChat({
       message,
-      sessionId: sessionId || "test-session",
+      sessionId: canonicalSessionId,
       feedback
     });
 
     res.json({
-      reply: result.reply || result.message || "No response"
+      reply: result.reply || result.message || "No response",
+      sessionId: canonicalSessionId
     });
   } catch (err) {
-    logError("SERVER", "Chat error", { error: err.message });
+    logger.error("SERVER", "Chat error", { error: err.message });
+    const sessionIdForClient =
+      canonicalSessionId != null && String(canonicalSessionId).length > 0
+        ? canonicalSessionId
+        : require("crypto").randomUUID();
     res.json({
-      reply: "A apărut o eroare."
+      reply: "A apărut o eroare.",
+      sessionId: sessionIdForClient
     });
   }
 });
@@ -165,19 +183,19 @@ const { cleanupOldSessions } = require("./services/sessionService");
 setInterval(() => {
   const cleanedCount = cleanupOldSessions();
   if (cleanedCount > 0) {
-    logInfo("SERVER", { event: "session_cleanup", cleanedCount });
+    logger.logInfo("SERVER", { event: "session_cleanup", cleanedCount });
   }
 }, 60 * 60 * 1000); // 1 hour
 
 if (require.main === module) {
   if (!API_KEY) {
-    logWarn("SERVER", "API_KEY is not configured. Protected routes will reject all requests.");
+    logger.warn("SERVER", "API_KEY is not configured. Protected routes will reject all requests.");
   }
 
   app.listen(config.server.port, () => {
     const artifactVersions = getArtifactVersions();
-    logInfo("ARTIFACT_VERSIONS", artifactVersions);
-    logInfo("SERVER", { event: "startup", port: config.server.port });
+    logger.logInfo("ARTIFACT_VERSIONS", artifactVersions);
+    logger.logInfo("SERVER", { event: "startup", port: config.server.port });
   });
 }
 

@@ -1,24 +1,28 @@
-const {
-  extractJSON,
-  parseTagsFromResponse,
-  sanitizeTags
-} = require("../scripts/autoTagProducts");
+const { inferDeterministicTags } = require("../scripts/autoTagProducts");
 
-describe("autoTagProducts parsing", () => {
-  it("cleans a markdown fenced JSON array", () => {
-    const response = "```json\n[\"cleaning\", \"interior\"]\n```";
-
-    expect(extractJSON(response)).toBe("[\"cleaning\", \"interior\"]");
+describe("inferDeterministicTags", () => {
+  it("tags wheel/rim products with wheels when name contains Jante", () => {
+    const tags = inferDeterministicTags({
+      name: "Cleaner Jante Pro",
+      description: ""
+    });
+    expect(tags).toContain("wheels");
   });
 
-  it("parses tags when the JSON array is wrapped in prose", () => {
-    const response = "Here are the best tags:\n```json\n[\"cleaning\", \"interior\"]\n```\nUse these.";
-
-    expect(parseTagsFromResponse(response)).toEqual(["cleaning", "interior"]);
+  it("tags tire products with tires (plural) when name contains anvelope", () => {
+    const tags = inferDeterministicTags({
+      name: "Dressing pentru anvelope",
+      description: ""
+    });
+    expect(tags).toContain("tires");
   });
 
-  it("sanitizes parsed tags to the allowed normalized list", () => {
-    expect(sanitizeTags(["Cleaning", "Interior", "not-allowed"]))
-      .toEqual(["cleaning", "interior"]);
+  it("never emits singular tag tire; English tire keyword maps to tires", () => {
+    const tags = inferDeterministicTags({
+      name: "Black tire dressing",
+      description: ""
+    });
+    expect(tags).toContain("tires");
+    expect(tags).not.toContain("tire");
   });
 });

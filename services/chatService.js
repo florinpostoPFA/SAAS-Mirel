@@ -104,7 +104,7 @@ const {
 const { getArtifactVersions } = require("./artifactVersions");
 
 const SOURCE = "ChatService";
-const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "piele"];
+const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "tires", "piele"];
 const CTO_SURFACE_ENUM = ["textile", "piele", "plastic", "alcantara"];
 const CTO_SURFACE_SET = new Set(CTO_SURFACE_ENUM);
 function normalizeResponseLocale(locale) {
@@ -864,7 +864,7 @@ const SLOT_DOMAIN_RULES = {
   plafon:    { context: "interior", allowedSurfaces: ["textile", "alcantara"] },
   caroserie: { context: "exterior", allowedSurfaces: ["paint"] },
   jante:     { context: "exterior", allowedSurfaces: ["wheels"] },
-  anvelope:  { context: "exterior", allowedSurfaces: ["wheels"] },
+  anvelope:  { context: "exterior", allowedSurfaces: ["tires", "wheels"] },
   geam:      { context: "exterior", allowedSurfaces: [] },
   parbriz:   { context: "exterior", allowedSurfaces: [] },
   oglinzi:   { context: "exterior", allowedSurfaces: [] },
@@ -978,6 +978,9 @@ function coerceLegacySurfaceToCto(surface) {
   }
   if (s === "paint") {
     return "paint";
+  }
+  if (s === "tires") {
+    return "tires";
   }
   if (s === "glass" || s === "wheels") {
     return null;
@@ -1566,7 +1569,10 @@ function forceFlowExecutionAtBoundary(interactionRef, sessionContext) {
     }
 
     const rawFlowProducts = Array.isArray(flowResult?.products) ? flowResult.products : [];
-    const filteredFlowProducts = filterProducts(rawFlowProducts, slotSnapshot);
+    const flowFilterOutcome = applyFlowProductFilterWithNoWipeout(rawFlowProducts, slotSnapshot, {
+      flowId
+    });
+    const filteredFlowProducts = flowFilterOutcome.products;
     const flowBundle = buildProductBundle(filteredFlowProducts);
     const finalFlowProducts = flowBundle.slice(0, 3);
     const flowReply = buildMinimalFlowReply(prioritizedFlow, flowResult, flowLocale);
@@ -2780,10 +2786,10 @@ function getAllowedSurfaces(slots) {
   }
 
   if (safeSlots.context === "exterior") {
-    return ["paint", "wheels", "glass"];
+    return ["paint", "wheels", "tires", "glass"];
   }
 
-  return [...CTO_SURFACE_ENUM, "paint", "wheels", "glass"];
+  return [...CTO_SURFACE_ENUM, "paint", "wheels", "tires", "glass"];
 }
 
 function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sessionId, sessionState = null) {
@@ -2835,15 +2841,16 @@ function detectContextHint(message) {
 
 function inferWheelsSurfaceFromObject(slots) {
   const safeSlots = slots && typeof slots === "object" ? slots : {};
-  const object = String(safeSlots.object || "").toLowerCase();
-
-  if (!safeSlots.surface && (object === "wheels" || object === "jante" || object === "anvelope")) {
-    return {
-      ...safeSlots,
-      surface: "wheels"
-    };
+  if (safeSlots.surface) {
+    return safeSlots;
   }
-
+  const object = String(safeSlots.object || "").toLowerCase();
+  if (object === "wheels" || object === "jante") {
+    return { ...safeSlots, surface: "wheels" };
+  }
+  if (object === "anvelope" || object === "tires") {
+    return { ...safeSlots, surface: "tires" };
+  }
   return safeSlots;
 }
 
@@ -3213,10 +3220,63 @@ function filterProducts(products, slots) {
       )
     ) return false;
     if (safeSlots.surface === "glass" && !tags.includes("glass")) return false;
-    if (safeSlots.surface === "wheels" && !tags.includes("wheels")) return false;
+
+    if (safeSlots.surface === "tires") {
+      const tireOk =
+        tags.includes("tires") ||
+        tags.includes("tire") ||
+        tags.includes("tire_dressing") ||
+        (tags.includes("rubber") && (tags.includes("dressing") || tags.includes("cleaner")));
+      if (!tireOk) return false;
+    }
+
+    if (safeSlots.surface === "wheels") {
+      const wheelOk =
+        tags.includes("wheels") ||
+        tags.includes("wheel_cleaner") ||
+        (tags.includes("metal") && tags.includes("cleaner")) ||
+        tags.includes("iron_remover");
+      if (!wheelOk) return false;
+    }
 
     return true;
   });
+}
+
+/**
+ * Flow path: never drop all executeFlow candidates due to tag/slot mismatch alone.
+ */
+function applyFlowProductFilterWithNoWipeout(rawFlowProducts, slots, logContext = {}) {
+  const raw = Array.isArray(rawFlowProducts) ? rawFlowProducts : [];
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const strictFiltered = filterProducts(raw, safeSlots);
+  if (raw.length > 0 && strictFiltered.length === 0) {
+    logInfo("PRODUCT_FILTER_WIPEOUT_FALLBACK", {
+      reason: "filtered_out_fallback_to_raw",
+      before: raw.length,
+      afterStrict: 0,
+      slots: safeSlots,
+      ...logContext
+    });
+    console.log("PRODUCT_FILTER_FALLBACK", {
+      reason: "filtered_out_fallback_to_raw",
+      before: raw.length,
+      after: raw.length,
+      slots: safeSlots
+    });
+    return {
+      products: raw,
+      fallbackUsed: true,
+      before: raw.length,
+      afterStrict: 0
+    };
+  }
+  return {
+    products: strictFiltered,
+    fallbackUsed: false,
+    before: raw.length,
+    afterStrict: strictFiltered.length
+  };
 }
 
 function buildProductBundle(products, options = {}) {
@@ -3367,7 +3427,19 @@ function filterContextTags(message, tags) {
 }
 
 function buildFinalTags(coreTags, workingTags, slots = {}) {
-  const slotTagKeys = new Set(["interior", "exterior", "leather", "textile", "alcantara", "plastic", "paint", "glass", "wheels", "piele"]);
+  const slotTagKeys = new Set([
+    "interior",
+    "exterior",
+    "leather",
+    "textile",
+    "alcantara",
+    "plastic",
+    "paint",
+    "glass",
+    "wheels",
+    "tires",
+    "piele"
+  ]);
   const surfaceTag = slotSurfaceToProductTag(slots.surface);
   const slotTags = [
     slots.context,
@@ -4171,7 +4243,8 @@ function selectionFollowupBypassesLowSignalIntentLevel(userMessage, sessionConte
 }
 
 function captureInformationalSelectionCarryover(sessionContext, userMessage, queryType, sessionId) {
-  if (queryType !== "informational") {
+  const qt = String(queryType || "").toLowerCase();
+  if (qt !== "informational" && qt !== "selection" && qt !== "product_search") {
     return;
   }
   const extracted = normalizeSlots(
@@ -4180,13 +4253,19 @@ function captureInformationalSelectionCarryover(sessionContext, userMessage, que
   if (!(extracted.object || extracted.context || extracted.surface)) {
     return;
   }
-  sessionContext.selectionFollowupCarryover = {
-    slots: {
-      context: extracted.context || null,
-      object: extracted.object || null,
-      surface: extracted.surface || null
-    }
-  };
+  const msg = String(userMessage || "").toLowerCase();
+  const productFollowupPhrasing =
+    /\b(produs|folosesc|folosit|recomanzi|cumpar|cumpara)\b/.test(msg);
+  sessionContext.informationalCarryoverEligibleForProductFollowup = productFollowupPhrasing;
+  if (qt === "informational") {
+    sessionContext.selectionFollowupCarryover = {
+      slots: {
+        context: extracted.context || null,
+        object: extracted.object || null,
+        surface: extracted.surface || null
+      }
+    };
+  }
   saveSession(sessionId, sessionContext);
 }
 
@@ -4227,7 +4306,8 @@ function hasStrongWheelTireSignal(slots) {
     objectNorm === "jante" ||
     objectNorm === "roti" ||
     objectNorm === "wheels" ||
-    surfaceNorm === "wheels"
+    surfaceNorm === "wheels" ||
+    surfaceNorm === "tires"
   );
 }
 
@@ -4333,6 +4413,46 @@ function applySelectionFollowupCarryoverHydration(userMessage, sessionContext, s
   logInfo("FOLLOWUP_CONTEXT_CARRYOVER_APPLIED", {
     slots: merged,
     source: "selectionFollowupCarryover"
+  });
+}
+
+function mergePreResetKnowledgeFollowupSlots(userMessage, sessionContext, sessionId) {
+  if (!isSelectionFollowupMessage(userMessage)) return;
+  const prev = String(sessionContext.previousAction || "").toLowerCase();
+  const prevAllowsProductFollowup =
+    prev === "knowledge" || prev === "recommend" || prev === "product_search";
+  if (!prevAllowsProductFollowup) return;
+  // Only gate on the "product phrasing" flag after a knowledge turn; recommend/product_search
+  // turns already arm selectionFollowupCarryover from endInteraction.
+  if (prev === "knowledge" && !sessionContext.informationalCarryoverEligibleForProductFollowup) {
+    return;
+  }
+  const carry = sessionContext.selectionFollowupCarryover;
+  if (!carry?.slots || typeof carry.slots !== "object") return;
+  const cCtx = carry.slots.context ?? null;
+  const cObj = carry.slots.object ?? null;
+  const cSurf = carry.slots.surface ?? null;
+  if (!(cCtx || cObj || cSurf)) return;
+  const fromMsg = normalizeSlots(applyObjectSlotInference(extractSlotsFromMessage(userMessage)));
+  if (fromMsg.object || fromMsg.context || fromMsg.surface) return;
+  const cur = sessionContext.slots && typeof sessionContext.slots === "object" ? sessionContext.slots : {};
+  let merged = {
+    context: cur.context || cCtx || null,
+    object: cur.object || cObj || null,
+    surface: cur.surface || cSurf || null,
+    vehicleMake: cur.vehicleMake ?? null,
+    vehicleModel: cur.vehicleModel ?? null,
+    vehicleYear: cur.vehicleYear ?? null
+  };
+  merged = normalizeSlots(applyObjectSlotInference(merged));
+  merged = inferWheelsSurfaceFromObject(merged);
+  merged = ensureExteriorContextForWheelObjects(merged);
+  sessionContext.slots = merged;
+  sessionContext.informationalCarryoverEligibleForProductFollowup = false;
+  saveSession(sessionId, sessionContext);
+  logInfo("FOLLOWUP_CONTEXT_CARRYOVER_APPLIED", {
+    slots: merged,
+    source: "pre_reset_knowledge_followup"
   });
 }
 
@@ -4883,6 +5003,15 @@ function getTopicHintFromMessage(message) {
     return "sampon";
   }
 
+  return null;
+}
+
+function topicFromWheelTireSlots(slots) {
+  if (!slots || typeof slots !== "object") return null;
+  const obj = String(slots.object || "").toLowerCase();
+  const surf = String(slots.surface || "").toLowerCase();
+  if (obj === "anvelope" || surf === "tires") return "anvelope";
+  if (obj === "jante" || surf === "wheels") return "jante";
   return null;
 }
 
@@ -7682,6 +7811,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
     }
 
+    mergePreResetKnowledgeFollowupSlots(userMessage, sessionContext, sessionId);
+
     let workingTags = shouldPreserveFollowUpState
       ? [...new Set([...sessionTags, ...coreTags])]
       : [...coreTags];
@@ -7835,8 +7966,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     sessionContext.objective.type = routingDecision.action;
     saveSession(sessionId, sessionContext);
 
-    if (selectionEscalation && !pendingSlotClarificationActive) {
-      const escalationTopic = messageTopicHint || sessionContext.currentTopic || null;
+    if (
+      selectionEscalation &&
+      !pendingSlotClarificationActive &&
+      getMissingSlot(sessionContext.slots || {}) !== null
+    ) {
+      const escalationTopic =
+        messageTopicHint ||
+        sessionContext.currentTopic ||
+        topicFromWheelTireSlots(sessionContext.slots) ||
+        null;
       const escalationContextHint = getContextHintForEscalation(userMessage);
 
       if (!escalationTopic) {
@@ -7965,8 +8104,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext?.pendingQuestion?.source === "coverage_role_goal"
           ? sessionContext.pendingQuestion
           : null;
+      const selectionStrictMergeSession =
+        hadPendingSlotClarificationAtStart ||
+        sessionContext?.pendingSelection === true ||
+        (isSelectionFollowupMessage(userMessage) &&
+          hasCarryoverSelectionContext(sessionContext));
       const slotResult = processSlots(userMessage, "selection", sessionContext, {
-        mergeWithSession: hadPendingSlotClarificationAtStart || sessionContext?.pendingSelection === true
+        mergeWithSession: selectionStrictMergeSession
       });
       let currentSlots = { ...(slotResult?.slots || {}) };
       currentSlots = inferWheelsSurfaceFromObject(currentSlots);
@@ -8248,6 +8392,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         selected: selectionBundle.map(product => product?.name || null).filter(Boolean),
         roles: selectionBundle.map(product => product?.tags || [])
       });
+      if (selectionBundle.length > 0 && selectionBundle.length < 2) {
+        logInfo("SAFEFALLBACK_BLOCKED_PRODUCTS_EXIST", {
+          path: "selection",
+          productCount: selectionBundle.length
+        });
+      }
       if (selectionBundle.length === 0) {
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
       }
@@ -9566,13 +9716,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           responseLocale: flowLocale
         });
         const rawFlowProducts = Array.isArray(flowResult?.products) ? flowResult.products : [];
-        const filteredFlowProducts = filterProducts(rawFlowProducts, sessionContext.slots || {});
+        const flowFilterOutcome = applyFlowProductFilterWithNoWipeout(
+          rawFlowProducts,
+          sessionContext.slots || {},
+          { flowId }
+        );
+        const filteredFlowProducts = flowFilterOutcome.products;
         const flowBundle = buildProductBundle(filteredFlowProducts);
         const flowReply = buildMinimalFlowReply(resolvedPrioritizedFlow, flowResult, flowLocale);
         console.log("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
           before: rawFlowProducts.length,
-          after: filteredFlowProducts.length
+          after: filteredFlowProducts.length,
+          filterFallbackToRaw: flowFilterOutcome.fallbackUsed
         });
         console.log("PRODUCT_BUNDLE", {
           selected: flowBundle.map(product => product?.name || null).filter(Boolean),
@@ -9606,7 +9762,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }, {
           decision: executedFlowDecision,
           outputType: "flow",
-          products: summarizeProductsForLog(flowProducts)
+          products: summarizeProductsForLog(flowProducts),
+          ...(flowFilterOutcome.fallbackUsed
+            ? { productsReason: "filtered_out_fallback_to_raw" }
+            : {})
         });
       }
 
@@ -10025,6 +10184,9 @@ module.exports = {
     findProductsByRoleConfig,
     tryConsumeSurfaceAssistTurn,
     tryConsumeLlmSurfaceAssistTurn,
-    validateCombination
+    validateCombination,
+    inferWheelsSurfaceFromObject,
+    filterProducts,
+    applyFlowProductFilterWithNoWipeout
   }
 };

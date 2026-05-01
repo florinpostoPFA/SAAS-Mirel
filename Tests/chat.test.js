@@ -15,7 +15,8 @@ jest.mock("../services/interactionLog", () => ({
 
 const { askLLM } = require("../services/llm");
 const { appendInteractionLine } = require("../services/interactionLog");
-const { detectLanguage } = require("../services/chatService");
+const chatService = require("../services/chatService");
+const { detectLanguage } = chatService;
 const settingsService = require("../services/settingsService");
 const app = require("../server");
 
@@ -213,6 +214,108 @@ describe("AI eCommerce Assistant API", () => {
 
       expect(res.statusCode).toBe(400);
       expect(res.body.error).toBeTruthy();
+    });
+  });
+
+  describe("POST /chat — session id handling", () => {
+    const crypto = require("crypto");
+    const logger = require("../services/logger");
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("returns server-generated sessionId when body omits session", async () => {
+      jest.spyOn(crypto, "randomUUID").mockReturnValue("22222222-2222-4222-8222-222222222222");
+      askLLM.mockResolvedValue("mocked llm reply for session test");
+
+      const res = await request(app)
+        .post("/chat")
+        .send({
+          message: "Care este diferenta intre spuma alcalina si spuma pH neutru?"
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.sessionId).toBe("22222222-2222-4222-8222-222222222222");
+      expect(res.body.reply).toBeTruthy();
+      expect(String(res.body.reply).length).toBeGreaterThan(3);
+    });
+
+    it("accepts session_id (snake_case)", async () => {
+      askLLM.mockResolvedValue("righto");
+      const res = await request(app)
+        .post("/chat")
+        .send({ message: "hello", session_id: "snake-client-session" });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.sessionId).toBe("snake-client-session");
+    });
+
+    it("accepts sessionId (camelCase)", async () => {
+      askLLM.mockResolvedValue("righto");
+      const res = await request(app)
+        .post("/chat")
+        .send({ message: "hello", sessionId: "camel-client-session" });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.sessionId).toBe("camel-client-session");
+    });
+
+    it("in production, overrides test-session, logs warning", async () => {
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "production";
+      const warnSpy = jest.spyOn(logger, "warn").mockImplementation(() => {});
+      jest.spyOn(crypto, "randomUUID").mockReturnValue("33333333-3333-4333-8333-333333333333");
+      askLLM.mockResolvedValue("ok");
+
+      const res = await request(app)
+        .post("/chat")
+        .send({ message: "hello", sessionId: "test-session" });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.sessionId).toBe("33333333-3333-4333-8333-333333333333");
+      expect(warnSpy).toHaveBeenCalledWith(
+        "SERVER",
+        "Chat session id rejected (test-session) in production; assigned new id",
+        expect.objectContaining({
+          badSessionId: true,
+          originalValue: "test-session",
+          path: "/chat"
+        })
+      );
+
+      process.env.NODE_ENV = prevEnv;
+    });
+
+    it("replaces test-session without warning when not production", async () => {
+      const prevEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "test";
+      const warnSpy = jest.spyOn(logger, "warn").mockImplementation(() => {});
+      jest.spyOn(crypto, "randomUUID").mockReturnValue("44444444-4444-4444-8444-444444444444");
+      askLLM.mockResolvedValue("ok");
+
+      const res = await request(app)
+        .post("/chat")
+        .send({ message: "hello", sessionId: "test-session" });
+
+      expect(res.body.sessionId).toBe("44444444-4444-4444-8444-444444444444");
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      process.env.NODE_ENV = prevEnv;
+    });
+
+    it("returns sessionId when handleChat throws (echoes canonical id from normalization)", async () => {
+      jest.spyOn(crypto, "randomUUID").mockReturnValue("55555555-5555-4555-8555-555555555555");
+      jest.spyOn(chatService, "handleChat").mockRejectedValue(new Error("forced chat failure"));
+
+      const res = await request(app)
+        .post("/chat")
+        .send({ message: "hello" });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.reply).toBe("A apărut o eroare.");
+      expect(res.body.sessionId).toBe("55555555-5555-4555-8555-555555555555");
+      expect(String(res.body.sessionId).length).toBeGreaterThan(0);
     });
   });
 

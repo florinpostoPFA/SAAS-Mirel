@@ -16,7 +16,21 @@ const SPEC_VERSION = process.env.AI_SPEC_VERSION || process.env.SPEC_VERSION || 
 
 const DEBUG_V2 = isTruthy(process.env.LOG_V2_DEBUG);
 const LLM_DEBUG = isTruthy(process.env.LLM_DEBUG_LOG);
-const INCLUDE_HOST = process.env.LOG_INCLUDE_HOST === "1";
+const COPY_PASTE_LINE = isTruthy(process.env.LOG_V2_COPY_PASTE);
+
+/** Cached once — stable for process lifetime (manual triage / copy-paste). */
+const HOSTNAME_CACHED = os.hostname();
+
+/**
+ * Host on every v2 row in production by default; dev off unless LOG_INCLUDE_HOST=1.
+ * Opt out: LOG_INCLUDE_HOST=0
+ */
+function shouldIncludeHostInV2Row() {
+  const v = String(process.env.LOG_INCLUDE_HOST || "").toLowerCase();
+  if (v === "0" || v === "false" || v === "off" || v === "no") return false;
+  if (v === "1" || v === "true" || v === "yes" || v === "on") return true;
+  return process.env.NODE_ENV === "production";
+}
 
 function emitStageTimingToConsole() {
   return process.env.LOG_V2_TIMING !== "0";
@@ -104,21 +118,54 @@ function baseFields(event, extra = {}) {
     buildVersion: getBuildVersion(),
     env: getServiceEnv(),
     service: s?.service || extra.service || "unknown",
-    traceId: s?.traceId ?? extra.traceId ?? null,
-    sessionId: s?.sessionId ?? extra.sessionId ?? null,
     clientId: s?.clientId ?? null,
     requestId: s?.requestId ?? null,
     ...extra
   };
-  if (INCLUDE_HOST) {
-    row.host = os.hostname();
+  row.service = s?.service || row.service || "unknown";
+  row.traceId = s?.traceId ?? row.traceId ?? "__missing_trace_context__";
+  row.sessionId = s?.sessionId ?? row.sessionId ?? "__missing_session_id__";
+  if (shouldIncludeHostInV2Row()) {
+    row.host = HOSTNAME_CACHED;
   }
   return row;
 }
 
+/**
+ * Single-line summary for manual copy/paste (Notion, tickets). Uses same host as v2 rows when enabled.
+ * @param {Record<string, unknown>} row
+ */
+function formatLogLineForCopyPaste(row) {
+  const host = row.host != null && row.host !== "" ? row.host : HOSTNAME_CACHED;
+  const outcome = row.meta && typeof row.meta === "object" ? row.meta.outcome : null;
+  const outcomeStr =
+    outcome && typeof outcome === "object"
+      ? [
+          outcome.decisionAction != null ? String(outcome.decisionAction) : "",
+          outcome.outputType != null ? String(outcome.outputType) : "",
+          outcome.queryType != null ? String(outcome.queryType) : ""
+        ]
+          .filter(Boolean)
+          .join("/")
+      : "";
+  return [
+    `ts=${row.ts ?? ""}`,
+    `env=${row.env ?? ""}`,
+    `host=${host}`,
+    `service=${row.service ?? ""}`,
+    `traceId=${row.traceId ?? ""}`,
+    `sessionId=${row.sessionId ?? ""}`,
+    `event=${row.event ?? ""}`,
+    `outcome=${outcomeStr}`
+  ].join(" ");
+}
+
 function writeRow(row) {
-  if (!INCLUDE_HOST && row.host !== undefined) delete row.host;
-  console.log(JSON.stringify(row));
+  const jsonLine = JSON.stringify(row);
+  console.log(jsonLine);
+  if (COPY_PASTE_LINE && row.event === "TURN_SUMMARY") {
+    console.log(formatLogLineForCopyPaste(row));
+  }
 }
 
 /**
@@ -298,8 +345,6 @@ function flushStagesForEarlyExit(interactionRef) {
  */
 function emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProducts) {
   const s = getTraceStore();
-  if (!s) return;
-  const durationMsTotal = Math.max(0, getNowMs() - s.turnStartMs);
   const action = interactionRef?.decision?.action ?? null;
   const clarification =
     action === "clarification" ||
@@ -311,7 +356,38 @@ function emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProd
       ? String(finalResult.reply ?? finalResult.message ?? "").length
       : 0;
   const artifactVersions = interactionRef?.artifactVersions || null;
+  const outcome = {
+    queryType: interactionRef?.queryType ?? null,
+    intentType: interactionRef?.intentType ?? null,
+    decisionAction: action,
+    clarification,
+    productCount,
+    outputType: finalOutputType ?? null,
+    replyLen,
+    catalogVersion: artifactVersions?.catalogVersion ?? null,
+    rolesVersion: artifactVersions?.rolesVersion ?? null,
+    flowsVersion: artifactVersions?.flowsVersion ?? null
+  };
 
+  if (!s) {
+    writeRow(
+      baseFields("TURN_SUMMARY", {
+        stage: "turn",
+        durationMs: null,
+        ok: true,
+        meta: {
+          outcome,
+          traceStoreMissing: true
+        },
+        traceId: interactionRef?.traceId,
+        sessionId: interactionRef?.sessionId,
+        service: "chatService"
+      })
+    );
+    return;
+  }
+
+  const durationMsTotal = Math.max(0, getNowMs() - s.turnStartMs);
   writeRow(
     baseFields("TURN_SUMMARY", {
       stage: "turn",
@@ -319,18 +395,7 @@ function emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProd
       ok: true,
       meta: {
         stages: s.stages,
-        outcome: {
-          queryType: interactionRef?.queryType ?? null,
-          intentType: interactionRef?.intentType ?? null,
-          decisionAction: action,
-          clarification,
-          productCount,
-          outputType: finalOutputType ?? null,
-          replyLen,
-          catalogVersion: artifactVersions?.catalogVersion ?? null,
-          rolesVersion: artifactVersions?.rolesVersion ?? null,
-          flowsVersion: artifactVersions?.flowsVersion ?? null
-        }
+        outcome
       }
     })
   );
@@ -446,6 +511,9 @@ module.exports = {
   endClarificationStage,
   withSearchPhaseSync,
   withSearchPhaseAsync,
+  formatLogLineForCopyPaste,
+  shouldIncludeHostInV2Row,
   DEBUG_V2,
-  LLM_DEBUG
+  LLM_DEBUG,
+  COPY_PASTE_LINE
 };

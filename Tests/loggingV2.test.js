@@ -81,6 +81,103 @@ describe("AppError", () => {
   });
 });
 
+describe("loggingV2 host + copy-paste helpers", () => {
+  const origNodeEnv = process.env.NODE_ENV;
+  const origIncHost = process.env.LOG_INCLUDE_HOST;
+  const origCopyPaste = process.env.LOG_V2_COPY_PASTE;
+
+  afterEach(() => {
+    process.env.NODE_ENV = origNodeEnv;
+    process.env.LOG_INCLUDE_HOST = origIncHost;
+    process.env.LOG_V2_COPY_PASTE = origCopyPaste;
+    jest.restoreAllMocks();
+  });
+
+  test("includes host by default when NODE_ENV=production", () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.LOG_INCLUDE_HOST;
+    expect(loggingV2.shouldIncludeHostInV2Row()).toBe(true);
+    const lines = [];
+    jest.spyOn(console, "log").mockImplementation((msg) => lines.push(msg));
+    loggingV2.runWithTraceContext({ traceId: "t-host", sessionId: "s-host", service: "chatService" }, () => {
+      loggingV2.emitTurnStart({ messageLen: 1 });
+    });
+    const row = JSON.parse(lines[0]);
+    expect(row.host).toBeTruthy();
+    expect(row.traceId).toBe("t-host");
+    expect(row.sessionId).toBe("s-host");
+  });
+
+  test("host omitted in non-prod unless LOG_INCLUDE_HOST=1", () => {
+    process.env.NODE_ENV = "test";
+    delete process.env.LOG_INCLUDE_HOST;
+    expect(loggingV2.shouldIncludeHostInV2Row()).toBe(false);
+  });
+
+  test("LOG_INCLUDE_HOST=0 disables host even in production", () => {
+    process.env.NODE_ENV = "production";
+    process.env.LOG_INCLUDE_HOST = "0";
+    expect(loggingV2.shouldIncludeHostInV2Row()).toBe(false);
+  });
+
+  test("LOG_V2_COPY_PASTE adds a second line for TURN_SUMMARY", () => {
+    jest.isolateModules(() => {
+      process.env.LOG_V2_COPY_PASTE = "1";
+      const loggingV2Fresh = require("../services/loggingV2");
+      const lines = [];
+      jest.spyOn(console, "log").mockImplementation((msg) => lines.push(msg));
+      loggingV2Fresh.runWithTraceContext(
+        { traceId: "t-cp", sessionId: "s-cp", service: "chatService" },
+        () => {
+          loggingV2Fresh.emitTurnSummary(
+            {
+              traceId: "t-cp",
+              sessionId: "s-cp",
+              queryType: "selection",
+              intentType: null,
+              decision: { action: "clarification", flowId: null, missingSlot: "context" },
+              safetyTelemetry: null,
+              contextInferenceTelemetry: null,
+              artifactVersions: null
+            },
+            { reply: "ok" },
+            "question",
+            []
+          );
+        }
+      );
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      const summary = JSON.parse(lines[lines.length - 2]);
+      expect(summary.event).toBe("TURN_SUMMARY");
+      expect(lines[lines.length - 1]).toContain("traceId=t-cp");
+      expect(lines[lines.length - 1]).toContain("sessionId=s-cp");
+      expect(lines[lines.length - 1]).toContain("event=TURN_SUMMARY");
+    });
+  });
+
+  test("formatLogLineForCopyPaste builds compact line", () => {
+    const line = loggingV2.formatLogLineForCopyPaste({
+      ts: "2026-01-01T00:00:00.000Z",
+      env: "prod",
+      host: "worker-1",
+      service: "chatService",
+      traceId: "tid",
+      sessionId: "sid",
+      event: "TURN_SUMMARY",
+      meta: {
+        outcome: {
+          decisionAction: "knowledge",
+          outputType: "reply",
+          queryType: "procedural"
+        }
+      }
+    });
+    expect(line).toMatch(/traceId=tid/);
+    expect(line).toMatch(/host=worker-1/);
+    expect(line).toMatch(/outcome=knowledge\/reply\/procedural/);
+  });
+});
+
 describe("loggingV2 emitError", () => {
   afterEach(() => {
     jest.restoreAllMocks();

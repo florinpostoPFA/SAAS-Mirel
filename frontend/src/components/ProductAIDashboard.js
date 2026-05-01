@@ -45,6 +45,24 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+const DASHBOARD_SESSION_STORAGE_KEY = "ai_dashboard_session";
+
+function getOrCreateDashboardSessionId() {
+  try {
+    let id = localStorage.getItem(DASHBOARD_SESSION_STORAGE_KEY);
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      localStorage.setItem(DASHBOARD_SESSION_STORAGE_KEY, id);
+    }
+    return id;
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  }
+}
+
 export default function ProductAIDashboard() {
   /** @type {[ChatMessage[], React.Dispatch<React.SetStateAction<ChatMessage[]>>]} */
   const [messages, setMessages] = useState([
@@ -56,6 +74,7 @@ export default function ProductAIDashboard() {
   ]);
 
   const [input, setInput] = useState("");
+  const [sessionId, setSessionId] = useState(getOrCreateDashboardSessionId);
 
   const onFeedback = (messageId, helpful) => {
     setMessages((prev) =>
@@ -159,12 +178,21 @@ export default function ProductAIDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ message: input, sessionId }),
       });
 
       console.log("STEP 3 - after fetch");
 
       const data = await response.json();
+
+      if (data.sessionId && data.sessionId !== sessionId) {
+        try {
+          localStorage.setItem(DASHBOARD_SESSION_STORAGE_KEY, data.sessionId);
+        } catch {
+          /* ignore */
+        }
+        setSessionId(data.sessionId);
+      }
 
       const assistantMessage = {
         id: createMessageId(),

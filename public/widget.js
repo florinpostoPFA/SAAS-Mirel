@@ -72,11 +72,17 @@
         body: JSON.stringify({
           api_key: apiKey,
           message: text,
+          sessionId,
           session_id: sessionId
         })
       });
 
       const data = await res.json();
+
+      if (data.sessionId && data.sessionId !== sessionId) {
+        sessionId = data.sessionId;
+        localStorage.setItem("ai_session", sessionId);
+      }
 
       // Check for error response
       if (!res.ok || data.error) {

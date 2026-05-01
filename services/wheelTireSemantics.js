@@ -341,6 +341,9 @@ function applyWheelTireObjectToSlots(message, slots) {
   const next = { ...slots };
   next.object = a.objectSlot;
   if (!next.context) next.context = "exterior";
+  if (!next.surface) {
+    next.surface = a.objectSlot === "anvelope" ? "tires" : "wheels";
+  }
   return next;
 }
 

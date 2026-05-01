@@ -18,6 +18,63 @@ const ALLOWED_TAGS = new Set([
   // Finish (result)
   "mat", "gloss", "satin", "natural"
 ]);
+
+/** Deterministic substring hints. Keys must match ALLOWED_TAGS when emitted. */
+const KEYWORD_TAG_MAPPING = {
+  interior: ["interior", "cockpit", "bord", "cotiera", "scaun"],
+  exterior: ["exterior", "caroserie", "vopsea"],
+  leather: ["leather", "piele"],
+  textile: ["textil", "material textil", "stofa", "stoffa", "fabric", "upholstery"],
+  alcantara: ["alcantara"],
+  plastic: ["plastic", "trim", "bord", "console"],
+  glass: ["glass", "geam", "geamuri", "sticla", "windshield", "parbriz", "luneta"],
+  paint: ["vopsea", "caroserie", "lac", "paint", "clearcoat"],
+  wheels: ["janta", "jante", "rim", "rims", "wheel", "wheels"],
+  tires: ["tire", "tires", "anvelopa", "anvelope"],
+  cleaning: ["clean", "cleaner", "curata", "murdar", "pata"],
+  protection: ["protect", "seal", "dressing"]
+};
+
+/**
+ * @param {{ name?: string, description?: string, short_description?: string, meta_keyword?: string, searchText?: string }} product
+ * @returns {string}
+ */
+function collectProductText(product) {
+  return [
+    product?.name,
+    product?.description,
+    product?.short_description,
+    product?.meta_keyword,
+    product?.searchText
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+/**
+ * @param {{ name?: string, description?: string, short_description?: string, meta_keyword?: string, searchText?: string }} product
+ * @returns {string[]}
+ */
+function inferDeterministicTags(product) {
+  const text = collectProductText(product);
+  const out = [];
+  const seen = new Set();
+  for (const [tag, keywords] of Object.entries(KEYWORD_TAG_MAPPING)) {
+    if (!ALLOWED_TAGS.has(tag)) continue;
+    for (const kw of keywords) {
+      if (!kw) continue;
+      if (text.includes(String(kw).toLowerCase())) {
+        if (!seen.has(tag)) {
+          seen.add(tag);
+          out.push(tag);
+        }
+        break;
+      }
+    }
+  }
+  return out;
+}
 function normalizeTag(tag) {
   return tag
     .toLowerCase()
@@ -145,6 +202,8 @@ tags = tags.filter(tag => {
 }
 
 async function generateTagsForProduct(product) {
+  const fromKeywords = inferDeterministicTags(product);
+
   const prompt = buildPrompt(product);
   const raw = await askLLM(prompt);
   const cleaned = extractJSON(raw);
@@ -163,7 +222,7 @@ async function generateTagsForProduct(product) {
 
   tags = tags.map(tag => String(tag).toLowerCase().trim());
   console.log("RAW TAGS:", tags);
-  tags = sanitizeTags(tags);
+  tags = sanitizeTags([...fromKeywords, ...tags]);
   console.log("FINAL TAGS:", tags);
 
   console.log("PRODUCT:", product.name);
@@ -173,6 +232,12 @@ async function generateTagsForProduct(product) {
   console.log("----------------");
 
   return tags;
+}
+
+function mergeDeterministicTags(product) {
+  const fromKeywords = inferDeterministicTags(product);
+  const existing = Array.isArray(product?.tags) ? product.tags : [];
+  return sanitizeTags([...existing, ...fromKeywords]);
 }
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -187,14 +252,17 @@ async function main() {
     console.log(`Processing batch ${batchNumber}...`);
 
     for (const product of batch) {
-      if (Array.isArray(product.tags) && product.tags.length > 0) {
-        continue;
-      }
+      const hasExistingTags = Array.isArray(product.tags) && product.tags.length > 0;
 
       try {
-        const parsedTags = await generateTagsForProduct(product);
-        product.tags = normalizeTags(parsedTags);
-        console.log(`Tagged: ${product.name}`);
+        if (hasExistingTags) {
+          product.tags = normalizeTags(mergeDeterministicTags(product));
+          console.log(`Merged deterministic tags: ${product.name}`);
+        } else {
+          const parsedTags = await generateTagsForProduct(product);
+          product.tags = normalizeTags(parsedTags);
+          console.log(`Tagged: ${product.name}`);
+        }
       } catch (err) {
         console.error(`Failed to tag: ${product.name}`, err.message);
       }
@@ -221,5 +289,9 @@ module.exports = {
   extractJSON,
   parseTagsFromResponse,
   sanitizeTags,
-  generateTagsForProduct
+  generateTagsForProduct,
+  mergeDeterministicTags,
+  collectProductText,
+  inferDeterministicTags,
+  KEYWORD_TAG_MAPPING
 };
