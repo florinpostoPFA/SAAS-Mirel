@@ -56,15 +56,22 @@ function loadHandleChatFresh() {
     })
   });
 
+  // Load real interactionLog once (before replacing module cache) so golden captures match JSONL schema v2.
+  // eslint-disable-next-line import/no-dynamic-require, global-require
+  const realInteractionLog = require(logPath);
   stubModule(logPath, {
     appendInteractionLine: (entry) => {
       try {
-        capturedInteractions.push(JSON.parse(JSON.stringify(entry)));
+        capturedInteractions.push(
+          JSON.parse(JSON.stringify(realInteractionLog.enrichInteractionExportRow(entry)))
+        );
       } catch {
         capturedInteractions.push({ _raw: String(entry) });
       }
     },
-    LOG_DIR: path.join(ROOT, "logs")
+    enrichInteractionExportRow: realInteractionLog.enrichInteractionExportRow,
+    INTERACTION_JSONL_SCHEMA_VERSION: realInteractionLog.INTERACTION_JSONL_SCHEMA_VERSION,
+    LOG_DIR: realInteractionLog.LOG_DIR
   });
 
   // eslint-disable-next-line import/no-dynamic-require, global-require

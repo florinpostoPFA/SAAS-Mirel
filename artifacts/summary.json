@@ -1,0 +1,117 @@
+{
+  "generatedAt": "2026-05-02T14:45:58.345Z",
+  "baseUrl": "http://localhost:3001",
+  "runNonce": "moogezzd-93fb6eb3",
+  "tickets": [
+    {
+      "ticketId": "log-28-04-decon-zero-products",
+      "title": "Logs 28.04 — Decontamination flow returned 0 products (unknownRole + bad fallback)",
+      "status": "pass",
+      "reason": null,
+      "cases": [
+        {
+          "caseId": "decontamination-flow-has-offerings",
+          "pass": true,
+          "failureReason": null
+        }
+      ]
+    },
+    {
+      "ticketId": "log-29-04-reco-misrouted-intent-level",
+      "title": "Logs 29.04 — Recommendation prompts misrouted to intent_level clarification",
+      "status": "pass",
+      "reason": null,
+      "cases": [
+        {
+          "caseId": "explicit-recommend-not-intent-level",
+          "pass": true,
+          "failureReason": null
+        }
+      ]
+    },
+    {
+      "ticketId": "log-29-04-wheels-invalid-surface",
+      "title": "Logs 29.04 — Wheels intent ended with invalid surface (jante + textile)",
+      "status": "pass",
+      "reason": null,
+      "cases": [
+        {
+          "caseId": "jante-not-paired-with-textile-recommendation",
+          "pass": true,
+          "failureReason": null
+        }
+      ]
+    },
+    {
+      "ticketId": "log-29-04-session-reuse",
+      "title": "Logs 29.04 — sessionId reused across distinct conversations (breaks conversation counts)",
+      "status": "pass",
+      "reason": null,
+      "cases": [
+        {
+          "caseId": "distinct-sessions-stay-distinct-a",
+          "pass": true,
+          "failureReason": null
+        },
+        {
+          "caseId": "distinct-sessions-stay-distinct-b",
+          "pass": true,
+          "failureReason": null
+        }
+      ]
+    },
+    {
+      "ticketId": "catalog-v2-refresh-coverage",
+      "title": "Catalog v2: refresh scripts + role→product coverage validation + artifact version logging",
+      "status": "skipped",
+      "reason": "Not HTTP-testable against /chat; run catalog refresh and coverage scripts in CI or locally.",
+      "cases": []
+    },
+    {
+      "ticketId": "wheel-tire-strict-filter-no-wipeout",
+      "title": "Wheel/tire strict filter: remove wipeout (strict pass without fallback)",
+      "status": "pass",
+      "reason": null,
+      "cases": [
+        {
+          "caseId": "strict-jante-query-not-full-wipeout",
+          "pass": true,
+          "failureReason": null
+        }
+      ]
+    },
+    {
+      "ticketId": "context-loss-mvp",
+      "title": "Context loss detection & recovery (MVP)",
+      "status": "pass",
+      "reason": null,
+      "cases": [
+        {
+          "caseId": "followup-stays-on-jante-guide",
+          "pass": true,
+          "failureReason": null
+        }
+      ]
+    },
+    {
+      "ticketId": "log-trace-host-jsonl-rows",
+      "title": "Add traceId + host to logs/YYYY-MM-DD.jsonl interaction rows",
+      "status": "skipped",
+      "reason": "Asserts server-side log files; replay only validates API fields where applicable (see trace ingest ticket).",
+      "cases": []
+    },
+    {
+      "ticketId": "log-29-04-missing-trace-ingest",
+      "title": "Logs 29.04 — Missing traceId/host in ingested prod logs (0. Logs DB)",
+      "status": "pass",
+      "reason": null,
+      "cases": [
+        {
+          "caseId": "chat-response-includes-trace-id",
+          "pass": true,
+          "failureReason": null
+        }
+      ]
+    }
+  ]
+}

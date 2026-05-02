@@ -123,7 +123,8 @@ app.post("/chat", chatLimiter, async (req, res) => {
 
     res.json({
       reply: result.reply || result.message || "No response",
-      sessionId: canonicalSessionId
+      sessionId: canonicalSessionId,
+      traceId: result.traceId != null ? result.traceId : null
     });
   } catch (err) {
     logger.error("SERVER", "Chat error", { error: err.message });
@@ -133,7 +134,8 @@ app.post("/chat", chatLimiter, async (req, res) => {
         : require("crypto").randomUUID();
     res.json({
       reply: "A apărut o eroare.",
-      sessionId: sessionIdForClient
+      sessionId: sessionIdForClient,
+      traceId: null
     });
   }
 });

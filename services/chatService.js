@@ -97,6 +97,7 @@ const {
   wheelTireTagBoost,
   selectionRoleFromWheelTire
 } = require("./wheelTireSemantics");
+const contextLossMvp = require("./contextLossMvp");
 const {
   buildPendingQuestionState,
   evaluateClarificationEscalation
@@ -1353,7 +1354,7 @@ function getClarificationQuestion(missingSlot, slots, responseLocale = "ro") {
   return loc === "en" ? "Can you share a bit more detail?" : "Poți sa-mi dai mai multe detalii?";
 }
 
-function assertMissingSlotInvariant(decision, slots) {
+function assertMissingSlotInvariant(decision, slots, slotMeta = null) {
   if (!decision || typeof decision !== "object") {
     return;
   }
@@ -1363,6 +1364,21 @@ function assertMissingSlotInvariant(decision, slots) {
 
   if (!missingSlot) {
     return;
+  }
+
+  const mvpVal = decision.contextLossMvpMeta && decision.contextLossMvpMeta.validation;
+  if (mvpVal && mvpVal.ok === false) {
+    return;
+  }
+
+  if (missingSlot === "surface") {
+    const surfVal = safeSlots.surface;
+    const hasSurface =
+      surfVal !== null && surfVal !== undefined && String(surfVal).trim() !== "";
+    const meta = slotMeta && typeof slotMeta === "object" ? slotMeta : {};
+    if (hasSurface && String(meta.surface || "").toLowerCase() !== "confirmed") {
+      return;
+    }
   }
 
   const value = safeSlots[missingSlot];
@@ -1920,6 +1936,7 @@ function endInteraction(interactionRef, result, patch = {}) {
 
   const entry = {
     timestamp: interactionRef.timestamp,
+    traceId: interactionRef.traceId ?? null,
     sessionId: interactionRef.sessionId,
     message: interactionRef.message,
     assistantReply,
@@ -2028,7 +2045,14 @@ function endInteraction(interactionRef, result, patch = {}) {
 
   loggingV2.emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProducts);
 
-  return finalResult;
+  const tracePayload = { traceId: interactionRef.traceId ?? null };
+  if (finalResult != null && typeof finalResult === "object" && !Array.isArray(finalResult)) {
+    return { ...finalResult, ...tracePayload };
+  }
+  return {
+    reply: finalResult == null ? "" : String(finalResult),
+    ...tracePayload
+  };
 }
 
 function formatSelectionResponse(products = [], slots = {}) {
@@ -5464,7 +5488,10 @@ function isKnownCleaningEntry(message) {
 function resolveAction({
   message,
   slots,
-  problemType = null
+  problemType = null,
+  slotMeta = null,
+  routingTurnIndex = 0,
+  conversationContextMvp = null
 }) {
   const safeSlots = slots && typeof slots === "object" ? slots : {};
   const resolvedMessage = typeof message === "string"
@@ -5591,6 +5618,32 @@ function resolveAction({
           missingSlot: flowMissing
         };
       }
+      const mvpCtxPre = contextLossMvp.buildConversationContextFromSession(
+        safeSlots,
+        slotMeta,
+        routingTurnIndex,
+        conversationContextMvp
+      );
+      const vrPre = contextLossMvp.validateContextForFlow(preemptFlow.flowId, mvpCtxPre);
+      if (!vrPre.ok) {
+        logInfo("CONTEXT_LOSS_MVP_VALIDATE", {
+          flowId: preemptFlow.flowId,
+          validation: vrPre,
+          surfaceStateBefore: mvpCtxPre.surface || null,
+          routerTop2: null,
+          routerMargin: null
+        });
+        const miss =
+          vrPre.missingSlots[0] ||
+          (vrPre.invalidReasons.length ? "surface" : null) ||
+          "surface";
+        return {
+          action: "clarification",
+          flowId: null,
+          missingSlot: miss,
+          contextLossMvpMeta: { validation: vrPre }
+        };
+      }
       const lockedDecision = {
         action: "flow",
         flowId: preemptFlow.flowId,
@@ -5655,6 +5708,32 @@ function resolveAction({
     });
 
     if (flowCandidate && flowCandidate.flowId) {
+      const mvpCtxCand = contextLossMvp.buildConversationContextFromSession(
+        safeSlots,
+        slotMeta,
+        routingTurnIndex,
+        conversationContextMvp
+      );
+      const vrCand = contextLossMvp.validateContextForFlow(flowCandidate.flowId, mvpCtxCand);
+      if (!vrCand.ok) {
+        logInfo("CONTEXT_LOSS_MVP_VALIDATE", {
+          flowId: flowCandidate.flowId,
+          validation: vrCand,
+          surfaceStateBefore: mvpCtxCand.surface || null,
+          routerTop2: null,
+          routerMargin: null
+        });
+        const miss =
+          vrCand.missingSlots[0] ||
+          (vrCand.invalidReasons.length ? "surface" : null) ||
+          "surface";
+        return {
+          action: "clarification",
+          flowId: null,
+          missingSlot: miss,
+          contextLossMvpMeta: { validation: vrCand }
+        };
+      }
       return {
         action: "flow",
         flowId: flowCandidate.flowId,
@@ -7536,7 +7615,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           slots: reentrySelectionSlots,
         }));
         const originalSelectionDecision = JSON.stringify(selectionDecision);
-        assertMissingSlotInvariant(selectionDecision, reentrySelectionSlots);
+        assertMissingSlotInvariant(selectionDecision, reentrySelectionSlots, sessionContext.slotMeta);
         if (!selectionDecision || !selectionDecision.action) {
           throw new Error("Invalid decision: resolveAction must return action");
         }
@@ -8137,7 +8216,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slots: currentSlots,
       }));
       const originalSelectionDecision = JSON.stringify(selectionDecision);
-      assertMissingSlotInvariant(selectionDecision, currentSlots);
+      assertMissingSlotInvariant(selectionDecision, currentSlots, sessionContext.slotMeta);
       if (!selectionDecision || !selectionDecision.action) {
         throw new Error("Invalid decision: resolveAction must return action");
       }
@@ -9115,6 +9194,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
     // --- End slot validation ---
 
+    if (String(queryType || "").toLowerCase() === "procedural") {
+      contextLossMvp.maybeAutoConfirmSurfaceFromMessage(
+        userMessage,
+        sessionContext.slots,
+        sessionContext.slotMeta
+      );
+    }
+
     console.log("SLOT_CHECK_SOURCE", sessionContext.slots);
     slotResult.missing = getMissingSlot(sessionContext.slots);
 
@@ -9126,6 +9213,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.state = null;
       sessionContext.pendingQuestion = null;
       clearPendingClarificationSlots(sessionContext);
+      if (String(queryType || "").toLowerCase() === "procedural") {
+        contextLossMvp.clearRecoveryMvp(sessionContext);
+      }
     }
     if (!sessionContext.slots || typeof sessionContext.slots !== "object") {
       throw new Error("Slots not initialized");
@@ -9147,6 +9237,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     sessionContext.objective.type = routingDecision.action;
     saveSession(sessionId, sessionContext);
     const problemType = sessionContext.problemType || null;
+    if (String(queryType || "").toLowerCase() === "procedural") {
+      sessionContext.routingTurnIndex = (sessionContext.routingTurnIndex || 0) + 1;
+      saveSession(sessionId, sessionContext);
+    }
     const resolvedAction = enforceClarificationContract(resolveAction({
       problemType,
       message: {
@@ -9154,9 +9248,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         routingDecision
       },
       slots: sessionContext.slots || {},
+      slotMeta: sessionContext.slotMeta || null,
+      routingTurnIndex: sessionContext.routingTurnIndex || 0,
+      conversationContextMvp: sessionContext.conversationContextMvp || null
     }));
     const originalResolvedAction = JSON.stringify(resolvedAction);
-    assertMissingSlotInvariant(resolvedAction, sessionContext.slots || {});
+    assertMissingSlotInvariant(resolvedAction, sessionContext.slots || {}, sessionContext.slotMeta);
     if (!resolvedAction || !resolvedAction.action) {
       throw new Error("Invalid decision: resolveAction must return action");
     }
@@ -9593,12 +9690,76 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
       logInfo("FLOW", getFlowLogPayload(intent, slotResult.slots, null, "missing_surface"));
 
-      const questionMessage = buildSurfaceClarificationQuestionWithAssist(
+      const normalSurfaceQ = buildSurfaceClarificationQuestionWithAssist(
         sessionContext.slots,
         sessionContext.responseLocale,
         sessionId,
         sessionContext.state
       );
+      let questionMessage = normalSurfaceQ;
+      if (String(queryType || "").toLowerCase() === "procedural") {
+        const pendingQuestionBefore = sessionContext.pendingQuestion
+          ? { ...sessionContext.pendingQuestion }
+          : null;
+        const surfaceMetaConfirmed = sessionContext.slotMeta?.surface === "confirmed";
+        const mvpCtxSurf = contextLossMvp.buildConversationContextFromSession(
+          sessionContext.slots,
+          sessionContext.slotMeta,
+          sessionContext.routingTurnIndex || 0,
+          sessionContext.conversationContextMvp
+        );
+        const lossSurf = contextLossMvp.detectContextLoss({
+          ctx: mvpCtxSurf,
+          slotName: "surface",
+          routingTurnIndex: sessionContext.routingTurnIndex || 0,
+          message: userMessage,
+          surfaceSlotConfirmed: surfaceMetaConfirmed
+        });
+        const prevRec = sessionContext.conversationContextMvp?.recovery;
+        const useDegraded = Boolean(prevRec?.active && (prevRec.consecutiveTriggers || 0) >= 2);
+        const useRecovery = Boolean(lossSurf.contextLossDetected && !useDegraded);
+        questionMessage = contextLossMvp.pickClarificationQuestion(
+          sessionContext.responseLocale,
+          useRecovery,
+          useDegraded,
+          normalSurfaceQ
+        );
+        contextLossMvp.recordClarificationEmitMvp(sessionContext, "surface", sessionContext.routingTurnIndex || 0, {
+          clarificationType: useRecovery ? "recovery" : "normal",
+          contextLossDetected: lossSurf.contextLossDetected,
+          reason: lossSurf.reason || null,
+          degraded: useDegraded
+        });
+        saveSession(sessionId, sessionContext);
+        const mvpCtxAfter = contextLossMvp.buildConversationContextFromSession(
+          sessionContext.slots,
+          sessionContext.slotMeta,
+          sessionContext.routingTurnIndex || 0,
+          sessionContext.conversationContextMvp
+        );
+        logInfo("CONTEXT_LOSS_MVP", {
+          contextLossDetected: lossSurf.contextLossDetected,
+          contextLossReason: lossSurf.reason || null,
+          requiredSlotsMissing: resolvedAction.contextLossMvpMeta?.validation?.missingSlots || [],
+          surfaceStateBefore: mvpCtxSurf.surface || null,
+          surfaceStateAfter: mvpCtxAfter.surface || null,
+          routerTop2: routingDecision?.top2 ?? null,
+          routerMargin: routingDecision?.margin ?? null,
+          clarificationType: useDegraded ? "normal" : useRecovery ? "recovery" : "normal",
+          clarificationDegraded: useDegraded,
+          repeatedSlotAsksCount: mvpCtxAfter.historySignals?.repeatedSlotAsksCount ?? null,
+          pendingQuestionBefore,
+          pendingQuestionAfter: sessionContext.pendingQuestion || null,
+          stateMutationDiff: {
+            surfaceBefore: mvpCtxSurf.surface?.value ?? null,
+            surfaceAfter: mvpCtxAfter.surface?.value ?? null,
+            pendingQuestionSlotBefore: pendingQuestionBefore?.slot ?? null,
+            pendingQuestionSlotAfter: sessionContext.pendingQuestion?.slot ?? null,
+            activeFlowBefore: sessionContext.lastFlow ?? null,
+            activeFlowAfter: sessionContext.lastFlow ?? null
+          }
+        });
+      }
 
       logResponseSummary("question", { products: 0 });
       return endInteraction(interactionRef, {

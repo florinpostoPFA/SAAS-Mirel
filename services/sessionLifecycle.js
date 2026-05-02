@@ -47,7 +47,9 @@ function createDefaultUnifiedSession(sessionId) {
     conversationHistory: [],
     lastActivity: now,
     createdAt: now,
-    lastResponseType: null
+    lastResponseType: null,
+    routingTurnIndex: 0,
+    conversationContextMvp: null
   };
 }
 
@@ -91,6 +93,8 @@ function migrateSessionInPlace(session, sessionId) {
   if (session.lastActivity == null) session.lastActivity = session.meta.updatedAtMs ?? now;
   if (session.createdAt == null) session.createdAt = session.meta.createdAtMs ?? now;
   if (session.lastResponseType === undefined) session.lastResponseType = null;
+  if (session.routingTurnIndex == null) session.routingTurnIndex = 0;
+  if (session.conversationContextMvp === undefined) session.conversationContextMvp = null;
 
   return session;
 }
