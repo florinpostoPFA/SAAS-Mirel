@@ -9,18 +9,18 @@ jest.mock("../services/llm", () => ({
 const { appendInteractionLine } = require("../services/interactionLog");
 const chatService = require("../services/chatService");
 
-describe("single decision authority (resolveAction)", () => {
+describe("single decision authority (resolveActionFinal)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("does not mutate clarification decision fields after resolveAction returns (regression: post-resolve reassignment)", () => {
-    const resolveAction = chatService.__test?.resolveAction;
-    expect(typeof resolveAction).toBe("function");
+  it("does not mutate clarification decision fields after resolveActionFinal returns (regression: post-resolve reassignment)", () => {
+    const resolveActionFinal = chatService.__test?.resolveActionFinal;
+    expect(typeof resolveActionFinal).toBe("function");
 
     const routingDecision = { action: "procedural", reason: "test" };
     const slots = { context: "interior", object: "scaune", surface: null };
-    const base = resolveAction({
+    const base = resolveActionFinal({
       problemType: null,
       message: { text: "test", routingDecision },
       slots,

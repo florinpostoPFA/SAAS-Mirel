@@ -216,7 +216,7 @@ function pickKnowledgeRecovery(deps) {
 }
 
 /**
- * @returns {null|object} patch to apply inside endInteraction
+ * @returns {null|object} patch consumed by normalizeDecisionAfterExecution / prepareTurnCompletionPayload
  */
 function buildKnowledgeDeadEndRecoveryPatch({
   interactionRef,
@@ -224,15 +224,17 @@ function buildKnowledgeDeadEndRecoveryPatch({
   finalResult,
   finalOutputType,
   finalProducts,
-  getMissingSlot
+  getMissingSlot,
+  currentDecision = null
 }) {
   if (shouldBypassKnowledgeDeadEndRecovery(interactionRef)) {
     return null;
   }
 
   const replyText = normalizeReplyText(finalResult);
+  const decisionForDead = currentDecision ?? interactionRef?.decision;
   const dead = isKnowledgeDeadEnd({
-    decision: interactionRef?.decision,
+    decision: decisionForDead,
     outputType: finalOutputType,
     finalProducts,
     replyText,

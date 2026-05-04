@@ -1,6 +1,12 @@
 const { __test } = require("../services/chatService");
 
-const { buildDecision, validateDecisionContract, DECISION_PAYLOAD_ACTIONS, resolveAction } = __test;
+const {
+  buildDecision,
+  validateDecisionContract,
+  DECISION_PAYLOAD_ACTIONS,
+  resolveAction,
+  resolveActionFinal
+} = __test;
 
 describe("Decision payload (canonical shape)", () => {
   it("buildDecision fills reasonCode and boolean needsDisambiguation", () => {
@@ -48,8 +54,20 @@ describe("Decision payload (canonical shape)", () => {
     expect(r.errors).toContain("invalid_action");
   });
 
-  it("resolveAction returns buildDecision-shaped object with reasonCode", () => {
+  it("resolveAction (P2.3 raw core) keeps router procedural action before apply*", () => {
     const d = resolveAction({
+      message: {
+        text: "vreau sa curat scaunele",
+        routingDecision: { action: "procedural" }
+      },
+      slots: { context: "interior", object: "seats", surface: "textile" }
+    });
+    expect(d.action).toBe("procedural");
+    expect(typeof d.reasonCode).toBe("string");
+  });
+
+  it("resolveActionFinal returns buildDecision-shaped object with reasonCode after pipeline", () => {
+    const d = resolveActionFinal({
       message: {
         text: "vreau sa curat scaunele",
         routingDecision: { action: "procedural" }

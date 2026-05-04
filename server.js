@@ -124,7 +124,8 @@ app.post("/chat", chatLimiter, async (req, res) => {
     res.json({
       reply: result.reply || result.message || "No response",
       sessionId: canonicalSessionId,
-      traceId: result.traceId != null ? result.traceId : null
+      traceId: result.traceId != null ? result.traceId : null,
+      decision: result.decisionTrace != null ? result.decisionTrace : null
     });
   } catch (err) {
     logger.error("SERVER", "Chat error", { error: err.message });

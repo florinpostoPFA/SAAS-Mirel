@@ -36,7 +36,6 @@ const { normalizeDecision } = require("./decisionNormalizer");
 const { detectQueryType } = require("./queryTypeService");
 const {
   analyzeSafetyQuery,
-  isSafetyQuery,
   resolveSafetyTrustContext,
   runSafetyGate,
   buildSafetyAnswerText,
@@ -44,7 +43,14 @@ const {
   conservativeFollowUpReply,
   logSafetyFields
 } = require("./safetyQueryService");
-const { routeRequest, areSlotsComplete, getMissingSlot: getRouterMissingSlot } = require("./router");
+const { routeRequest, areSlotsComplete } = require("./router");
+const {
+  normalizeRomanianTextForGate,
+  canonicalizeObjectValue,
+  GLASS_OBJECT_ALIASES,
+  PAINT_OBJECT_ALIASES
+} = require("./cleaningObjectCanonical");
+const { getMissingSlot, CTO_SURFACE_ENUM, CTO_SURFACE_SET } = require("./slotCompleteness");
 const { findRelevantKnowledge } = require("./knowledgeService");
 const fallbackProductsCatalog = require("../data/products.json");
 const productRoles = require("../data/product_roles.json");
@@ -145,8 +151,6 @@ function logChatPipelineStage(stage, meta = {}) {
 }
 
 const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "tires", "piele"];
-const CTO_SURFACE_ENUM = ["textile", "piele", "plastic", "alcantara"];
-const CTO_SURFACE_SET = new Set(CTO_SURFACE_ENUM);
 function normalizeResponseLocale(locale) {
   const s = String(locale || "ro").toLowerCase().trim();
   if (s.startsWith("en")) return "en";
@@ -910,75 +914,6 @@ const SLOT_DOMAIN_RULES = {
   oglinzi:   { context: "exterior", allowedSurfaces: [] },
   oglinda:   { context: "exterior", allowedSurfaces: [] }
 };
-const GLASS_OBJECT_ALIASES = [
-  "sticla",
-  "geam",
-  "geamuri",
-  "parbriz",
-  "glass",
-  "windshield",
-  "oglinda",
-  "oglinzi",
-  "mirror",
-  "mirrors"
-];
-const PAINT_OBJECT_ALIASES = [
-  "vopsea",
-  "vopseaua",
-  "caroserie",
-  "caroseria",
-  "lac",
-  "clear coat",
-  "clearcoat",
-  "paint"
-];
-
-function canonicalizeObjectValue(object) {
-  const normalized = normalizeRomanianTextForGate(object);
-  if (!normalized) {
-    return null;
-  }
-
-  if (normalized === "janta" || normalized === "jante") {
-    return "jante";
-  }
-
-  if (
-    normalized === "roata" ||
-    normalized === "roti" ||
-    normalized === "rotile" ||
-    normalized === "wheels" ||
-    normalized === "wheel"
-  ) {
-    return "jante";
-  }
-
-  if (normalized === "anvelopa" || normalized === "anvelope") {
-    return "anvelope";
-  }
-
-  if (GLASS_OBJECT_ALIASES.includes(normalized)) {
-    return "glass";
-  }
-
-  if (["tires", "tyres", "tire"].includes(normalized)) {
-    return "anvelope";
-  }
-
-  if (PAINT_OBJECT_ALIASES.includes(normalized)) {
-    return "caroserie";
-  }
-
-  return normalized;
-}
-
-function normalizeRomanianTextForGate(text) {
-  let s = String(text || "").toLowerCase();
-  s = s.replace(/[ăâ]/g, "a").replace(/î/gi, "i").replace(/[șş]/g, "s").replace(/[țţ]/g, "t");
-  s = s.replace(/[^a-z0-9\s]/g, " ");
-  s = s.replace(/\s+/g, " ").trim();
-  return s;
-}
 
 function logSurfaceNormalized(raw, normalizedSurface) {
   if (normalizedSurface == null) {
@@ -1608,6 +1543,37 @@ function assertDecisionAuthority(interactionRef, stageName) {
   return null;
 }
 
+/**
+ * Single write of the turn decision (Phase 1). Call once per endInteraction after all repairs.
+ * Freezes payload so later code cannot mutate authority fields silently.
+ */
+function commitTurnDecision(interactionRef, decisionPartial) {
+  const finalized = buildDecision(decisionPartial && typeof decisionPartial === "object" ? decisionPartial : {});
+  interactionRef.decision = finalized;
+  interactionRef._decisionAuthoritySnapshot = Object.freeze({
+    action: finalized.action,
+    flowId: finalized.flowId ?? null,
+    missingSlot: finalized.missingSlot !== undefined ? finalized.missingSlot : null
+  });
+  Object.freeze(interactionRef.decision);
+  if (process.env.DECISION_FINAL_DEBUG === "1") {
+    logInfo("DECISION_POST_COMMIT", { trace: buildDecisionTraceFromDecision(finalized) });
+  }
+  return finalized;
+}
+
+function buildDecisionTraceFromDecision(decision) {
+  if (!decision || typeof decision !== "object") {
+    return { action: null, reasonCode: null, flowId: null, missingSlot: null };
+  }
+  return {
+    action: decision.action ?? null,
+    reasonCode: decision.reasonCode ?? null,
+    flowId: decision.flowId ?? null,
+    missingSlot: decision.missingSlot !== undefined ? decision.missingSlot : null
+  };
+}
+
 function getMissingSlotFromPendingState(state) {
   if (state === "NEEDS_CONTEXT") return "context";
   if (state === "NEEDS_OBJECT") return "object";
@@ -1627,10 +1593,13 @@ function getBoundarySlotSnapshot(interactionRef, sessionContext) {
   return {};
 }
 
-function forceFlowExecutionAtBoundary(interactionRef, sessionContext) {
-  const decision = interactionRef?.decision && typeof interactionRef.decision === "object"
-    ? interactionRef.decision
-    : {};
+function forceFlowExecutionAtBoundary(interactionRef, sessionContext, decisionOverride = null) {
+  const decision =
+    decisionOverride && typeof decisionOverride === "object"
+      ? decisionOverride
+      : interactionRef?.decision && typeof interactionRef.decision === "object"
+        ? interactionRef.decision
+        : {};
   const flowId = typeof decision.flowId === "string" ? decision.flowId.trim() : "";
   const flowRegistry = config?.flows && typeof config.flows === "object" ? config.flows : {};
   const prioritizedFlow = flowRegistry[flowId] || null;
@@ -1702,9 +1671,7 @@ function forceFlowExecutionAtBoundary(interactionRef, sessionContext) {
   }
 }
 
-function endInteraction(interactionRef, result, patch = {}) {
-  loggingV2.flushStagesForEarlyExit(interactionRef);
-
+function applyEndInteractionRefPatch(interactionRef, patch) {
   if (patch.intentType != null) interactionRef.intentType = patch.intentType;
   if (patch.tags != null) interactionRef.tags = patch.tags;
   if (patch.slots != null) interactionRef.slots = patch.slots;
@@ -1738,234 +1705,128 @@ function endInteraction(interactionRef, result, patch = {}) {
       ...patch.intentRoutingTelemetry
     };
   }
-  if (patch.decision) {
-    interactionRef.decision = { ...interactionRef.decision, ...patch.decision };
-  }
-  captureDecisionAuthoritySnapshot(interactionRef);
+}
 
-  let finalResult = result;
-  let finalOutputType = patch.outputType != null ? patch.outputType : inferOutputType(result);
-  let finalProducts = patch.products != null ? patch.products : summarizeProductsForLog(result.products);
-  const explicitProductsReason = patch.productsReason != null ? String(patch.productsReason) : null;
-  const sessionContext = interactionRef?.sessionId ? getSession(interactionRef.sessionId) : null;
-  const hardGuardPrompt = "Ce vrei sa cureti mai exact (ex: geamuri, jante, bord, scaune)?";
-  const resolveHardGuardMissingSlot = (slots) => {
-    const safeSlots = slots && typeof slots === "object" ? slots : {};
-    const missingSlot = getMissingSlot(safeSlots);
-    return missingSlot || "context";
+/**
+ * P2.5 — Rebuild clarification authority using the same pipeline as resolveActionFinal, without invoking resolveActionFinal.
+ */
+function buildClarificationRepairDecision(interactionRef, sessionContext, missingSlot, extraPartial = {}) {
+  const slots =
+    interactionRef.slots && typeof interactionRef.slots === "object"
+      ? interactionRef.slots
+      : sessionContext?.slots && typeof sessionContext.slots === "object"
+        ? sessionContext.slots
+        : {};
+  const opts = {
+    problemType: sessionContext?.problemType ?? null,
+    traceId: interactionRef.traceId ?? null,
+    message: {
+      text: String(interactionRef.message || ""),
+      routingDecision: { action: "clarification", missingSlot }
+    },
+    slots,
+    slotMeta: sessionContext?.slotMeta ?? null,
+    routingTurnIndex: sessionContext?.routingTurnIndex ?? 0,
+    conversationContextMvp: sessionContext?.conversationContextMvp ?? null,
+    routingContext: null
   };
+  const partial = stripDecisionPipelineMarkers(runPostCoreApplyPipeline(resolveActionCore(opts), opts));
+  const shaped = buildDecision({ ...partial, ...extraPartial });
+  return buildDecision(enforceClarificationContract(shaped));
+}
 
-  // P0 - HARD GUARD: decision.action must never be null
-  if (!interactionRef.decision || !interactionRef.decision.action) {
-    console.error("HARD_GUARD_VIOLATION", {
-      decision: interactionRef.decision,
-      slots: interactionRef.slots,
-      message: interactionRef.message
-    });
-    logInfo("HARD_GUARD_TRIGGERED", {
-      reason: "null_action",
-      decision: interactionRef.decision
-    });
-    // Fallback: force clarification with generic prompt (authority from resolveAction only)
-    interactionRef.slots = interactionRef.slots ?? {};
-    const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
-    interactionRef.decision = {
-      ...enforceClarificationContract(resolveAction({
-        message: {
-          text: String(interactionRef.message || ""),
-          routingDecision: { action: "clarification", missingSlot: fallbackMissingSlot }
-        },
-        slots: interactionRef.slots
-      })),
-      hardGuardFallback: true
+/** P2.5 — Post-execution: flow decision vs actual output type (was endInteraction). */
+function applyFlowResolutionAdjustmentsAfterExecution({
+  interactionRef,
+  sessionContext,
+  workingDecision,
+  finalOutputType,
+  finalResult,
+  finalProducts
+}) {
+  if (workingDecision?.action === "flow" && finalOutputType !== "flow") {
+    const forcedFlowOutput = forceFlowExecutionAtBoundary(interactionRef, sessionContext, workingDecision);
+    return {
+      workingDecision,
+      finalResult: forcedFlowOutput.result,
+      finalOutputType: forcedFlowOutput.outputType,
+      finalProducts: forcedFlowOutput.products
     };
-    delete interactionRef._decisionAuthoritySnapshot;
-    captureDecisionAuthoritySnapshot(interactionRef);
-    finalResult = {
-      type: "question",
-      message: hardGuardPrompt
-    };
-    finalOutputType = "question";
-    finalProducts = [];
   }
+  return { workingDecision, finalResult, finalOutputType, finalProducts };
+}
 
-  // P0a - HARD GUARD: clarification decisions must have contract-complete missingSlot
-  // Exception: validator-triggered invalid combinations can have missingSlot=null when all slots are defined
-  if (interactionRef?.decision?.action === "clarification") {
-    interactionRef.slots = interactionRef.slots ?? {};
-    const previousMissingSlot = interactionRef.decision.missingSlot;
-    const computedMissing = getMissingSlot(interactionRef.slots);
-    if (previousMissingSlot === undefined) {
-      const resolvedMissingSlot = computedMissing || "context";
-      console.error("[DECISION_CONTRACT_INVALID]", {
-        reason: "clarification_missing_missingSlot",
-        resolvedMissingSlot,
-        slots: interactionRef.slots
-      });
-      logInfo("CLARIFICATION_HARD_GUARD_TRIGGERED", {
-        reason: "missing_missingSlot",
-        missingSlot: resolvedMissingSlot,
-        decision: { ...interactionRef.decision, missingSlot: resolvedMissingSlot },
-        slots: interactionRef.slots
-      });
-      interactionRef.decision = enforceClarificationContract(resolveAction({
-        message: {
-          text: String(interactionRef.message || ""),
-          routingDecision: { action: "clarification", missingSlot: resolvedMissingSlot }
-        },
-        slots: interactionRef.slots
-      }));
-      delete interactionRef._decisionAuthoritySnapshot;
-      captureDecisionAuthoritySnapshot(interactionRef);
-    }
-  }
-
-  try {
-    interactionRef.decision = enforceClarificationContract(interactionRef.decision);
-  } catch (err) {
-    if (interactionRef?.decision?.hardGuardFallback) {
-      interactionRef.slots = interactionRef.slots ?? {};
-      const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
-      logInfo("CLARIFICATION_CONTRACT_BYPASSED_HARD_GUARD", {
-        error: err.message,
-        decision: interactionRef.decision,
-        missingSlot: fallbackMissingSlot
-      });
-      console.error("[DECISION_CONTRACT_INVALID]", {
-        reason: "clarification_contract_enforce_failed_hard_guard",
-        error: err.message
-      });
-      interactionRef.decision = {
-        ...enforceClarificationContract(resolveAction({
-          message: {
-            text: String(interactionRef.message || ""),
-            routingDecision: { action: "clarification", missingSlot: fallbackMissingSlot }
-          },
-          slots: interactionRef.slots ?? {}
-        })),
-        hardGuardFallback: true
-      };
-      delete interactionRef._decisionAuthoritySnapshot;
-      captureDecisionAuthoritySnapshot(interactionRef);
-      finalResult = {
-        type: "question",
-        message: hardGuardPrompt
-      };
-      finalOutputType = "question";
-      finalProducts = [];
-    } else {
-      throw err;
-    }
-  }
-
-  if (interactionRef?.decision?.hardGuardFallback) {
-    try {
-      assertDecisionInvariantsBeforeExecution(
-        interactionRef.decision,
-        interactionRef.slots,
-        interactionRef.message
-      );
-    } catch (err) {
-      interactionRef.slots = interactionRef.slots ?? {};
-      const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
-      logInfo("HARD_GUARD_INVARIANT_BYPASS", {
-        error: err.message,
-        decision: interactionRef.decision,
-        missingSlot: fallbackMissingSlot
-      });
-      console.error("[DECISION_CONTRACT_INVALID]", {
-        reason: "hard_guard_invariant_bypass",
-        error: err.message
-      });
-      interactionRef.decision = {
-        ...enforceClarificationContract(resolveAction({
-          message: {
-            text: String(interactionRef.message || ""),
-            routingDecision: { action: "clarification", missingSlot: fallbackMissingSlot }
-          },
-          slots: interactionRef.slots ?? {}
-        })),
-        hardGuardFallback: true
-      };
-      delete interactionRef._decisionAuthoritySnapshot;
-      captureDecisionAuthoritySnapshot(interactionRef);
-      finalResult = {
-        type: "question",
-        message: hardGuardPrompt
-      };
-      finalOutputType = "question";
-      finalProducts = [];
-    }
-  } else {
-    assertDecisionInvariantsBeforeExecution(
-      interactionRef.decision,
-      interactionRef.slots,
-      interactionRef.message
-    );
-  }
-
-  if (interactionRef?.decision?.action === "flow" && finalOutputType !== "flow") {
-    const forcedFlowOutput = forceFlowExecutionAtBoundary(interactionRef, sessionContext);
-    finalResult = forcedFlowOutput.result;
-    finalOutputType = forcedFlowOutput.outputType;
-    finalProducts = forcedFlowOutput.products;
-  }
-
-  if (interactionRef?.decision?.action === "clarification" && finalOutputType !== "question") {
+/** P2.5 — Post-execution: clarification authority vs response shape (was endInteraction). */
+function applyClarificationNormalizationAfterExecution({
+  sessionContext,
+  workingDecision,
+  finalOutputType,
+  finalResult,
+  finalProducts,
+  interactionRef
+}) {
+  if (workingDecision?.action === "clarification" && finalOutputType !== "question") {
     console.error("[DECISION_CONTRACT_INVALID]", {
       reason: "clarification_output_not_question",
       outputType: finalOutputType,
-      missingSlot: interactionRef.decision?.missingSlot ?? null
+      missingSlot: workingDecision?.missingSlot ?? null
     });
     const ms =
-      interactionRef.decision?.missingSlot != null
-        ? interactionRef.decision.missingSlot
+      workingDecision?.missingSlot != null
+        ? workingDecision.missingSlot
         : getMissingSlot(interactionRef.slots || {}) || "context";
-    finalResult = {
-      type: "question",
-      message: getClarificationQuestion(ms, interactionRef.slots || {}, sessionContext?.responseLocale)
+    return {
+      finalResult: {
+        type: "question",
+        message: getClarificationQuestion(ms, interactionRef.slots || {}, sessionContext?.responseLocale)
+      },
+      finalOutputType: "question",
+      finalProducts: []
     };
-    finalOutputType = "question";
-    finalProducts = [];
   }
+  return { finalResult, finalOutputType, finalProducts };
+}
 
-  const resolvedResultType = getResultTypeFromOutputType(finalOutputType);
-  if (resolvedResultType && finalResult && typeof finalResult === "object" && !finalResult.type) {
-    finalResult = {
-      ...finalResult,
-      type: resolvedResultType
-    };
-  }
+/**
+ * P2.6 — Post-execution normalization: knowledge dead-end + invalid payload repair.
+ * Output/consistency only — does not re-run `resolveActionFinal` or re-route.
+ */
+function normalizeDecisionAfterExecution({
+  interactionRef,
+  sessionContext,
+  workingDecision,
+  finalResult,
+  finalOutputType,
+  finalProducts,
+  resolveHardGuardMissingSlot,
+  hardGuardPrompt
+}) {
+  let wd = workingDecision;
+  let fr = finalResult;
+  let fot = finalOutputType;
+  let fp = finalProducts;
 
   const recoveryPatch = buildKnowledgeDeadEndRecoveryPatch({
     interactionRef,
     sessionContext,
-    finalResult,
-    finalOutputType,
-    finalProducts,
-    getMissingSlot
+    finalResult: fr,
+    finalOutputType: fot,
+    finalProducts: fp,
+    getMissingSlot,
+    currentDecision: wd
   });
   if (recoveryPatch) {
-    finalResult = recoveryPatch.finalResult;
-    finalOutputType = recoveryPatch.finalOutputType;
-    finalProducts = recoveryPatch.finalProducts;
+    fr = recoveryPatch.finalResult;
+    fot = recoveryPatch.finalOutputType;
+    fp = recoveryPatch.finalProducts;
     const rd = recoveryPatch.decision;
-    interactionRef.decision = {
-      ...interactionRef.decision,
-      ...resolveAction({
-        message: { text: String(interactionRef.message || ""), routingDecision: {} },
-        slots: interactionRef.slots || {},
-        deadEndRecoveryAuthority: {
-          action: rd.action,
-          flowId: rd.flowId ?? null,
-          missingSlot: rd.missingSlot !== undefined ? rd.missingSlot : null,
-          knowledgeRecovery: rd.knowledgeRecovery === true
-        }
-      }),
+    wd = buildDecision({
+      ...wd,
+      action: rd.action,
+      flowId: rd.flowId ?? null,
+      missingSlot: rd.missingSlot !== undefined ? rd.missingSlot : null,
       knowledgeRecovery: rd.knowledgeRecovery === true
-    };
-    delete interactionRef._decisionAuthoritySnapshot;
-    captureDecisionAuthoritySnapshot(interactionRef);
+    });
     interactionRef.knowledgeTelemetry = {
       ...(interactionRef.knowledgeTelemetry || {}),
       ...recoveryPatch.telemetry
@@ -1981,15 +1842,15 @@ function endInteraction(interactionRef, result, patch = {}) {
       }
       saveSession(interactionRef.sessionId, sessionContext);
     }
-    if (interactionRef.decision.action === "clarification") {
-      interactionRef.decision = enforceClarificationContract(interactionRef.decision);
+    if (wd.action === "clarification") {
+      wd = buildDecision(enforceClarificationContract(wd));
     }
-  } else if (sessionContext && interactionRef?.decision?.action === "knowledge") {
+  } else if (sessionContext && wd?.action === "knowledge") {
     const stillDead = isKnowledgeDeadEnd({
-      decision: interactionRef.decision,
-      outputType: finalOutputType,
-      finalProducts,
-      replyText: normalizeKnowledgeReplyText(finalResult),
+      decision: wd,
+      outputType: fot,
+      finalProducts: fp,
+      replyText: normalizeKnowledgeReplyText(fr),
       queryType: interactionRef.queryType
     });
     if (!stillDead) {
@@ -1998,62 +1859,118 @@ function endInteraction(interactionRef, result, patch = {}) {
     }
   }
 
-  const authorityViolation = assertDecisionAuthority(interactionRef, "endInteraction_pre_output_contract");
-  if (authorityViolation?.violated) {
-    const snap = authorityViolation.snapshot;
-    const ms = authorityViolation.safeMissingSlot;
-    if (snap.action === "clarification") {
-      const slotForQuestion = snap.missingSlot != null ? snap.missingSlot : ms;
-      finalResult = {
-        type: "question",
-        message: getClarificationQuestion(
-          slotForQuestion,
-          interactionRef.slots || {},
-          sessionContext?.responseLocale
-        )
-      };
-      finalOutputType = "question";
-      finalProducts = [];
-    } else if (snap.action === "knowledge") {
-      finalResult = { reply: getSafeFallbackReply(), products: [] };
-      finalOutputType = "reply";
-      finalProducts = [];
-    } else {
-      finalResult = {
-        type: "question",
-        message: getClarificationQuestion(ms, interactionRef.slots || {}, sessionContext?.responseLocale)
-      };
-      finalOutputType = "question";
-      finalProducts = [];
-    }
-  }
-
-  interactionRef.decision = buildDecision({ ...interactionRef.decision });
-  const decisionPayloadContract = validateDecisionContract(interactionRef.decision);
+  wd = buildDecision({ ...wd });
+  const decisionPayloadContract = validateDecisionContract(wd);
   if (!decisionPayloadContract.valid) {
     logInfo("DECISION_CONTRACT_INVALID", {
       errors: decisionPayloadContract.errors,
       traceId: interactionRef.traceId,
       sessionId: interactionRef.sessionId,
-      action: interactionRef.decision?.action ?? null,
-      flowId: interactionRef.decision?.flowId ?? null,
-      missingSlot: interactionRef.decision?.missingSlot ?? null
+      action: wd?.action ?? null,
+      flowId: wd?.flowId ?? null,
+      missingSlot: wd?.missingSlot ?? null
     });
     interactionRef.slots = interactionRef.slots ?? {};
     const contractFallbackSlot = resolveHardGuardMissingSlot(interactionRef.slots);
-    interactionRef.decision = buildDecision({
-      ...enforceClarificationContract(resolveAction({
-        message: {
-          text: String(interactionRef.message || ""),
-          routingDecision: { action: "clarification", missingSlot: contractFallbackSlot }
-        },
-        slots: interactionRef.slots
-      })),
+    wd = buildClarificationRepairDecision(interactionRef, sessionContext, contractFallbackSlot, {
       hardGuardFallback: true,
       reasonCode: "contract.invalid_decision_payload"
     });
-    delete interactionRef._decisionAuthoritySnapshot;
-    captureDecisionAuthoritySnapshot(interactionRef);
+    fr = {
+      type: "question",
+      message: hardGuardPrompt
+    };
+    fot = "question";
+    fp = [];
+  }
+
+  return {
+    workingDecision: wd,
+    finalResult: fr,
+    finalOutputType: fot,
+    finalProducts: fp
+  };
+}
+
+let _prepareTurnCompletionPayloadActive = false;
+
+function assertNoDecisionRecompute(opts) {
+  const detail = {
+    message: "resolveActionFinal must not run during post-execution turn completion (use buildClarificationRepairDecision or buildDecision only)",
+    traceId: opts?.traceId ?? null
+  };
+  if (process.env.NODE_ENV === "test") {
+    throw new Error(`DECISION_RECOMPUTE_VIOLATION: ${detail.message}`);
+  }
+  logInfo("DECISION_RECOMPUTE_VIOLATION", detail);
+}
+
+/**
+ * P2.5 — All turn completion behavior before commit (no resolveActionFinal; no endInteraction body).
+ */
+function prepareTurnCompletionPayload(interactionRef, result, patch) {
+  _prepareTurnCompletionPayloadActive = true;
+  try {
+    return prepareTurnCompletionPayloadBody(interactionRef, result, patch);
+  } finally {
+    _prepareTurnCompletionPayloadActive = false;
+  }
+}
+
+function prepareTurnCompletionPayloadBody(interactionRef, result, patch) {
+  let workingDecision = buildDecision({
+    ...(interactionRef.decision && typeof interactionRef.decision === "object" ? interactionRef.decision : {}),
+    ...(patch.decision && typeof patch.decision === "object" ? patch.decision : {})
+  });
+  delete interactionRef._decisionAuthoritySnapshot;
+
+  if (process.env.DECISION_EXECUTION_PROBE === "1") {
+    const pre = interactionRef._decisionAuthorityBeforeExecution ?? null;
+    const afterMerge = {
+      traceId: interactionRef.traceId ?? null,
+      action: workingDecision?.action ?? null,
+      flowId: workingDecision?.flowId ?? null,
+      missingSlot: workingDecision?.missingSlot !== undefined ? workingDecision.missingSlot : null,
+      reasonCode: workingDecision?.reasonCode ?? null
+    };
+    logInfo("DECISION_AFTER_EXECUTION", {
+      ...afterMerge,
+      preExecution: pre,
+      authorityMatchesPreExecution:
+        pre != null &&
+        pre.action === afterMerge.action &&
+        pre.flowId === afterMerge.flowId &&
+        pre.missingSlot === afterMerge.missingSlot
+    });
+  }
+
+  let finalResult = result;
+  let finalOutputType = patch.outputType != null ? patch.outputType : inferOutputType(result);
+  let finalProducts = patch.products != null ? patch.products : summarizeProductsForLog(result.products);
+  const explicitProductsReason = patch.productsReason != null ? String(patch.productsReason) : null;
+  const sessionContext = interactionRef?.sessionId ? getSession(interactionRef.sessionId) : null;
+  const hardGuardPrompt = "Ce vrei sa cureti mai exact (ex: geamuri, jante, bord, scaune)?";
+  const resolveHardGuardMissingSlot = (slots) => {
+    const safeSlots = slots && typeof slots === "object" ? slots : {};
+    const missingSlot = getMissingSlot(safeSlots);
+    return missingSlot || "context";
+  };
+
+  if (!workingDecision || !workingDecision.action) {
+    console.error("HARD_GUARD_VIOLATION", {
+      decision: workingDecision,
+      slots: interactionRef.slots,
+      message: interactionRef.message
+    });
+    logInfo("HARD_GUARD_TRIGGERED", {
+      reason: "null_action",
+      decision: workingDecision
+    });
+    interactionRef.slots = interactionRef.slots ?? {};
+    const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
+    workingDecision = buildClarificationRepairDecision(interactionRef, sessionContext, fallbackMissingSlot, {
+      hardGuardFallback: true
+    });
     finalResult = {
       type: "question",
       message: hardGuardPrompt
@@ -2062,14 +1979,172 @@ function endInteraction(interactionRef, result, patch = {}) {
     finalProducts = [];
   }
 
-  assertDecisionOutputContract(
-    authorityViolation?.violated
-      ? { ...interactionRef.decision, ...authorityViolation.snapshot }
-      : interactionRef.decision,
-    { type: finalOutputType },
-    interactionRef.slots,
-    interactionRef.message
-  );
+  if (workingDecision?.action === "clarification") {
+    interactionRef.slots = interactionRef.slots ?? {};
+    const previousMissingSlot = workingDecision.missingSlot;
+    const computedMissing = getMissingSlot(interactionRef.slots);
+    if (previousMissingSlot === undefined) {
+      const resolvedMissingSlot = computedMissing || "context";
+      console.error("[DECISION_CONTRACT_INVALID]", {
+        reason: "clarification_missing_missingSlot",
+        resolvedMissingSlot,
+        slots: interactionRef.slots
+      });
+      logInfo("CLARIFICATION_HARD_GUARD_TRIGGERED", {
+        reason: "missing_missingSlot",
+        missingSlot: resolvedMissingSlot,
+        decision: { ...workingDecision, missingSlot: resolvedMissingSlot },
+        slots: interactionRef.slots
+      });
+      workingDecision = buildClarificationRepairDecision(
+        interactionRef,
+        sessionContext,
+        resolvedMissingSlot
+      );
+    }
+  }
+
+  try {
+    workingDecision = buildDecision(enforceClarificationContract(workingDecision));
+  } catch (err) {
+    if (workingDecision?.hardGuardFallback) {
+      interactionRef.slots = interactionRef.slots ?? {};
+      const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
+      logInfo("CLARIFICATION_CONTRACT_BYPASSED_HARD_GUARD", {
+        error: err.message,
+        decision: workingDecision,
+        missingSlot: fallbackMissingSlot
+      });
+      console.error("[DECISION_CONTRACT_INVALID]", {
+        reason: "clarification_contract_enforce_failed_hard_guard",
+        error: err.message
+      });
+      workingDecision = buildClarificationRepairDecision(interactionRef, sessionContext, fallbackMissingSlot, {
+        hardGuardFallback: true
+      });
+      finalResult = {
+        type: "question",
+        message: hardGuardPrompt
+      };
+      finalOutputType = "question";
+      finalProducts = [];
+    } else {
+      throw err;
+    }
+  }
+
+  if (workingDecision?.hardGuardFallback) {
+    try {
+      assertDecisionInvariantsBeforeExecution(workingDecision, interactionRef.slots, interactionRef.message);
+    } catch (err) {
+      interactionRef.slots = interactionRef.slots ?? {};
+      const fallbackMissingSlot = resolveHardGuardMissingSlot(interactionRef.slots);
+      logInfo("HARD_GUARD_INVARIANT_BYPASS", {
+        error: err.message,
+        decision: workingDecision,
+        missingSlot: fallbackMissingSlot
+      });
+      console.error("[DECISION_CONTRACT_INVALID]", {
+        reason: "hard_guard_invariant_bypass",
+        error: err.message
+      });
+      workingDecision = buildClarificationRepairDecision(interactionRef, sessionContext, fallbackMissingSlot, {
+        hardGuardFallback: true
+      });
+      finalResult = {
+        type: "question",
+        message: hardGuardPrompt
+      };
+      finalOutputType = "question";
+      finalProducts = [];
+    }
+  } else {
+    assertDecisionInvariantsBeforeExecution(workingDecision, interactionRef.slots, interactionRef.message);
+  }
+
+  const flowAligned = applyFlowResolutionAdjustmentsAfterExecution({
+    interactionRef,
+    sessionContext,
+    workingDecision,
+    finalOutputType,
+    finalResult,
+    finalProducts
+  });
+  workingDecision = flowAligned.workingDecision;
+  finalResult = flowAligned.finalResult;
+  finalOutputType = flowAligned.finalOutputType;
+  finalProducts = flowAligned.finalProducts;
+
+  const clarAligned = applyClarificationNormalizationAfterExecution({
+    sessionContext,
+    workingDecision,
+    finalOutputType,
+    finalResult,
+    finalProducts,
+    interactionRef
+  });
+  finalResult = clarAligned.finalResult;
+  finalOutputType = clarAligned.finalOutputType;
+  finalProducts = clarAligned.finalProducts;
+
+  const resolvedResultType = getResultTypeFromOutputType(finalOutputType);
+  if (resolvedResultType && finalResult && typeof finalResult === "object" && !finalResult.type) {
+    finalResult = {
+      ...finalResult,
+      type: resolvedResultType
+    };
+  }
+
+  const normalized = normalizeDecisionAfterExecution({
+    interactionRef,
+    sessionContext,
+    workingDecision,
+    finalResult,
+    finalOutputType,
+    finalProducts,
+    resolveHardGuardMissingSlot,
+    hardGuardPrompt
+  });
+
+  return {
+    workingDecision: normalized.workingDecision,
+    finalResult: normalized.finalResult,
+    finalOutputType: normalized.finalOutputType,
+    finalProducts: normalized.finalProducts,
+    explicitProductsReason,
+    sessionContext
+  };
+}
+
+function endInteraction(interactionRef, result, patch = {}) {
+  loggingV2.flushStagesForEarlyExit(interactionRef);
+  applyEndInteractionRefPatch(interactionRef, patch);
+
+  const prep = prepareTurnCompletionPayload(interactionRef, result, patch);
+
+  const turnDecisionValidation = validateDecisionForCommit(prep.workingDecision);
+  if (!turnDecisionValidation.ok) {
+    logInfo("TURN_DECISION_VALIDATE", {
+      errors: turnDecisionValidation.errors,
+      traceId: interactionRef.traceId,
+      sessionId: interactionRef.sessionId,
+      action: prep.workingDecision?.action ?? null,
+      flowId: prep.workingDecision?.flowId ?? null,
+      missingSlot: prep.workingDecision?.missingSlot ?? null
+    });
+  }
+
+  commitTurnDecision(interactionRef, prep.workingDecision);
+
+  const {
+    finalResult,
+    finalOutputType,
+    finalProducts,
+    explicitProductsReason,
+    sessionContext
+  } = prep;
+
+  assertDecisionOutputContract(interactionRef.decision, { type: finalOutputType }, interactionRef.slots, interactionRef.message);
   logInfo("DECISION_OUTPUT_CONSISTENCY", {
     decision: interactionRef.decision,
     outputType: finalOutputType
@@ -2237,7 +2312,14 @@ function endInteraction(interactionRef, result, patch = {}) {
     ),
     catalogVersion: interactionRef.artifactVersions?.catalogVersion || null,
     rolesVersion: interactionRef.artifactVersions?.rolesVersion || null,
-    flowsVersion: interactionRef.artifactVersions?.flowsVersion || null
+    flowsVersion: interactionRef.artifactVersions?.flowsVersion || null,
+    stateDriverSnapshot: {
+      queryType: interactionRef.queryType ?? null,
+      pendingQuestionSlot: sessionContext?.pendingQuestion?.slot ?? null,
+      pendingSelection: sessionContext?.pendingSelection === true,
+      lastResponseType: sessionContext?.lastResponseType ?? null,
+      sessionState: sessionContext?.state ?? null
+    }
   };
 
   logInfo("DECISION_PAYLOAD", {
@@ -2274,18 +2356,21 @@ function endInteraction(interactionRef, result, patch = {}) {
   loggingV2.emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProducts);
 
   const tracePayload = { traceId: interactionRef.traceId ?? null };
+  const decisionTrace = buildDecisionTraceFromDecision(interactionRef.decision);
   const productsReasonForClient =
     entry.output.productsReason ?? interactionRef.decision.productsReason ?? null;
   if (finalResult != null && typeof finalResult === "object" && !Array.isArray(finalResult)) {
     return {
       ...finalResult,
       ...(productsReasonForClient != null ? { productsReason: productsReasonForClient } : {}),
+      decisionTrace,
       ...tracePayload
     };
   }
   return {
     reply: finalResult == null ? "" : String(finalResult),
     ...(productsReasonForClient != null ? { productsReason: productsReasonForClient } : {}),
+    decisionTrace,
     ...tracePayload
   };
 }
@@ -2906,46 +2991,6 @@ function requiresObjectClarification(message, intent, slots, sessionContext) {
   }
 
   return slots.context === "interior" && detectProblemIntent(message);
-}
-
-function getMissingSlot(slots) {
-  const slotSource = slots && typeof slots === "object" ? slots : {};
-  console.log("GET_MISSING_SLOT_INPUT", slotSource);
-
-  const hasContext = slotSource.context !== null && slotSource.context !== undefined && String(slotSource.context).trim() !== "";
-  const hasObject = slotSource.object !== null && slotSource.object !== undefined && String(slotSource.object).trim() !== "";
-  const surfRaw = slotSource.surface !== null && slotSource.surface !== undefined ? String(slotSource.surface).trim() : "";
-  const hasCtoSurface = surfRaw !== "" && CTO_SURFACE_SET.has(surfRaw.toLowerCase());
-
-  if (!hasContext) return "context";
-  if (!hasObject) return "object";
-
-  const ctx = String(slotSource.context || "").toLowerCase();
-  const obj = canonicalizeObjectValue(slotSource.object);
-
-  if (ctx === "interior") {
-    if (obj === "glass" || obj === "jante" || obj === "anvelope" || obj === "caroserie") {
-      return null;
-    }
-    if (obj === "mocheta" || obj === "bord") {
-      return null;
-    }
-    if (!hasCtoSurface) return "surface";
-    return null;
-  }
-
-  if (ctx === "exterior") {
-    const glassObjects = new Set(["glass", "geam", "parbriz", "oglinzi", "oglinda"]);
-    if (glassObjects.has(obj)) {
-      return null;
-    }
-    if (obj === "caroserie" && !surfRaw) return "surface";
-    if ((obj === "jante" || obj === "roti" || obj === "wheels" || obj === "anvelope") && !surfRaw) return "surface";
-    return null;
-  }
-
-  if (!surfRaw) return "surface";
-  return null;
 }
 
 function getMissingSlotForRequiredList(slots, requiredList) {
@@ -6113,89 +6158,240 @@ function isKnownCleaningEntry(message) {
   ].some(keyword => msg.includes(keyword));
 }
 
-function resolveActionCore({
-  message,
-  slots,
-  problemType = null,
-  slotMeta = null,
-  routingTurnIndex = 0,
-  conversationContextMvp = null,
-  deadEndRecoveryAuthority = null
-}) {
-  const safeSlots = slots && typeof slots === "object" ? slots : {};
+/**
+ * P2.3 — Procedural routing: flow lock, candidates, clarification fallbacks, knowledge_override.
+ * Formerly the `action === "procedural"` branch inside resolveActionCore.
+ */
+function computeFlowResolutionFromProcedural(opts) {
+  const safeSlots = opts.slots && typeof opts.slots === "object" ? opts.slots : {};
+  const message = opts.message;
   const resolvedMessage = typeof message === "string"
     ? message
     : String(message?.text || "");
-  const routingDecision = message && typeof message === "object"
-    ? message.routingDecision
-    : null;
+  const problemType = opts.problemType != null ? opts.problemType : null;
+  const slotMeta = opts.slotMeta != null ? opts.slotMeta : null;
+  const routingTurnIndex = opts.routingTurnIndex != null ? opts.routingTurnIndex : 0;
+  const conversationContextMvp = opts.conversationContextMvp != null ? opts.conversationContextMvp : null;
+
   const guidedRedirectMessage = getGuidedRedirectMessage(resolvedMessage);
   const strongSlotsPresent = hasStrongSlots(safeSlots);
   const knownCleaningEntry = isKnownCleaningEntry(resolvedMessage);
 
-  if (isSafetyQuery(resolvedMessage)) {
-    console.log("SAFETY_OVERRIDE", {
-      message: resolvedMessage,
-      slots: safeSlots
-    });
+  if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
     return {
-      action: "safety",
+      action: "knowledge",
       flowId: null,
+      missingSlot: null,
+      safeFallback: true,
+      replyOverride: guidedRedirectMessage
+    };
+  }
+
+  if (!problemType && !strongSlotsPresent && !knownCleaningEntry) {
+    return {
+      action: "knowledge",
+      flowId: null,
+      missingSlot: null,
+      safeFallback: true
+    };
+  }
+
+  const preemptFlow = resolveFlow({
+    intent: "product_guidance",
+    message: resolvedMessage,
+    slots: safeSlots,
+    problemType
+  });
+  const reqCfg = getFlowRequiredSlotsConfig(preemptFlow);
+  if (
+    preemptFlow &&
+    preemptFlow.flowId &&
+    preemptFlow.type !== "knowledge_override" &&
+    !reqCfg.legacy
+  ) {
+    const flowMissing = getMissingSlotForRequiredList(safeSlots, reqCfg.requiredSlots);
+    if (flowMissing) {
+      console.log("FLOW_DECISION", {
+        flowCandidate: preemptFlow.flowId,
+        missingSlot: flowMissing,
+        flowRequirement: "explicit_slots_incomplete"
+      });
+      return {
+        action: "clarification",
+        flowId: null,
+        missingSlot: flowMissing
+      };
+    }
+    const mvpCtxPre = contextLossMvp.buildConversationContextFromSession(
+      safeSlots,
+      slotMeta,
+      routingTurnIndex,
+      conversationContextMvp
+    );
+    const vrPre = contextLossMvp.validateContextForFlow(preemptFlow.flowId, mvpCtxPre);
+    if (!vrPre.ok) {
+      logInfo("CONTEXT_LOSS_MVP_VALIDATE", {
+        flowId: preemptFlow.flowId,
+        validation: vrPre,
+        surfaceStateBefore: mvpCtxPre.surface || null,
+        routerTop2: null,
+        routerMargin: null
+      });
+      const miss =
+        vrPre.missingSlots[0] ||
+        (vrPre.invalidReasons.length ? "surface" : null) ||
+        "surface";
+      return {
+        action: "clarification",
+        flowId: null,
+        missingSlot: miss,
+        contextLossMvpMeta: { validation: vrPre }
+      };
+    }
+    const lockedDecision = {
+      action: "flow",
+      flowId: preemptFlow.flowId,
+      missingSlot: null
+    };
+    logInfo("FLOW_LOCKED", {
+      flowId: preemptFlow.flowId,
+      requiredSlots: reqCfg.requiredSlots
+    });
+    assertFlowLockInvariant(true, lockedDecision);
+    console.log("FLOW_DECISION", {
+      flowCandidate: preemptFlow.flowId,
+      missingSlot: null,
+      flowLocked: true
+    });
+    return lockedDecision;
+  }
+
+  const missingSlot = getMissingSlot(safeSlots);
+
+  if (missingSlot) {
+    console.log("FLOW_DECISION", {
+      flowCandidate: null,
+      missingSlot
+    });
+
+    return {
+      action: "clarification",
+      flowId: null,
+      missingSlot
+    };
+  }
+
+  const flowResolution = resolveFlow({
+    intent: "product_guidance",
+    message: resolvedMessage,
+    slots: safeSlots,
+    problemType
+  });
+
+  if (flowResolution && flowResolution.type === "knowledge_override") {
+    return {
+      action: "knowledge",
+      flowId: null,
+      missingSlot: null,
+      knowledgeSource: "flow_override"
+    };
+  }
+
+  const flowCandidates = resolveFlowCandidates({
+    intent: "product_guidance",
+    message: resolvedMessage,
+    slots: safeSlots,
+    problemType
+  });
+  const flowCandidate = Array.isArray(flowCandidates) && flowCandidates.length > 0
+    ? flowCandidates[0]
+    : null;
+
+  console.log("FLOW_DECISION", {
+    flowCandidate: flowCandidate?.flowId || null,
+    missingSlot
+  });
+
+  if (flowCandidate && flowCandidate.flowId) {
+    const mvpCtxCand = contextLossMvp.buildConversationContextFromSession(
+      safeSlots,
+      slotMeta,
+      routingTurnIndex,
+      conversationContextMvp
+    );
+    const vrCand = contextLossMvp.validateContextForFlow(flowCandidate.flowId, mvpCtxCand);
+    if (!vrCand.ok) {
+      logInfo("CONTEXT_LOSS_MVP_VALIDATE", {
+        flowId: flowCandidate.flowId,
+        validation: vrCand,
+        surfaceStateBefore: mvpCtxCand.surface || null,
+        routerTop2: null,
+        routerMargin: null
+      });
+      const miss =
+        vrCand.missingSlots[0] ||
+        (vrCand.invalidReasons.length ? "surface" : null) ||
+        "surface";
+      return {
+        action: "clarification",
+        flowId: null,
+        missingSlot: miss,
+        contextLossMvpMeta: { validation: vrCand }
+      };
+    }
+    return {
+      action: "flow",
+      flowId: flowCandidate.flowId,
       missingSlot: null
     };
   }
 
-  if (deadEndRecoveryAuthority && typeof deadEndRecoveryAuthority === "object") {
-    const a = deadEndRecoveryAuthority;
+  if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
     return {
-      action: a.action,
-      flowId: a.flowId ?? null,
-      missingSlot: a.missingSlot !== undefined ? a.missingSlot : null,
-      knowledgeRecovery: Boolean(a.knowledgeRecovery)
+      action: "knowledge",
+      flowId: null,
+      missingSlot: null,
+      safeFallback: true,
+      replyOverride: guidedRedirectMessage
     };
   }
 
-  console.log("SLOT_CHECK_SOURCE", safeSlots);
-  let action = routingDecision?.action || null;
+  return {
+    action: "knowledge",
+    flowId: null,
+    missingSlot: null,
+    safeFallback: true
+  };
+}
+
+/**
+ * P2.3 — Router classification only: emit raw `action` (+ router missingSlot passthrough).
+ * Shaping lives in apply* (runPostCoreApplyPipeline).
+ */
+function resolveActionCore({
+  message,
+  slots,
+  problemType: _problemType = null,
+  slotMeta: _slotMeta = null,
+  routingTurnIndex: _routingTurnIndex = 0,
+  conversationContextMvp: _conversationContextMvp = null,
+  deadEndRecoveryAuthority: _deadEndRecoveryAuthority = null
+}) {
+  const routingDecision = message && typeof message === "object"
+    ? message.routingDecision
+    : null;
+
+  const action = routingDecision?.action || null;
 
   if (action === "selection") {
-    const missingSlot = getRouterMissingSlot(safeSlots);
-
-    if (missingSlot) {
-      return {
-        action: "clarification",
-        flowId: null,
-        missingSlot
-      };
-    }
-
     return {
-      action: "recommend",
+      action: "selection",
       flowId: null,
       missingSlot: null
     };
   }
 
   if (action === "knowledge") {
-    if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
-      return {
-        action: "knowledge",
-        flowId: null,
-        missingSlot: null,
-        safeFallback: true,
-        replyOverride: guidedRedirectMessage
-      };
-    }
-
-    if (!problemType && !strongSlotsPresent) {
-      return {
-        action: "knowledge",
-        flowId: null,
-        missingSlot: null,
-        safeFallback: true
-      };
-    }
-
     return {
       action: "knowledge",
       flowId: null,
@@ -6212,189 +6408,10 @@ function resolveActionCore({
   }
 
   if (action === "procedural") {
-    if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
-      return {
-        action: "knowledge",
-        flowId: null,
-        missingSlot: null,
-        safeFallback: true,
-        replyOverride: guidedRedirectMessage
-      };
-    }
-
-    if (!problemType && !strongSlotsPresent && !knownCleaningEntry) {
-      return {
-        action: "knowledge",
-        flowId: null,
-        missingSlot: null,
-        safeFallback: true
-      };
-    }
-
-    const preemptFlow = resolveFlow({
-      intent: "product_guidance",
-      message: resolvedMessage,
-      slots: safeSlots,
-      problemType
-    });
-    const reqCfg = getFlowRequiredSlotsConfig(preemptFlow);
-    if (
-      preemptFlow &&
-      preemptFlow.flowId &&
-      preemptFlow.type !== "knowledge_override" &&
-      !reqCfg.legacy
-    ) {
-      const flowMissing = getMissingSlotForRequiredList(safeSlots, reqCfg.requiredSlots);
-      if (flowMissing) {
-        console.log("FLOW_DECISION", {
-          flowCandidate: preemptFlow.flowId,
-          missingSlot: flowMissing,
-          flowRequirement: "explicit_slots_incomplete"
-        });
-        return {
-          action: "clarification",
-          flowId: null,
-          missingSlot: flowMissing
-        };
-      }
-      const mvpCtxPre = contextLossMvp.buildConversationContextFromSession(
-        safeSlots,
-        slotMeta,
-        routingTurnIndex,
-        conversationContextMvp
-      );
-      const vrPre = contextLossMvp.validateContextForFlow(preemptFlow.flowId, mvpCtxPre);
-      if (!vrPre.ok) {
-        logInfo("CONTEXT_LOSS_MVP_VALIDATE", {
-          flowId: preemptFlow.flowId,
-          validation: vrPre,
-          surfaceStateBefore: mvpCtxPre.surface || null,
-          routerTop2: null,
-          routerMargin: null
-        });
-        const miss =
-          vrPre.missingSlots[0] ||
-          (vrPre.invalidReasons.length ? "surface" : null) ||
-          "surface";
-        return {
-          action: "clarification",
-          flowId: null,
-          missingSlot: miss,
-          contextLossMvpMeta: { validation: vrPre }
-        };
-      }
-      const lockedDecision = {
-        action: "flow",
-        flowId: preemptFlow.flowId,
-        missingSlot: null
-      };
-      logInfo("FLOW_LOCKED", {
-        flowId: preemptFlow.flowId,
-        requiredSlots: reqCfg.requiredSlots
-      });
-      assertFlowLockInvariant(true, lockedDecision);
-      console.log("FLOW_DECISION", {
-        flowCandidate: preemptFlow.flowId,
-        missingSlot: null,
-        flowLocked: true
-      });
-      return lockedDecision;
-    }
-
-    const missingSlot = getMissingSlot(safeSlots);
-
-    if (missingSlot) {
-      console.log("FLOW_DECISION", {
-        flowCandidate: null,
-        missingSlot
-      });
-
-      return {
-        action: "clarification",
-        flowId: null,
-        missingSlot
-      };
-    }
-
-    const flowResolution = resolveFlow({
-      intent: "product_guidance",
-      message: resolvedMessage,
-      slots: safeSlots,
-      problemType
-    });
-
-    if (flowResolution && flowResolution.type === "knowledge_override") {
-      return {
-        action: "knowledge",
-        flowId: null,
-        missingSlot: null
-      };
-    }
-
-    const flowCandidates = resolveFlowCandidates({
-      intent: "product_guidance",
-      message: resolvedMessage,
-      slots: safeSlots,
-      problemType
-    });
-    const flowCandidate = Array.isArray(flowCandidates) && flowCandidates.length > 0
-      ? flowCandidates[0]
-      : null;
-
-    console.log("FLOW_DECISION", {
-      flowCandidate: flowCandidate?.flowId || null,
-      missingSlot
-    });
-
-    if (flowCandidate && flowCandidate.flowId) {
-      const mvpCtxCand = contextLossMvp.buildConversationContextFromSession(
-        safeSlots,
-        slotMeta,
-        routingTurnIndex,
-        conversationContextMvp
-      );
-      const vrCand = contextLossMvp.validateContextForFlow(flowCandidate.flowId, mvpCtxCand);
-      if (!vrCand.ok) {
-        logInfo("CONTEXT_LOSS_MVP_VALIDATE", {
-          flowId: flowCandidate.flowId,
-          validation: vrCand,
-          surfaceStateBefore: mvpCtxCand.surface || null,
-          routerTop2: null,
-          routerMargin: null
-        });
-        const miss =
-          vrCand.missingSlots[0] ||
-          (vrCand.invalidReasons.length ? "surface" : null) ||
-          "surface";
-        return {
-          action: "clarification",
-          flowId: null,
-          missingSlot: miss,
-          contextLossMvpMeta: { validation: vrCand }
-        };
-      }
-      return {
-        action: "flow",
-        flowId: flowCandidate.flowId,
-        missingSlot: null
-      };
-    }
-
-    if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
-      return {
-        action: "knowledge",
-        flowId: null,
-        missingSlot: null,
-        safeFallback: true,
-        replyOverride: guidedRedirectMessage
-      };
-    }
-
     return {
-      action: "knowledge",
+      action: "procedural",
       flowId: null,
-      missingSlot: null,
-      safeFallback: true
+      missingSlot: null
     };
   }
 
@@ -6592,14 +6609,22 @@ function isNegationCorrection(message) {
 }
 
 /**
- * Post-core routing purity: pending clarification, negation/correction, clarification normalization,
- * recommend lock, selection escalation. Must stay inside resolveAction() so authority fields are
- * only produced by resolveAction.
+ * P2.2 — Post-core transforms on the raw partial from resolveActionCore (before buildDecision).
+ * Order is part of the public contract; do not reorder without parity review.
  */
-function finalizeResolveAction(baseDecision, opts) {
-  const routingContext = opts.routingContext;
+function passthroughPartial(partial) {
+  return partial && typeof partial === "object" ? { ...partial } : {};
+}
+
+/**
+ * Pending clarification isolation, negation/correction, clarification slot normalization.
+ * Formerly the bulk of finalizeResolveAction.
+ */
+function applyClarificationNormalization(partial, opts) {
+  let resolvedAction = passthroughPartial(partial);
+  const routingContext = opts?.routingContext;
   if (!routingContext) {
-    return baseDecision;
+    return resolvedAction;
   }
   const routingDecision = opts.message && typeof opts.message === "object"
     ? opts.message.routingDecision
@@ -6609,11 +6634,8 @@ function finalizeResolveAction(baseDecision, opts) {
     previousState,
     slotResultMissing,
     completedSlotFollowUp,
-    userMessage,
-    selectionEscalation
+    userMessage
   } = routingContext;
-
-  let resolvedAction = { ...baseDecision };
 
   if (previousState && previousState.startsWith("NEEDS_")) {
     const pendingSlotFilled = slotResultMissing === null && completedSlotFollowUp;
@@ -6706,6 +6728,56 @@ function finalizeResolveAction(baseDecision, opts) {
       };
     }
   }
+
+  if (resolvedAction.action === "clarification" && resolvedAction.missingSlot === undefined) {
+    const resolvedMissingSlot = getMissingSlot(slots) || "context";
+    logInfo("CLARIFICATION_MISSING_SLOT_FILLED_IN_APPLY", {
+      missingSlot: resolvedMissingSlot,
+      traceId: opts?.traceId ?? null
+    });
+    resolvedAction = {
+      ...resolvedAction,
+      missingSlot: resolvedMissingSlot
+    };
+  }
+
+  return resolvedAction;
+}
+
+/**
+ * P2.3 — Selection → clarify/recommend; recommend lock + selection escalation.
+ */
+function applySelectionAdjustments(partial, opts) {
+  let resolvedAction = passthroughPartial(partial);
+  const slots = opts?.slots && typeof opts.slots === "object" ? opts.slots : {};
+
+  if (resolvedAction.action === "selection") {
+    const missingSlot = getMissingSlot(slots);
+    if (missingSlot) {
+      resolvedAction = {
+        ...resolvedAction,
+        action: "clarification",
+        flowId: null,
+        missingSlot
+      };
+    } else {
+      resolvedAction = {
+        ...resolvedAction,
+        action: "recommend",
+        flowId: null,
+        missingSlot: null
+      };
+    }
+  }
+
+  const routingContext = opts?.routingContext;
+  if (!routingContext) {
+    return resolvedAction;
+  }
+  const routingDecision = opts.message && typeof opts.message === "object"
+    ? opts.message.routingDecision
+    : null;
+  const { selectionEscalation } = routingContext;
 
   const recommendLockedDecision =
     resolvedAction.action === "recommend" ||
@@ -6898,10 +6970,188 @@ function validateDecisionContract(decision) {
   return { valid: errors.length === 0, errors };
 }
 
+/**
+ * P2.4 — Pure validator for turn commit (logging layer; does not mutate).
+ */
+function validateDecisionForCommit(decision) {
+  const r = validateDecisionContract(decision);
+  return { ok: r.valid, errors: r.errors };
+}
+
+/** P2.2 — Core-only: no post-core apply*; use resolveActionFinal for the full pipeline. */
 function resolveAction(opts) {
-  const base = resolveActionCore(opts);
-  const finalized = finalizeResolveAction(base, opts);
-  return buildDecision(finalized);
+  return buildDecision(resolveActionCore(opts));
+}
+
+/**
+ * Deep equality for decision payloads (P2.1 parity checks). Compares authority fields + common extras.
+ */
+function decisionPayloadDeepEqual(a, b) {
+  const pick = (d) => ({
+    action: d?.action ?? null,
+    flowId: d?.flowId ?? null,
+    missingSlot: d?.missingSlot !== undefined ? d.missingSlot : null,
+    reasonCode: d?.reasonCode ?? null,
+    reason: d?.reason != null ? String(d.reason) : null,
+    needsDisambiguation: Boolean(d?.needsDisambiguation),
+    productsReason: d?.productsReason ?? null,
+    safeFallback: d?.safeFallback === true,
+    knowledgeRecovery: d?.knowledgeRecovery === true
+  });
+  return JSON.stringify(pick(a)) === JSON.stringify(pick(b));
+}
+
+/** P2.3 — Procedural flow resolution (former resolveActionCore procedural branch). */
+function applyFlowResolutionAdjustments(partial, opts) {
+  const p = passthroughPartial(partial);
+  if (p.action === "procedural") {
+    return { ...computeFlowResolutionFromProcedural(opts) };
+  }
+  return p;
+}
+
+/** P2.3 — Safety UX shaping hook (router classifies in core). */
+function applySafetyAdjustments(partial, _opts) {
+  return passthroughPartial(partial);
+}
+
+/** P2.3 — Dead-end recovery authority + router-knowledge weak-context fallback. */
+function applyFallbacks(partial, opts) {
+  const auth = opts?.deadEndRecoveryAuthority;
+  if (auth && typeof auth === "object") {
+    const a = auth;
+    return {
+      action: a.action,
+      flowId: a.flowId ?? null,
+      missingSlot: a.missingSlot !== undefined ? a.missingSlot : null,
+      knowledgeRecovery: Boolean(a.knowledgeRecovery)
+    };
+  }
+  if (!partial || typeof partial !== "object" || partial.action == null || partial.action === "") {
+    const safeSlots = opts?.slots && typeof opts.slots === "object" ? opts.slots : {};
+    const fallbackMissingSlot = getMissingSlot(safeSlots) || "context";
+    logInfo("APPLY_FALLBACKS_HARD_GUARD", {
+      reason: "null_or_missing_action",
+      traceId: opts?.traceId ?? null
+    });
+    return {
+      action: "clarification",
+      flowId: null,
+      missingSlot: fallbackMissingSlot,
+      hardGuardFallback: true
+    };
+  }
+  let p = passthroughPartial(partial);
+  if (p.action !== "knowledge") {
+    return p;
+  }
+  if (p.knowledgeSource === "flow_override") {
+    const { knowledgeSource: _rm, ...rest } = p;
+    return rest;
+  }
+  if (p.safeFallback) {
+    return p;
+  }
+  const message = opts.message;
+  const resolvedMessage = typeof message === "string"
+    ? message
+    : String(message?.text || "");
+  const safeSlots = opts.slots && typeof opts.slots === "object" ? opts.slots : {};
+  const problemType = opts.problemType != null ? opts.problemType : null;
+  const guidedRedirectMessage = getGuidedRedirectMessage(resolvedMessage);
+  const strongSlotsPresent = hasStrongSlots(safeSlots);
+
+  if (guidedRedirectMessage && !problemType && !strongSlotsPresent) {
+    return {
+      ...p,
+      safeFallback: true,
+      replyOverride: guidedRedirectMessage
+    };
+  }
+  if (!problemType && !strongSlotsPresent) {
+    return { ...p, safeFallback: true };
+  }
+  return p;
+}
+
+function stripDecisionPipelineMarkers(partial) {
+  if (!partial || typeof partial !== "object") {
+    return partial;
+  }
+  const { knowledgeSource: _rm, ...rest } = partial;
+  return rest;
+}
+
+function runPostCoreApplyPipeline(partial, opts) {
+  const slots = opts?.slots && typeof opts.slots === "object" ? opts.slots : {};
+  console.log("SLOT_CHECK_SOURCE", slots);
+  let p = applyClarificationNormalization(partial, opts);
+  p = applyFlowResolutionAdjustments(p, opts);
+  p = applySafetyAdjustments(p, opts);
+  p = applyFallbacks(p, opts);
+  p = applySelectionAdjustments(p, opts);
+  return p;
+}
+
+/**
+ * M4: merge router `reason` string (from routeRequest) onto the decision for logging / client continuity.
+ */
+function applyRouterReasonAnnotation(decision, opts) {
+  const rd = opts?.message?.routingDecision;
+  const reason =
+    rd && rd.reason != null && String(rd.reason).trim() !== "" ? String(rd.reason).trim() : null;
+  if (!reason) {
+    return decision;
+  }
+  return buildDecision({ ...decision, reason });
+}
+
+/**
+ * SYSTEM INVARIANT:
+ * Decision is computed once in resolveActionFinal (routing phase).
+ * After execution, output may be normalized for consistency (prepareTurnCompletionPayload /
+ * normalizeDecisionAfterExecution), but routing must not re-enter this function.
+ *
+ * No function may call resolveActionFinal after execution begins for the same turn.
+ * Repairs use buildClarificationRepairDecision / buildDecision, not a second resolveActionFinal.
+ *
+ * P2.2 — Single entry: core → ordered apply* on partial → buildDecision → router reason.
+ * `resolveAction` is core-only (buildDecision(core)); post-core logic lives only here.
+ */
+function resolveActionFinal(opts) {
+  if (_prepareTurnCompletionPayloadActive) {
+    assertNoDecisionRecompute(opts);
+  }
+  const partial = stripDecisionPipelineMarkers(
+    runPostCoreApplyPipeline(resolveActionCore(opts), opts)
+  );
+  let decision = buildDecision(partial);
+  decision = applyRouterReasonAnnotation(decision, opts);
+
+  if (process.env.DECISION_PARITY === "1") {
+    const altPartial = stripDecisionPipelineMarkers(
+      runPostCoreApplyPipeline(resolveActionCore(opts), opts)
+    );
+    const alt = applyRouterReasonAnnotation(buildDecision(altPartial), opts);
+    if (!decisionPayloadDeepEqual(decision, alt)) {
+      logInfo("DECISION_PARITY_DIFF", {
+        first: decision,
+        recomputed: alt,
+        traceId: opts?.traceId ?? null
+      });
+    }
+  }
+
+  if (process.env.DECISION_FINAL_DEBUG === "1") {
+    logInfo("DECISION_FINAL_COMPUTED", {
+      action: decision?.action ?? null,
+      flowId: decision?.flowId ?? null,
+      missingSlot: decision?.missingSlot !== undefined ? decision.missingSlot : null,
+      reasonCode: decision?.reasonCode ?? null,
+      reason: decision?.reason != null ? decision.reason : null
+    });
+  }
+  return decision;
 }
 
 function isWheelsObjectLike(slots) {
@@ -7710,7 +7960,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         responseLocaleForLowSignal
       );
 
-      const lowSignalDecision = enforceClarificationContract(resolveAction({
+      const lowSignalDecision = enforceClarificationContract(resolveActionFinal({
         message: {
           text: userMessage,
           routingDecision: { action: "clarification", missingSlot: "intent_level" }
@@ -8552,7 +8802,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.slots = reentrySelectionSlots;
         }
 
-        const selectionDecision = enforceClarificationContract(resolveAction({
+        const selectionDecision = enforceClarificationContract(resolveActionFinal({
           problemType,
           message: {
             text: userMessage,
@@ -8563,11 +8813,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const originalSelectionDecision = JSON.stringify(selectionDecision);
         assertMissingSlotInvariant(selectionDecision, reentrySelectionSlots, sessionContext.slotMeta);
         if (!selectionDecision || !selectionDecision.action) {
-          throw new Error("Invalid decision: resolveAction must return action");
+          throw new Error("Invalid decision: resolveActionFinal must return action");
         }
-        logInfo("DECISION_SOURCE", { source: "resolveAction", decision: selectionDecision });
-        interactionRef.decision = selectionDecision;
-        logInfo("ROUTER_DECISION", interactionRef.decision);
+        logInfo("DECISION_SOURCE", { source: "resolveActionFinal", decision: selectionDecision });
+        logInfo("ROUTER_DECISION", selectionDecision);
         if (JSON.stringify(selectionDecision) !== originalSelectionDecision) {
           console.warn("DECISION_MUTATION_DETECTED", {
             before: originalSelectionDecision,
@@ -9182,7 +9431,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       const problemType = sessionContext.problemType || null;
-      const selectionDecision = enforceClarificationContract(resolveAction({
+      const selectionDecision = enforceClarificationContract(resolveActionFinal({
         problemType,
         message: {
           text: userMessage,
@@ -9193,9 +9442,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const originalSelectionDecision = JSON.stringify(selectionDecision);
       assertMissingSlotInvariant(selectionDecision, currentSlots, sessionContext.slotMeta);
       if (!selectionDecision || !selectionDecision.action) {
-        throw new Error("Invalid decision: resolveAction must return action");
+        throw new Error("Invalid decision: resolveActionFinal must return action");
       }
-      logInfo("DECISION_SOURCE", { source: "resolveAction", decision: selectionDecision });
+      logInfo("DECISION_SOURCE", { source: "resolveActionFinal", decision: selectionDecision });
 
       if (JSON.stringify(selectionDecision) !== originalSelectionDecision) {
         console.warn("DECISION_MUTATION_DETECTED", {
@@ -9228,8 +9477,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       if (selectionDecision.action === "clarification") {
-        interactionRef.decision = selectionDecision;
-
         logInfo("ENFORCED_CLARIFICATION", {
           queryType,
           missingSlot: selectionDecision.missingSlot
@@ -9261,8 +9508,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         delete sessionContext.pendingSelectionMissingSlot;
       }
       saveSession(sessionId, sessionContext);
-      interactionRef.decision = selectionDecision;
-      logInfo("ROUTER_DECISION", interactionRef.decision);
+      logInfo("ROUTER_DECISION", selectionDecision);
 
       // All required slots are present, proceed with selection
       const selectionSlots = sessionContext.slots || slotResult.slots || {};
@@ -9935,11 +10181,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const continuationSlotGuard =
       sessionContext?.pendingSelection === true ||
       Boolean(sessionContext?.pendingQuestion);
-    const slotMode = isSafetyQuery(userMessage)
-      ? "override"
-      : hadPendingSlotClarificationAtStart || selectionFollowupSlotMerge || continuationSlotGuard
-        ? "merge"
-        : "replace";
+    const slotMode =
+      String(queryType || "").toLowerCase() === "safety"
+        ? "override"
+        : hadPendingSlotClarificationAtStart || selectionFollowupSlotMerge || continuationSlotGuard
+          ? "merge"
+          : "replace";
     const beforeSlots = { ...(sessionContext.slots || {}) };
     console.log("SLOT_MODE", {
       mode: slotMode
@@ -10227,8 +10474,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
     }
     logChatPipelineStage("resolve_action", { queryType, routingAction: routingDecision.action });
-    const resolvedAction = enforceClarificationContract(resolveAction({
+    const resolvedAction = enforceClarificationContract(resolveActionFinal({
       problemType,
+      traceId: interactionRef.traceId ?? null,
       message: {
         text: userMessage,
         routingDecision
@@ -10248,7 +10496,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const originalResolvedAction = JSON.stringify(resolvedAction);
     assertMissingSlotInvariant(resolvedAction, sessionContext.slots || {}, sessionContext.slotMeta);
     if (!resolvedAction || !resolvedAction.action) {
-      throw new Error("Invalid decision: resolveAction must return action");
+      throw new Error("Invalid decision: resolveActionFinal must return action");
     }
 
     if (previousState && previousState.startsWith("NEEDS_")) {
@@ -10293,7 +10541,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     logInfo("ROUTING_DECISION", canonicalRoutingDecision);
 
     console.log("DECISION_FINAL", resolvedAction);
-    logInfo("DECISION_SOURCE", { source: "resolveAction", decision: resolvedAction });
+    logInfo("DECISION_SOURCE", { source: "resolveActionFinal", decision: resolvedAction });
     console.log("STAGE:RESOLVE", resolvedAction);
     if (JSON.stringify(resolvedAction) !== originalResolvedAction) {
       console.warn("DECISION_MUTATION_DETECTED", {
@@ -10328,9 +10576,39 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const { recommendLockApplied: _recommendLockStrip, ...resolvedForRef } = resolvedAction;
     interactionRef.decision = buildDecision({
       ...resolvedForRef,
-      reason: routingDecision.reason,
       missingSlot: resolvedForRef.missingSlot || null
     });
+
+    if (process.env.DECISION_EXECUTION_PROBE === "1") {
+      const execProbe = {
+        traceId: interactionRef.traceId ?? null,
+        action: interactionRef.decision?.action ?? null,
+        flowId: interactionRef.decision?.flowId ?? null,
+        missingSlot:
+          interactionRef.decision?.missingSlot !== undefined ? interactionRef.decision.missingSlot : null,
+        reasonCode: interactionRef.decision?.reasonCode ?? null
+      };
+      interactionRef._decisionAuthorityBeforeExecution = execProbe;
+      logInfo("DECISION_BEFORE_EXECUTION", execProbe);
+    }
+
+    if (process.env.DECISION_FINAL_DEBUG === "1") {
+      logInfo("DECISION_STABILITY_PROBE", {
+        stage: "after_pipeline_resolve_before_execution",
+        afterFinal: {
+          action: resolvedAction.action,
+          flowId: resolvedAction.flowId ?? null,
+          missingSlot: resolvedAction.missingSlot ?? null,
+          reasonCode: resolvedAction.reasonCode ?? null
+        },
+        onInteractionRef: {
+          action: interactionRef.decision?.action ?? null,
+          flowId: interactionRef.decision?.flowId ?? null,
+          missingSlot: interactionRef.decision?.missingSlot ?? null,
+          reasonCode: interactionRef.decision?.reasonCode ?? null
+        }
+      });
+    }
 
     if (resolvedAction.action === "knowledge" || resolvedAction.action === "safety") {
       sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
@@ -10784,7 +11062,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           roles: flowBundle.map(product => product?.tags || [])
         });
         const flowProducts = flowBundle.slice(0, 3);
-        interactionRef.decision = executedFlowDecision;
         logInfo("FLOW_EXECUTED", {
           flowId,
           slots: sessionContext.slots || {}
@@ -11055,8 +11332,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         context.session = sessionContext;
       }
 
-      interactionRef.decision = resolvedAction;
-
       // BRANCHING LOGIC BASED ON DECISION
       if (resolvedAction.action === "knowledge") {
         logInfo("DECISION", { type: "knowledge", fallbackReason: "decision_service_guide" });
@@ -11226,7 +11501,12 @@ module.exports = {
   extractSlotsFromMessage,
   __test: {
     resolveAction,
+    resolveActionFinal,
+    decisionPayloadDeepEqual,
+    applyRouterReasonAnnotation,
     assertDecisionAuthority,
+    commitTurnDecision,
+    buildDecisionTraceFromDecision,
     captureDecisionAuthoritySnapshot,
     runEntryGuard,
     buildDecision,
