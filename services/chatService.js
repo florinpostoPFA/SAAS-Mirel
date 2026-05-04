@@ -1,6 +1,8 @@
 // Chat logic - orchestrate search, prompt building, and LLM
 const config = require("../config");
-const { selectProducts } = require("./productSelectionService");
+const { selectProducts, passesSlotObjectRole } = require("./productSelectionService");
+const { hasExplicitCommerceProductIntent } = require("./commerceIntentSignals");
+const { formatFlowReply, formatSelectionReply } = require("./responseFormatTemplates");
 const { buildPrompt } = require("./promptBuilder");
 const { getSettings } = require("./settingsService");
 const { askLLM } = require("./llm");
@@ -2260,29 +2262,45 @@ function endInteraction(interactionRef, result, patch = {}) {
   loggingV2.emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProducts);
 
   const tracePayload = { traceId: interactionRef.traceId ?? null };
+  const productsReasonForClient =
+    entry.output.productsReason ?? interactionRef.decision.productsReason ?? null;
   if (finalResult != null && typeof finalResult === "object" && !Array.isArray(finalResult)) {
-    return { ...finalResult, ...tracePayload };
+    return {
+      ...finalResult,
+      ...(productsReasonForClient != null ? { productsReason: productsReasonForClient } : {}),
+      ...tracePayload
+    };
   }
   return {
     reply: finalResult == null ? "" : String(finalResult),
+    ...(productsReasonForClient != null ? { productsReason: productsReasonForClient } : {}),
     ...tracePayload
   };
 }
 
 function formatSelectionResponse(products = [], slots = {}) {
+  const loc = normalizeResponseLocale(slots.locale || slots.responseLocale || "ro");
   const safeProducts = Array.isArray(products)
     ? products.slice(0, MAX_SELECTION_PRODUCTS)
     : [];
 
   if (safeProducts.length === 0) {
-    return "Nu am gasit produse potrivite in lista disponibila.";
+    const emptyBody =
+      loc === "en"
+        ? "No matching products in the current catalog slice."
+        : "Nu am gasit produse potrivite in lista disponibila.";
+    return formatSelectionReply({
+      body: emptyBody,
+      narrowingQuestion: slots.narrowingQuestion,
+      locale: loc
+    });
   }
 
   const solutions = safeProducts.filter(product => !isAccessoryProduct(product)).slice(0, 2);
   const accessories = safeProducts.filter(product => isAccessoryProduct(product)).slice(0, 1);
   const stableSolutions = solutions.length > 0 ? solutions : safeProducts.slice(0, 2);
 
-  const lines = ["Iata recomandarile potrivite:", "", "• Soluție:"];
+  const lines = ["• Soluție:"];
 
   stableSolutions.forEach((product) => {
     lines.push(`- ${product?.name || "Produs"} ${buildMicroExplanation(product, slots)}`.trim());
@@ -2296,24 +2314,30 @@ function formatSelectionResponse(products = [], slots = {}) {
     });
   }
 
-  return lines.join("\n");
+  return formatSelectionReply({
+    body: lines.join("\n"),
+    narrowingQuestion: slots.narrowingQuestion,
+    locale: loc
+  });
 }
 
 function buildMinimalFlowReply(flowDefinition, flowResult, responseLocale = "ro") {
   const explicitReply = String(flowResult?.reply || "").trim();
-
-  if (explicitReply) {
-    return explicitReply;
-  }
-
   const loc = normalizeResponseLocale(responseLocale);
   const flowTitle = String(flowDefinition?.title || flowDefinition?.flowId || "flow");
+
+  if (explicitReply) {
+    return formatFlowReply({ title: flowTitle, body: explicitReply, locale: loc });
+  }
+
   const steps = Array.isArray(flowDefinition?.steps) ? flowDefinition.steps : [];
 
   if (steps.length === 0) {
-    return loc === "en"
-      ? `Here is a quick guide for ${flowTitle}.`
-      : `Iata un ghid rapid pentru ${flowTitle}.`;
+    const body =
+      loc === "en"
+        ? `Here is a quick guide for ${flowTitle}.`
+        : `Iata un ghid rapid pentru ${flowTitle}.`;
+    return formatFlowReply({ title: flowTitle, body, locale: loc });
   }
 
   const lines = loc === "en"
@@ -2325,7 +2349,7 @@ function buildMinimalFlowReply(flowDefinition, flowResult, responseLocale = "ro"
     lines.push(`${index + 1}. ${stepTitle}`);
   });
 
-  return lines.join("\n");
+  return formatFlowReply({ title: flowTitle, body: lines.join("\n"), locale: loc });
 }
 
 function extractObjectOverrides(message) {
@@ -3397,12 +3421,23 @@ function returnSelectionFailSafe(
 ) {
   const reply =
     options.reply ||
-    "Nu sunt sigur ce produs se potrivește perfect aici, dar te pot ghida pas cu pas dacă vrei.";
+    "Nu am găsit produse potrivite în catalog pentru combinația ta de suprafață/context. Spune-mi materialul exact sau nivelul de murdărie și îți propun variante sigure.";
+  const productsReason =
+    options.productsReason != null && String(options.productsReason).trim() !== ""
+      ? String(options.productsReason)
+      : "no_matching_products";
+  logInfo("NO_MATCHING_PRODUCTS_FALLBACK", {
+    sessionId: String(sessionId),
+    productsReason,
+    slots: selectionSlots || null,
+    messagePreview: String(interactionRef?.message || "").slice(0, 120)
+  });
   const failSafeDecision = {
     ...(selectionDecision || {}),
     action: "knowledge",
     flowId: null,
-    missingSlot: null
+    missingSlot: null,
+    productsReason
   };
   interactionRef.slots = selectionSlots || interactionRef.slots || null;
   updateSessionWithProducts(sessionId, [], "guidance");
@@ -3411,7 +3446,7 @@ function returnSelectionFailSafe(
   return endInteraction(interactionRef, { reply, products: [] }, {
     decision: failSafeDecision,
     outputType: "reply",
-    productsReason: options.productsReason || "none",
+    productsReason,
     products: []
   });
 }
@@ -3480,6 +3515,11 @@ function filterProducts(products, slots) {
         (tags.includes("metal") && tags.includes("cleaner")) ||
         tags.includes("iron_remover");
       if (!wheelOk) return false;
+    }
+
+    // P1.10 — Object/slot coarse gate (deterministic; drops irrelevant SKUs when object is known)
+    if (!isAccessory && safeSlots.object && !passesSlotObjectRole(product, safeSlots)) {
+      return false;
     }
 
     return true;
@@ -3667,6 +3707,27 @@ function filterContextTags(message, tags) {
   }
 
   return filteredTags;
+}
+
+/**
+ * P1.13 — When continuing a session, only keep prior session tags reinforced by the current message
+ * or by tags freshly detected this turn (coreTags).
+ */
+function sessionTagsReinforcedByCurrentMessage(sessionTags, coreTags, userMessage) {
+  const msg = String(userMessage || "").toLowerCase();
+  const coreLower = new Set(
+    (coreTags || []).map(t => String(t || "").toLowerCase()).filter(Boolean)
+  );
+  return (Array.isArray(sessionTags) ? sessionTags : []).filter(tag => {
+    const t = String(tag || "").toLowerCase();
+    if (!t) return false;
+    if (coreLower.has(t)) return true;
+    if (msg.includes(t)) return true;
+    if (t === "cleaning" && (msg.includes("curat") || msg.includes("spal") || msg.includes("detailing"))) {
+      return true;
+    }
+    return false;
+  });
 }
 
 function buildFinalTags(coreTags, workingTags, slots = {}) {
@@ -8646,8 +8707,23 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     mergePreResetKnowledgeFollowupSlots(userMessage, sessionContext, sessionId);
 
+    const reinforcedSessionTags = sessionTagsReinforcedByCurrentMessage(
+      sessionTags,
+      coreTags,
+      userMessage
+    );
+    if (shouldPreserveFollowUpState && sessionTags.length > reinforcedSessionTags.length) {
+      logInfo("TAG_DECAY_SESSION_PRUNE", {
+        sessionId,
+        dropped: sessionTags.filter(t => !reinforcedSessionTags.includes(t)),
+        beforeCount: sessionTags.length,
+        afterCount: reinforcedSessionTags.length,
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
     let workingTags = shouldPreserveFollowUpState
-      ? [...new Set([...sessionTags, ...coreTags])]
+      ? [...new Set([...reinforcedSessionTags, ...coreTags])]
       : [...coreTags];
 
     workingTags = enrichTagsFromMessage(userMessage, workingTags);
@@ -8691,16 +8767,27 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const protectProcedural = queryType === "procedural" && isHowToActionMsg && !isInformationalExceptionMsg;
 
       if (knowledgeGateTriggered && !protectProcedural) {
-        logInfo("KNOWLEDGE_GATE_APPLIED", {
-          originalQueryType: queryType,
-          knowledgePatternMatched: true,
-          isHowToAction: isHowToActionMsg,
-          isInformationalException: isInformationalExceptionMsg,
-          protectProcedural: false,
-          finalQueryType: "informational"
-        });
-        queryType = "informational";
-        interactionRef.queryType = queryType;
+        if (hasExplicitCommerceProductIntent(userMessage)) {
+          logInfo("P1_12_COMMERCE_ESCAPES_KNOWLEDGE_GATE", {
+            originalQueryType: queryType,
+            messagePreview: String(userMessage || "").slice(0, 140)
+          });
+          if (queryType === "informational" || queryType === "procedural") {
+            queryType = "selection";
+          }
+          interactionRef.queryType = queryType;
+        } else {
+          logInfo("KNOWLEDGE_GATE_APPLIED", {
+            originalQueryType: queryType,
+            knowledgePatternMatched: true,
+            isHowToAction: isHowToActionMsg,
+            isInformationalException: isInformationalExceptionMsg,
+            protectProcedural: false,
+            finalQueryType: "informational"
+          });
+          queryType = "informational";
+          interactionRef.queryType = queryType;
+        }
       } else if (knowledgeGateTriggered && protectProcedural) {
         logInfo("KNOWLEDGE_GATE_SKIPPED", {
           originalQueryType: queryType,
@@ -9273,7 +9360,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           : null;
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots, {
           reply: fallbackReply || undefined,
-          productsReason: "none"
+          productsReason: "no_matching_products"
         });
       }
 
@@ -11021,6 +11108,7 @@ module.exports = {
     evaluateDeterministicSessionReset,
     applyDeterministicSessionResetInPlace,
     extractNormalizedSlotsFromMessage,
-    shouldPreserveSlotsForContinuation
+    shouldPreserveSlotsForContinuation,
+    sessionTagsReinforcedByCurrentMessage
   }
 };

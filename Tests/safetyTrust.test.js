@@ -21,6 +21,13 @@ function lastLogEntry() {
   return calls[calls.length - 1][0];
 }
 
+/** P1.9 safety template prefix — assertions target the answer-first core line. */
+function safetyBodyForReplyAssertions(reply) {
+  let t = String(reply || "").trim();
+  t = t.replace(/^—\s*Siguranță\s*—\s*\n?/i, "");
+  return t.trim();
+}
+
 describe("Safety trust patch (Option A)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -71,10 +78,12 @@ describe("Safety trust patch (Option A)", () => {
         expect(reply).toMatch(/\?/);
       }
       if (ex.replyStartsAnswerFirst) {
-        expect(/^(DEPINDE|DA|NU)[.\s]/i.test(reply.trim())).toBe(true);
+        const body = safetyBodyForReplyAssertions(reply);
+        expect(/^(DEPINDE|DA|NU)[.\s]/i.test(body)).toBe(true);
       }
       if (ex.replyStartsWithNu) {
-        expect(/^NU[.\s]/i.test(reply.trim())).toBe(true);
+        const body = safetyBodyForReplyAssertions(reply);
+        expect(/^NU[.\s]/i.test(body)).toBe(true);
       }
       if (ex.questionCountMax != null) {
         const n = (reply.match(/\?/g) || []).length;

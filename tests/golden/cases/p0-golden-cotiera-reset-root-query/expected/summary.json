@@ -243,7 +243,7 @@
         "message": "textil"
       },
       "outcome": {
-        "assistantReply": "Iata pasii pentru Curatare interior masina (ghid rapid):\n1. Aspirare\n2. Curatare suprafete\n3. Finisare",
+        "assistantReply": "— Flux recomandat —\nSubiect: Curatare interior masina (ghid rapid)\n\nIata pasii pentru Curatare interior masina (ghid rapid):\n1. Aspirare\n2. Curatare suprafete\n3. Finisare\n\nSfat: urmează eticheta produsului; dacă observi efecte nedorite, clătește imediat.",
         "decision": {
           "action": "flow",
           "flowId": "interior_clean_basic",
@@ -257,8 +257,7 @@
           "queryType": "procedural",
           "tags": [
             "textile",
-            "interior",
-            "cleaning"
+            "interior"
           ],
           "type": "product_guidance"
         },
@@ -494,7 +493,6 @@
             "surfaceUnknown": false,
             "tags": [
               "interior",
-              "cleaning",
               "textile"
             ],
             "vehicleFieldsRequested": false
@@ -576,7 +574,6 @@
             "surfaceUnknown": false,
             "tags": [
               "interior",
-              "cleaning",
               "textile"
             ],
             "vehicleFieldsRequested": false
@@ -669,8 +666,7 @@
         "surfaceUnknown": false,
         "tags": [
           "textile",
-          "interior",
-          "cleaning"
+          "interior"
         ],
         "vehicleFieldsRequested": false
       },
@@ -758,8 +754,7 @@
         "surfaceUnknown": false,
         "tags": [
           "textile",
-          "interior",
-          "cleaning"
+          "interior"
         ],
         "vehicleFieldsRequested": false
       }

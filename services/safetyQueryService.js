@@ -335,20 +335,23 @@ function headlineForType(answerType) {
 /**
  * Deterministic safety reply (no product list).
  */
+const { formatSafetyReplyRo } = require("./responseFormatTemplates");
+
 function buildSafetyAnswerText(message, analysis) {
   const msg = normalizeMsg(message);
   const t = analysis.safetyAnswerType || "depends";
   const head = headlineForType(t);
   const body = buildAnswerFirstBody(msg, t);
-  return [head, ...body].join("\n");
+  return formatSafetyReplyRo([head, ...body].join("\n"));
 }
 
 function conservativeFollowUpReply() {
-  return [
+  const core = [
     "DEPINDE.",
     "Fara detalii clare, recomand varianta cea mai conservatoare: produs dedicat suprafetei, dilutie mica, test intr-o zona ascunsa, timp scurt, clatire abundenta.",
     "Daca ai dubii, nu combina solutii agresive pe materiale sensibile."
   ].join("\n");
+  return formatSafetyReplyRo(core);
 }
 
 function logSafetyFields(payload) {

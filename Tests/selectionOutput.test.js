@@ -47,6 +47,7 @@ describe("Selection hard filtering and output", () => {
     const bulletCount = (reply.match(/^- /gm) || []).length;
 
     expect(result.type).toBe("recommendation");
+    expect(reply).toMatch(/recomand[aă]ri produse/i);
     expect(reply).toMatch(/Soluție:/i);
     expect(reply).toMatch(/Accesoriu:/i);
     expect(reply).toContain("Cleaner Textil Interior");
@@ -72,7 +73,8 @@ describe("Selection hard filtering and output", () => {
     const reply = String(result.reply || result.message || "");
 
     expect(result.type).toBe("reply");
-    expect(reply).toMatch(/Nu sunt sigur ce produs se potrivește perfect aici|Nu sunt sigur ce produs se potriveste perfect aici/i);
+    expect(reply).toMatch(/Nu am găsit produse potrivite în catalog|Clarificare:/i);
+    expect(result.productsReason).toBe("no_matching_products");
     expect(Array.isArray(result.products)).toBe(true);
     expect(result.products).toHaveLength(0);
   });
