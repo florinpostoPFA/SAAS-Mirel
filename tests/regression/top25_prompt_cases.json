@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "title": "Top 25 prompts regression suite (Notion: Deliverable Top 25 prompts)",
+  "reference": "https://www.notion.so/248e2badf3af42e9b3f2ff48d1b26f17",
+  "rubricLegend": {
+    "actionAnyOf": "Last turn decision.action must be one of listed values",
+    "actionMustBe": "Exact decision.action",
+    "missingSlotAnyOf": "decision.missingSlot must be one of (null uses explicit null in list)",
+    "flowIdAnyOf": "decision.flowId must be one of",
+    "forbidActionAnyOf": "decision.action must NOT be any of these",
+    "outputTypeAnyOf": "output.type must be one of",
+    "productsReasonAnyOf": "decision.productsReason or output.productsReason",
+    "sessionSlots": "After last turn, session.slots checks (objectNot, contextAnyOf, etc.)"
+  },
+  "cases": [
+    {
+      "id": "A01",
+      "source": "A production",
+      "title": "recomandare de produse",
+      "steps": ["recomandare de produse"],
+      "expect": {
+        "actionAnyOf": ["selection", "clarification", "recommend"],
+        "missingSlotAnyOf": ["intent_level", "context", "object", "surface", null],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "A02",
+      "source": "A production",
+      "title": "vreau recomandare de produs",
+      "steps": ["vreau recomandare de produs"],
+      "expect": {
+        "actionAnyOf": ["selection", "clarification", "recommend"],
+        "missingSlotAnyOf": ["intent_level", "context", "object", "surface", null],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "A03",
+      "source": "A production",
+      "title": "salut jante — purchase framing",
+      "steps": ["salut. vreau sa-mi spal jantele. ce-mi dai?"],
+      "expect": {
+        "actionAnyOf": ["selection", "clarification", "recommend", "flow"],
+        "missingSlotAnyOf": ["surface", "object", "context", "intent_level", null],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "A04",
+      "source": "A production",
+      "title": "plastic interior — purchase framing",
+      "steps": ["salut vreau sa curat plasticul din interiorul masinii. ce-mi dai bun?"],
+      "expect": {
+        "actionAnyOf": ["selection", "clarification", "recommend", "flow"],
+        "missingSlotAnyOf": ["surface", "object", "context", "intent_level", null],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "A05",
+      "source": "A production",
+      "title": "cum intretin vopseaua — guidance",
+      "steps": ["cum intretin vopseaua?"],
+      "expect": {
+        "actionAnyOf": ["knowledge", "flow", "clarification"],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "A06",
+      "source": "A production",
+      "title": "polish — clarify or flow",
+      "steps": ["vreau sa polishez masina"],
+      "expect": {
+        "actionAnyOf": ["clarification", "flow", "knowledge"],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "A07",
+      "source": "A production",
+      "title": "sticla — glass flow",
+      "steps": ["vreau sa-mi curat sticla bine de tot la masina"],
+      "expect": {
+        "actionAnyOf": ["flow", "clarification"],
+        "flowIdAnyOf": ["glass_clean_basic", null],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "A08",
+      "source": "A production",
+      "title": "cotiera — surface clarification",
+      "steps": ["cum curat cotiera?"],
+      "expect": {
+        "actionMustBe": "clarification",
+        "missingSlotAnyOf": ["surface"]
+      }
+    },
+    {
+      "id": "A09",
+      "source": "A production",
+      "title": "scaun piele urme pix — safety or safe routing",
+      "steps": ["cum curat un scaun de piele de urme de pix ?"],
+      "expect": {
+        "actionAnyOf": ["safety", "flow", "clarification", "knowledge"],
+        "forbidActionAnyOf": []
+      }
+    },
+    {
+      "id": "A10",
+      "source": "A production + P0.7",
+      "title": "textil short — no pending must not bind to old journey",
+      "steps": ["textil"],
+      "expect": {
+        "actionAnyOf": ["clarification", "knowledge"],
+        "missingSlotAnyOf": ["intent_level", "surface", "context", "object", null],
+        "forbidActionAnyOf": ["flow"]
+      }
+    },
+    {
+      "id": "A11",
+      "source": "A production + P0.7",
+      "title": "exterior short — no pending",
+      "steps": ["exterior"],
+      "expect": {
+        "actionAnyOf": ["clarification", "knowledge"],
+        "missingSlotAnyOf": ["intent_level", "context", "object", "surface", null],
+        "forbidActionAnyOf": ["flow"]
+      }
+    },
+    {
+      "id": "B01",
+      "source": "B safety",
+      "title": "APC pe piele",
+      "steps": ["pot folosi apc pe piele?"],
+      "expect": {
+        "actionMustBe": "safety",
+        "forbidActionAnyOf": []
+      }
+    },
+    {
+      "id": "B02",
+      "source": "B safety",
+      "title": "APC piele naturala diluat",
+      "steps": ["pot folosi apc pe piele naturala diluat?"],
+      "expect": {
+        "actionMustBe": "safety"
+      }
+    },
+    {
+      "id": "B03",
+      "source": "B safety",
+      "title": "degresant motor pe plastic interior",
+      "steps": ["pot folosi degresant de motor pe plastic interior?"],
+      "expect": {
+        "actionMustBe": "safety"
+      }
+    },
+    {
+      "id": "C01",
+      "source": "C short reply / P0.7",
+      "title": "da fără pending — nu e continuare oarbă",
+      "steps": ["da"],
+      "expect": {
+        "actionAnyOf": ["clarification", "greeting", "knowledge", "farewell"],
+        "missingSlotAnyOf": ["intent_level", "context", null],
+        "forbidActionAnyOf": ["recommend", "selection"]
+      }
+    },
+    {
+      "id": "C02",
+      "source": "C short reply / P0.7",
+      "title": "nu fără pending",
+      "steps": ["nu"],
+      "expect": {
+        "actionAnyOf": ["clarification", "greeting", "knowledge", "farewell"],
+        "forbidActionAnyOf": ["recommend", "selection"]
+      }
+    },
+    {
+      "id": "C03",
+      "source": "C entry guard",
+      "title": "ok — scurt, fără rutare agresivă",
+      "steps": ["ok"],
+      "expect": {
+        "actionAnyOf": ["greeting", "knowledge", "clarification", "farewell"],
+        "forbidActionAnyOf": ["safety", "flow"]
+      }
+    },
+    {
+      "id": "C04",
+      "source": "C P0.7 continuation valid",
+      "title": "după întrebare suprafață, textil leagă",
+      "steps": ["cum curat cotiera?", "textil"],
+      "expect": {
+        "actionAnyOf": ["flow", "knowledge", "clarification"],
+        "flowIdAnyOf": ["interior_clean_basic", null]
+      }
+    },
+    {
+      "id": "D01",
+      "source": "D P0.5 reset",
+      "title": "după flow cotiera+textil, root query spal masina — fără cotiera în sloturi",
+      "steps": ["vreau sa curat cotiera", "textil", "vreau sa spal masina complet"],
+      "expect": {
+        "actionAnyOf": ["clarification", "flow", "knowledge", "selection"],
+        "sessionSlots": {
+          "objectNot": "cotiera"
+        }
+      }
+    },
+    {
+      "id": "E01",
+      "source": "E commerce",
+      "title": "plastic interior — nevoie produs",
+      "steps": ["de care produs am nevoie pentru plastic interior?"],
+      "expect": {
+        "actionAnyOf": ["selection", "recommend", "clarification", "knowledge"],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "E02",
+      "source": "E commerce",
+      "title": "link soluție jante",
+      "steps": ["ai link pentru solutia de jante?"],
+      "expect": {
+        "actionAnyOf": ["selection", "recommend", "clarification", "knowledge", "flow"],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "E03",
+      "source": "E commerce",
+      "title": "recomandă geamuri",
+      "steps": ["recomanda-mi ceva pentru geamuri"],
+      "expect": {
+        "actionAnyOf": ["selection", "recommend", "flow", "clarification"],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "F01",
+      "source": "F no-products fallback",
+      "title": "alcantara albă murdară — deterministic fallback",
+      "steps": ["recomanda-mi un produs pentru alcantara alba foarte murdara"],
+      "expect": {
+        "actionAnyOf": ["selection", "recommend", "clarification", "knowledge"],
+        "ifZeroProductsThenProductsReasonAnyOf": ["no_matching_products", null]
+      }
+    },
+    {
+      "id": "F02",
+      "source": "F no-products fallback",
+      "title": "obiect non-catalog",
+      "steps": ["recomanda-mi un produs pentru droid metalic foobarxyz123 neexistent"],
+      "expect": {
+        "actionAnyOf": ["selection", "recommend", "clarification", "knowledge"],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "G01",
+      "source": "G low-signal",
+      "title": "test — intent_level sau guard, fără buclă",
+      "steps": ["test"],
+      "expect": {
+        "actionMustBe": "clarification",
+        "missingSlotAnyOf": ["intent_level"]
+      }
+    }
+  ]
+}

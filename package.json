@@ -6,6 +6,7 @@
     "start": "node server.js",
     "test": "jest --runInBand --forceExit",
     "test:golden": "node scripts/golden-replay.js",
+    "test:top25": "node scripts/top25-regression.js",
     "qa:replay": "node scripts/qa-replay.js",
     "test:watch": "jest --watch",
     "start:frontend": "react-scripts start",

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "meta": {
+    "description": "P0.8 — cotiera → textil surface answer → procedural flow"
+  },
+  "sessionId": "golden-p0-cotiera-flow",
+  "clientId": "C1",
+  "products": null,
+  "runtime": {
+    "nowMs": 1700000000000
+  },
+  "steps": [
+    { "message": "cum curat cotiera" },
+    { "message": "textil" }
+  ]
+}

@@ -206,6 +206,68 @@ function isSafetyQuery(message) {
   return analyzeSafetyQuery(message).triggered;
 }
 
+/**
+ * Shared context for Option A safety trust (merge anchor + current message when awaiting clarification).
+ * @returns {{ trust: object, awaitingClarification: boolean, analysis: object, answerContextMessage: string }}
+ */
+function resolveSafetyTrustContext(routingMessage, sessionContext) {
+  const trust =
+    sessionContext?.safetyTrust && typeof sessionContext.safetyTrust === "object"
+      ? sessionContext.safetyTrust
+      : {};
+  const awaitingClarification = Boolean(trust.active && trust.clarificationAsked);
+
+  let analysis = analyzeSafetyQuery(routingMessage);
+  let answerContextMessage = routingMessage;
+
+  if (awaitingClarification && trust.anchorRouting) {
+    const merged = `${trust.anchorRouting} ${routingMessage}`.trim();
+    const mergedAnalysis = analyzeSafetyQuery(merged);
+    if (mergedAnalysis.triggered) {
+      analysis = mergedAnalysis;
+      answerContextMessage = merged;
+    }
+  }
+
+  return { trust, awaitingClarification, analysis, answerContextMessage };
+}
+
+/**
+ * P0.2 — Safety hard gate contract: deterministic compatibility/trust routing before intent/slots/flows.
+ * Abuse/profanity remains a separate entry check in chatService.
+ *
+ * @param {{ routingMessage: string, sessionContext: object }} input
+ * @returns {{
+ *   triggered: boolean,
+ *   category: string | null,
+ *   reasonCode: string,
+ *   responseTemplate: null,
+ *   analysis: object,
+ *   answerContextMessage: string,
+ *   awaitingClarification: boolean
+ * }}
+ */
+function runSafetyGate(input) {
+  const { routingMessage, sessionContext } = input;
+  const ctx = resolveSafetyTrustContext(routingMessage, sessionContext);
+  const routingActive = ctx.analysis.triggered || ctx.awaitingClarification;
+  const reasonCode = ctx.analysis.triggered
+    ? ctx.analysis.reason
+    : ctx.awaitingClarification
+      ? "safety_trust_pending"
+      : "none";
+
+  return {
+    triggered: routingActive,
+    category: routingActive ? "compatibility" : null,
+    reasonCode,
+    responseTemplate: null,
+    analysis: ctx.analysis,
+    answerContextMessage: ctx.answerContextMessage,
+    awaitingClarification: ctx.awaitingClarification
+  };
+}
+
 const CLARIFICATION_BY_FIELD = {
   material_or_product:
     "Pentru un raspuns sigur: despre ce suprafata sau ce produs chimic e vorba (ex: APC diluat, piele, textil)?",
@@ -303,6 +365,8 @@ function logSafetyFields(payload) {
 module.exports = {
   analyzeSafetyQuery,
   isSafetyQuery,
+  resolveSafetyTrustContext,
+  runSafetyGate,
   buildSafetyAnswerText,
   CLARIFICATION_BY_FIELD,
   conservativeFollowUpReply,

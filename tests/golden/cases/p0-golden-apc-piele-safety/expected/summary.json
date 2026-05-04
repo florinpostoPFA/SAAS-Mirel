@@ -1,58 +1,55 @@
 {
-  "caseId": "low-signal-intent-level",
+  "caseId": "p0-golden-apc-piele-safety",
   "meta": {
-    "description": "Vague single-token input triggers low-signal intent_level clarification"
+    "description": "P0.8 — APC on leather routes through safety gate"
   },
   "steps": [
     {
       "index": 0,
       "input": {
         "clientId": "C1",
-        "message": "test"
+        "message": "pot folosi apc pe piele"
       },
       "outcome": {
-        "assistantReply": "Vrei pași (cum se face) sau vrei recomandare de produse?",
+        "assistantReply": "E piele naturala sau piele ecologica (vinyl)?",
         "decision": {
-          "action": "clarification",
+          "action": "safety",
           "flowId": null,
           "hardGuardFallback": false,
-          "missingSlot": "intent_level",
+          "missingSlot": null,
           "needsDisambiguation": false,
           "productsReason": null,
-          "reasonCode": "routing.clarification.intent_level"
+          "reasonCode": "routing.safety"
         },
         "intent": {
-          "queryType": null,
-          "tags": null,
-          "type": null
+          "queryType": "safety",
+          "tags": [],
+          "type": "product_guidance"
         },
-        "lowSignalDetected": true,
+        "lowSignalDetected": false,
         "output": {
           "products": [],
           "productsLength": 0,
           "productsReason": null,
-          "type": "question"
+          "type": "reply"
         },
-        "pendingQuestion": {
-          "slot": "intent_level",
-          "source": "low_signal",
-          "type": "intent_level"
-        }
+        "pendingQuestion": null
       },
       "sessionMutations": [],
       "sessionServiceAfter": {
         "activeProducts": [],
         "conversationContextMvp": null,
         "conversationHistory": [],
+        "currentTopic": "apc",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
-        "lastResponseType": "question",
-        "lastUserMessage": "test",
+        "lastResponseType": "reply",
+        "lastUserMessage": "pot folosi apc pe piele",
         "messageCount": 0,
         "meta": {
           "clientId": null,
           "createdAtMs": 1700000000000,
-          "sessionId": "golden-low-signal-1",
+          "sessionId": "golden-p0-apc-piele",
           "updatedAtMs": 1700000000000
         },
         "objective": {
@@ -61,16 +58,17 @@
           "type": null
         },
         "originalIntent": null,
-        "pendingQuestion": {
-          "slot": "intent_level",
-          "source": "low_signal",
-          "type": "intent_level"
-        },
-        "pendingSelection": false,
+        "pendingQuestion": null,
         "pendingSlots": null,
-        "previousAction": "clarification",
+        "previousAction": "safety",
         "questionCount": 0,
         "routingTurnIndex": 0,
+        "safetyTrust": {
+          "active": true,
+          "anchorRouting": "pot folosi apc pe piele",
+          "clarificationAsked": true,
+          "missingField": "leather_type"
+        },
         "schemaVersion": 2,
         "slotMeta": {
           "context": "unknown",
@@ -85,15 +83,16 @@
         "activeProducts": [],
         "conversationContextMvp": null,
         "conversationHistory": [],
+        "currentTopic": "apc",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
-        "lastResponseType": "question",
-        "lastUserMessage": "test",
+        "lastResponseType": "reply",
+        "lastUserMessage": "pot folosi apc pe piele",
         "messageCount": 0,
         "meta": {
           "clientId": null,
           "createdAtMs": 1700000000000,
-          "sessionId": "golden-low-signal-1",
+          "sessionId": "golden-p0-apc-piele",
           "updatedAtMs": 1700000000000
         },
         "objective": {
@@ -102,16 +101,17 @@
           "type": null
         },
         "originalIntent": null,
-        "pendingQuestion": {
-          "slot": "intent_level",
-          "source": "low_signal",
-          "type": "intent_level"
-        },
-        "pendingSelection": false,
+        "pendingQuestion": null,
         "pendingSlots": null,
-        "previousAction": "clarification",
+        "previousAction": "safety",
         "questionCount": 0,
         "routingTurnIndex": 0,
+        "safetyTrust": {
+          "active": true,
+          "anchorRouting": "pot folosi apc pe piele",
+          "clarificationAsked": true,
+          "missingField": "leather_type"
+        },
         "schemaVersion": 2,
         "slotMeta": {
           "context": "unknown",

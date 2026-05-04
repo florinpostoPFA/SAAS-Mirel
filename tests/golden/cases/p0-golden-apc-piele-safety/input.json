@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "meta": {
+    "description": "P0.8 — APC on leather routes through safety gate"
+  },
+  "sessionId": "golden-p0-apc-piele",
+  "clientId": "C1",
+  "products": null,
+  "runtime": {
+    "nowMs": 1700000000000
+  },
+  "steps": [
+    { "message": "pot folosi apc pe piele" }
+  ]
+}

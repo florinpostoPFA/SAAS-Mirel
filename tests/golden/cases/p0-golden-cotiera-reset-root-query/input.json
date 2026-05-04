@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "meta": {
+    "description": "P0.8 — cotiera context then new root cleaning query triggers session reset"
+  },
+  "sessionId": "golden-p0-cotiera-reset",
+  "clientId": "C1",
+  "products": null,
+  "runtime": {
+    "nowMs": 1700000000000
+  },
+  "steps": [
+    { "message": "vreau sa curat cotiera" },
+    { "message": "textil" },
+    { "message": "vreau sa spal masina complet" }
+  ]
+}

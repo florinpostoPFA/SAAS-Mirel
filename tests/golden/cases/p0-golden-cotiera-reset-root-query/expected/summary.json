@@ -1,0 +1,1040 @@
+{
+  "caseId": "p0-golden-cotiera-reset-root-query",
+  "meta": {
+    "description": "P0.8 — cotiera context then new root cleaning query triggers session reset"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "input": {
+        "clientId": "C1",
+        "message": "vreau sa curat cotiera"
+      },
+      "outcome": {
+        "assistantReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
+        "decision": {
+          "action": "clarification",
+          "flowId": null,
+          "hardGuardFallback": false,
+          "missingSlot": "surface",
+          "needsDisambiguation": false,
+          "productsReason": null,
+          "reasonCode": "routing.clarification.slot"
+        },
+        "intent": {
+          "queryType": "procedural",
+          "tags": [
+            "interior",
+            "cleaning"
+          ],
+          "type": "product_guidance"
+        },
+        "lowSignalDetected": false,
+        "output": {
+          "products": [],
+          "productsLength": 0,
+          "productsReason": null,
+          "type": "question"
+        },
+        "pendingQuestion": {
+          "active": true,
+          "attemptCount": 0,
+          "escalated": false,
+          "escalationStep": null,
+          "lastFailureReason": null,
+          "lastUserAnswerNormalized": null,
+          "slot": "surface"
+        }
+      },
+      "sessionMutations": [],
+      "sessionServiceAfter": {
+        "activeProducts": [],
+        "clarificationAskCounts": {
+          "surface": 1
+        },
+        "conversationContextMvp": null,
+        "conversationHistory": [],
+        "domain": "cleaning",
+        "glassFlowContextLocked": false,
+        "intentFlags": {},
+        "language": "ro",
+        "lastAskedClarificationSlot": "surface",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_guidance",
+        "lastIntent": "procedural",
+        "lastNonNullSlots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": null
+        },
+        "lastResponse": null,
+        "lastResponseType": "question",
+        "lastUserMessage": "vreau sa curat cotiera",
+        "messageCount": 0,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-p0-cotiera-reset",
+          "updatedAtMs": 1700000000000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {},
+          "type": null
+        },
+        "originalIntent": null,
+        "pendingClarification": {
+          "active": true,
+          "pendingSlots": {
+            "context": "interior",
+            "object": "cotiera",
+            "surface": null,
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "responseLocale": "ro",
+          "state": "NEEDS_SURFACE"
+        },
+        "pendingQuestion": {
+          "active": true,
+          "attemptCount": 0,
+          "escalated": false,
+          "escalationStep": null,
+          "lastFailureReason": null,
+          "lastUserAnswerNormalized": null,
+          "slot": "surface"
+        },
+        "pendingSelection": false,
+        "pendingSelectionMissingSlot": null,
+        "pendingSlots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": null,
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "previousAction": "clarification",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 0,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": null
+        },
+        "state": "NEEDS_SURFACE",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "interior",
+          "cleaning"
+        ],
+        "vehicleFieldsRequested": false
+      },
+      "sessionStoreAfter": {
+        "activeProducts": [],
+        "clarificationAskCounts": {
+          "surface": 1
+        },
+        "conversationContextMvp": null,
+        "conversationHistory": [],
+        "domain": "cleaning",
+        "glassFlowContextLocked": false,
+        "intentFlags": {},
+        "language": "ro",
+        "lastAskedClarificationSlot": "surface",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_guidance",
+        "lastIntent": "procedural",
+        "lastNonNullSlots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": null
+        },
+        "lastResponse": null,
+        "lastResponseType": "question",
+        "lastUserMessage": "vreau sa curat cotiera",
+        "messageCount": 0,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-p0-cotiera-reset",
+          "updatedAtMs": 1700000000000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {},
+          "type": null
+        },
+        "originalIntent": null,
+        "pendingClarification": {
+          "active": true,
+          "pendingSlots": {
+            "context": "interior",
+            "object": "cotiera",
+            "surface": null,
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "responseLocale": "ro",
+          "state": "NEEDS_SURFACE"
+        },
+        "pendingQuestion": {
+          "active": true,
+          "attemptCount": 0,
+          "escalated": false,
+          "escalationStep": null,
+          "lastFailureReason": null,
+          "lastUserAnswerNormalized": null,
+          "slot": "surface"
+        },
+        "pendingSelection": false,
+        "pendingSelectionMissingSlot": null,
+        "pendingSlots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": null,
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "previousAction": "clarification",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 0,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": null
+        },
+        "state": "NEEDS_SURFACE",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "interior",
+          "cleaning"
+        ],
+        "vehicleFieldsRequested": false
+      }
+    },
+    {
+      "index": 1,
+      "input": {
+        "clientId": "C1",
+        "message": "textil"
+      },
+      "outcome": {
+        "assistantReply": "Iata pasii pentru Curatare interior masina (ghid rapid):\n1. Aspirare\n2. Curatare suprafete\n3. Finisare",
+        "decision": {
+          "action": "flow",
+          "flowId": "interior_clean_basic",
+          "hardGuardFallback": false,
+          "missingSlot": null,
+          "needsDisambiguation": false,
+          "productsReason": null,
+          "reasonCode": "routing.flow"
+        },
+        "intent": {
+          "queryType": "procedural",
+          "tags": [
+            "textile",
+            "interior",
+            "cleaning"
+          ],
+          "type": "product_guidance"
+        },
+        "lowSignalDetected": false,
+        "output": {
+          "products": [],
+          "productsLength": 0,
+          "productsReason": "no_matching_products",
+          "type": "flow"
+        },
+        "pendingQuestion": null
+      },
+      "sessionMutations": [
+        {
+          "after": {
+            "activeProducts": [],
+            "clarificationAskCounts": {},
+            "conversationContextMvp": null,
+            "conversationHistory": [],
+            "domain": "cleaning",
+            "glassFlowContextLocked": false,
+            "intentFlags": {},
+            "language": "ro",
+            "lastAskedClarificationSlot": "surface",
+            "lastFlow": null,
+            "lastHighLevelIntent": "product_guidance",
+            "lastIntent": "procedural",
+            "lastNonNullSlots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile"
+            },
+            "lastResponse": null,
+            "lastResponseType": "question",
+            "lastUserMessage": "vreau sa curat cotiera",
+            "messageCount": 0,
+            "meta": {
+              "clientId": null,
+              "createdAtMs": 1700000000000,
+              "sessionId": "golden-p0-cotiera-reset",
+              "updatedAtMs": 1700000001000
+            },
+            "objective": {
+              "needsCompletion": false,
+              "slots": {},
+              "type": null
+            },
+            "originalIntent": null,
+            "pendingClarification": {
+              "active": false,
+              "pendingSlots": null,
+              "responseLocale": "ro",
+              "state": null
+            },
+            "pendingQuestion": null,
+            "pendingSelection": false,
+            "pendingSelectionMissingSlot": null,
+            "pendingSlots": null,
+            "previousAction": "clarification",
+            "questionCount": 0,
+            "questionsAsked": 0,
+            "responseLocale": "ro",
+            "routingTurnIndex": 0,
+            "schemaVersion": 2,
+            "slotMeta": {
+              "context": "unknown",
+              "object": "unknown",
+              "surface": "confirmed"
+            },
+            "slots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile"
+            },
+            "state": "IDLE",
+            "surfaceAssistPhase": null,
+            "surfaceAssistShortlist": null,
+            "surfaceUnknown": false,
+            "tags": [
+              "interior",
+              "cleaning"
+            ],
+            "vehicleFieldsRequested": false
+          },
+          "before": {
+            "activeProducts": [],
+            "clarificationAskCounts": {},
+            "conversationContextMvp": null,
+            "conversationHistory": [],
+            "domain": "cleaning",
+            "glassFlowContextLocked": false,
+            "intentFlags": {},
+            "language": "ro",
+            "lastAskedClarificationSlot": "surface",
+            "lastFlow": null,
+            "lastHighLevelIntent": "product_guidance",
+            "lastIntent": "procedural",
+            "lastNonNullSlots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile"
+            },
+            "lastResponse": null,
+            "lastResponseType": "question",
+            "lastUserMessage": "vreau sa curat cotiera",
+            "messageCount": 0,
+            "meta": {
+              "clientId": null,
+              "createdAtMs": 1700000000000,
+              "sessionId": "golden-p0-cotiera-reset",
+              "updatedAtMs": 1700000001000
+            },
+            "objective": {
+              "needsCompletion": false,
+              "slots": {},
+              "type": null
+            },
+            "originalIntent": null,
+            "pendingClarification": {
+              "active": false,
+              "pendingSlots": null,
+              "responseLocale": "ro",
+              "state": null
+            },
+            "pendingQuestion": null,
+            "pendingSelection": false,
+            "pendingSelectionMissingSlot": null,
+            "pendingSlots": null,
+            "previousAction": "clarification",
+            "questionCount": 0,
+            "questionsAsked": 0,
+            "responseLocale": "ro",
+            "routingTurnIndex": 0,
+            "schemaVersion": 2,
+            "slotMeta": {
+              "context": "unknown",
+              "object": "unknown",
+              "surface": "confirmed"
+            },
+            "slots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile"
+            },
+            "state": null,
+            "surfaceAssistPhase": null,
+            "surfaceAssistShortlist": null,
+            "surfaceUnknown": false,
+            "tags": [
+              "interior",
+              "cleaning"
+            ],
+            "vehicleFieldsRequested": false
+          },
+          "sessionId": "golden-p0-cotiera-reset",
+          "type": "sessionStore.save"
+        },
+        {
+          "after": {
+            "activeIntent": "procedural",
+            "activeProducts": [],
+            "clarificationAskCounts": {},
+            "conversationContextMvp": null,
+            "conversationHistory": [],
+            "domain": "cleaning",
+            "glassFlowContextLocked": false,
+            "intentFlags": {},
+            "language": "ro",
+            "lastAskedClarificationSlot": "surface",
+            "lastFlow": null,
+            "lastHighLevelIntent": "product_guidance",
+            "lastIntent": "procedural",
+            "lastNonNullSlots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile"
+            },
+            "lastResponse": null,
+            "lastResponseType": "question",
+            "lastUserMessage": "vreau sa curat cotiera",
+            "messageCount": 0,
+            "meta": {
+              "clientId": null,
+              "createdAtMs": 1700000000000,
+              "sessionId": "golden-p0-cotiera-reset",
+              "updatedAtMs": 1700000001000
+            },
+            "objective": {
+              "needsCompletion": false,
+              "slots": {
+                "context": "interior",
+                "object": "cotiera",
+                "surface": "textile",
+                "vehicleMake": null,
+                "vehicleModel": null,
+                "vehicleYear": null
+              },
+              "type": "procedural"
+            },
+            "originalIntent": null,
+            "pendingClarification": {
+              "active": false,
+              "pendingSlots": null,
+              "responseLocale": "ro",
+              "state": null
+            },
+            "pendingQuestion": null,
+            "pendingSelection": false,
+            "pendingSelectionMissingSlot": null,
+            "pendingSlots": null,
+            "previousAction": "clarification",
+            "questionCount": 0,
+            "questionsAsked": 0,
+            "responseLocale": "ro",
+            "routingTurnIndex": 0,
+            "schemaVersion": 2,
+            "slotMeta": {
+              "context": "unknown",
+              "object": "unknown",
+              "surface": "confirmed"
+            },
+            "slots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile",
+              "vehicleMake": null,
+              "vehicleModel": null,
+              "vehicleYear": null
+            },
+            "state": "IDLE",
+            "surfaceAssistPhase": null,
+            "surfaceAssistShortlist": null,
+            "surfaceUnknown": false,
+            "tags": [
+              "interior",
+              "cleaning",
+              "textile"
+            ],
+            "vehicleFieldsRequested": false
+          },
+          "before": {
+            "activeIntent": "procedural",
+            "activeProducts": [],
+            "clarificationAskCounts": {},
+            "conversationContextMvp": null,
+            "conversationHistory": [],
+            "domain": "cleaning",
+            "glassFlowContextLocked": false,
+            "intentFlags": {},
+            "language": "ro",
+            "lastAskedClarificationSlot": "surface",
+            "lastFlow": null,
+            "lastHighLevelIntent": "product_guidance",
+            "lastIntent": "procedural",
+            "lastNonNullSlots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile"
+            },
+            "lastResponse": null,
+            "lastResponseType": "question",
+            "lastUserMessage": "vreau sa curat cotiera",
+            "messageCount": 0,
+            "meta": {
+              "clientId": null,
+              "createdAtMs": 1700000000000,
+              "sessionId": "golden-p0-cotiera-reset",
+              "updatedAtMs": 1700000001000
+            },
+            "objective": {
+              "needsCompletion": false,
+              "slots": {
+                "context": "interior",
+                "object": "cotiera",
+                "surface": "textile",
+                "vehicleMake": null,
+                "vehicleModel": null,
+                "vehicleYear": null
+              },
+              "type": "procedural"
+            },
+            "originalIntent": null,
+            "pendingClarification": {
+              "active": false,
+              "pendingSlots": null,
+              "responseLocale": "ro",
+              "state": null
+            },
+            "pendingQuestion": null,
+            "pendingSelection": false,
+            "pendingSelectionMissingSlot": null,
+            "pendingSlots": null,
+            "previousAction": "clarification",
+            "questionCount": 0,
+            "questionsAsked": 0,
+            "responseLocale": "ro",
+            "routingTurnIndex": 0,
+            "schemaVersion": 2,
+            "slotMeta": {
+              "context": "unknown",
+              "object": "unknown",
+              "surface": "confirmed"
+            },
+            "slots": {
+              "context": "interior",
+              "object": "cotiera",
+              "surface": "textile",
+              "vehicleMake": null,
+              "vehicleModel": null,
+              "vehicleYear": null
+            },
+            "state": null,
+            "surfaceAssistPhase": null,
+            "surfaceAssistShortlist": null,
+            "surfaceUnknown": false,
+            "tags": [
+              "interior",
+              "cleaning",
+              "textile"
+            ],
+            "vehicleFieldsRequested": false
+          },
+          "sessionId": "golden-p0-cotiera-reset",
+          "type": "sessionStore.save"
+        }
+      ],
+      "sessionServiceAfter": {
+        "activeIntent": "procedural",
+        "activeProducts": [],
+        "clarificationAskCounts": {},
+        "context": "interior",
+        "conversationContextMvp": null,
+        "conversationHistory": [
+          {
+            "productCount": 0,
+            "products": [],
+            "type": "guidance"
+          }
+        ],
+        "domain": "cleaning",
+        "glassFlowContextLocked": false,
+        "intentFlags": {},
+        "language": "ro",
+        "lastAskedClarificationSlot": "surface",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_search",
+        "lastIntent": "procedural",
+        "lastNonNullSlots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": "textile"
+        },
+        "lastResponse": null,
+        "lastResponseType": "flow",
+        "lastUserMessage": "textil",
+        "messageCount": 1,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-p0-cotiera-reset",
+          "updatedAtMs": 1700000001000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {
+            "context": "interior",
+            "object": "cotiera",
+            "surface": "textile",
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "type": "procedural"
+        },
+        "originalIntent": null,
+        "pendingClarification": {
+          "active": false,
+          "pendingSlots": null,
+          "responseLocale": "ro",
+          "state": null
+        },
+        "pendingQuestion": null,
+        "pendingSelection": false,
+        "pendingSelectionMissingSlot": null,
+        "pendingSlots": null,
+        "previousAction": "flow",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 1,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "confirmed"
+        },
+        "slots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": "textile",
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "state": "READY",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "textile",
+          "interior",
+          "cleaning"
+        ],
+        "vehicleFieldsRequested": false
+      },
+      "sessionStoreAfter": {
+        "activeIntent": "procedural",
+        "activeProducts": [],
+        "clarificationAskCounts": {},
+        "context": "interior",
+        "conversationContextMvp": null,
+        "conversationHistory": [
+          {
+            "productCount": 0,
+            "products": [],
+            "type": "guidance"
+          }
+        ],
+        "domain": "cleaning",
+        "glassFlowContextLocked": false,
+        "intentFlags": {},
+        "language": "ro",
+        "lastAskedClarificationSlot": "surface",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_search",
+        "lastIntent": "procedural",
+        "lastNonNullSlots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": "textile"
+        },
+        "lastResponse": null,
+        "lastResponseType": "flow",
+        "lastUserMessage": "textil",
+        "messageCount": 1,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-p0-cotiera-reset",
+          "updatedAtMs": 1700000001000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {
+            "context": "interior",
+            "object": "cotiera",
+            "surface": "textile",
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "type": "procedural"
+        },
+        "originalIntent": null,
+        "pendingClarification": {
+          "active": false,
+          "pendingSlots": null,
+          "responseLocale": "ro",
+          "state": null
+        },
+        "pendingQuestion": null,
+        "pendingSelection": false,
+        "pendingSelectionMissingSlot": null,
+        "pendingSlots": null,
+        "previousAction": "flow",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 1,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "confirmed"
+        },
+        "slots": {
+          "context": "interior",
+          "object": "cotiera",
+          "surface": "textile",
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "state": "READY",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "textile",
+          "interior",
+          "cleaning"
+        ],
+        "vehicleFieldsRequested": false
+      }
+    },
+    {
+      "index": 2,
+      "input": {
+        "clientId": "C1",
+        "message": "vreau sa spal masina complet"
+      },
+      "outcome": {
+        "assistantReply": "Despre ce element este vorba?",
+        "decision": {
+          "action": "clarification",
+          "flowId": null,
+          "hardGuardFallback": false,
+          "missingSlot": "object",
+          "needsDisambiguation": false,
+          "productsReason": null,
+          "reasonCode": "routing.clarification.slot"
+        },
+        "intent": {
+          "queryType": "procedural",
+          "tags": [
+            "cleaning"
+          ],
+          "type": "product_guidance"
+        },
+        "lowSignalDetected": false,
+        "output": {
+          "products": [],
+          "productsLength": 0,
+          "productsReason": null,
+          "type": "question"
+        },
+        "pendingQuestion": {
+          "active": true,
+          "attemptCount": 0,
+          "context": "exterior",
+          "escalated": false,
+          "escalationStep": null,
+          "lastFailureReason": null,
+          "lastUserAnswerNormalized": null,
+          "object": null,
+          "slot": "object"
+        }
+      },
+      "sessionMutations": [],
+      "sessionServiceAfter": {
+        "activeIntent": "procedural",
+        "activeProducts": [],
+        "clarificationAskCounts": {
+          "object": 1
+        },
+        "context": "interior",
+        "conversationContextMvp": null,
+        "conversationHistory": [
+          {
+            "productCount": 0,
+            "products": [],
+            "type": "guidance"
+          }
+        ],
+        "domain": "cleaning",
+        "glassFlowContextLocked": false,
+        "intentFlags": {},
+        "language": "ro",
+        "lastAskedClarificationSlot": "object",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_guidance",
+        "lastIntent": "procedural",
+        "lastNonNullSlots": {
+          "context": "exterior",
+          "object": "cotiera",
+          "surface": "textile"
+        },
+        "lastResponse": null,
+        "lastResponseType": "question",
+        "lastUserMessage": "vreau sa spal masina complet",
+        "messageCount": 1,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-p0-cotiera-reset",
+          "updatedAtMs": 1700000002000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {
+            "context": "interior",
+            "object": "cotiera",
+            "surface": "textile",
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "type": "procedural"
+        },
+        "originalIntent": "product_guidance",
+        "pendingClarification": {
+          "active": true,
+          "pendingSlots": {
+            "context": "exterior",
+            "object": null,
+            "surface": null,
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "responseLocale": "ro",
+          "state": "NEEDS_OBJECT"
+        },
+        "pendingQuestion": {
+          "active": true,
+          "attemptCount": 0,
+          "context": "exterior",
+          "escalated": false,
+          "escalationStep": null,
+          "lastFailureReason": null,
+          "lastUserAnswerNormalized": null,
+          "object": null,
+          "slot": "object"
+        },
+        "pendingSelection": false,
+        "pendingSelectionMissingSlot": null,
+        "pendingSlots": {
+          "context": "exterior",
+          "object": null,
+          "surface": null,
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "previousAction": "clarification",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 1,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {
+          "context": "exterior",
+          "object": null,
+          "surface": null,
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "state": "NEEDS_OBJECT",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "cleaning"
+        ],
+        "vehicleFieldsRequested": false
+      },
+      "sessionStoreAfter": {
+        "activeIntent": "procedural",
+        "activeProducts": [],
+        "clarificationAskCounts": {
+          "object": 1
+        },
+        "context": "interior",
+        "conversationContextMvp": null,
+        "conversationHistory": [
+          {
+            "productCount": 0,
+            "products": [],
+            "type": "guidance"
+          }
+        ],
+        "domain": "cleaning",
+        "glassFlowContextLocked": false,
+        "intentFlags": {},
+        "language": "ro",
+        "lastAskedClarificationSlot": "object",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_guidance",
+        "lastIntent": "procedural",
+        "lastNonNullSlots": {
+          "context": "exterior",
+          "object": "cotiera",
+          "surface": "textile"
+        },
+        "lastResponse": null,
+        "lastResponseType": "question",
+        "lastUserMessage": "vreau sa spal masina complet",
+        "messageCount": 1,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-p0-cotiera-reset",
+          "updatedAtMs": 1700000002000
+        },
+        "objective": {
+          "needsCompletion": false,
+          "slots": {
+            "context": "interior",
+            "object": "cotiera",
+            "surface": "textile",
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "type": "procedural"
+        },
+        "originalIntent": "product_guidance",
+        "pendingClarification": {
+          "active": true,
+          "pendingSlots": {
+            "context": "exterior",
+            "object": null,
+            "surface": null,
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
+          "responseLocale": "ro",
+          "state": "NEEDS_OBJECT"
+        },
+        "pendingQuestion": {
+          "active": true,
+          "attemptCount": 0,
+          "context": "exterior",
+          "escalated": false,
+          "escalationStep": null,
+          "lastFailureReason": null,
+          "lastUserAnswerNormalized": null,
+          "object": null,
+          "slot": "object"
+        },
+        "pendingSelection": false,
+        "pendingSelectionMissingSlot": null,
+        "pendingSlots": {
+          "context": "exterior",
+          "object": null,
+          "surface": null,
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "previousAction": "clarification",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 1,
+        "schemaVersion": 2,
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {
+          "context": "exterior",
+          "object": null,
+          "surface": null,
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "state": "NEEDS_OBJECT",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "cleaning"
+        ],
+        "vehicleFieldsRequested": false
+      }
+    }
+  ],
+  "version": 1
+}
