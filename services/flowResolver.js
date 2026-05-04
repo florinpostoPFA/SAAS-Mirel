@@ -68,7 +68,7 @@ const LEATHER_INK_FLOW_KEYWORDS = [
 
 const flowKeywords = {
   bug_removal_quick: ["insecte", "musca", "gandaci", "buguri", "urme de insecte", "insecte pe parbriz"],
-  glass_clean_basic: ["sticla", "geam", "geamuri", "parbriz"],
+  glass_clean_basic: ["sticla", "geam", "geamuri", "parbriz", "oglinda", "oglinzi", "mirror", "mirrors"],
   wheel_tire_deep_clean: ["jante", "roti", "anvelope"],
   interior_clean_basic: ["scaun", "cotiera", "interior"],
   leather_ink_removal: LEATHER_INK_FLOW_KEYWORDS
@@ -104,7 +104,18 @@ function hasLeatherInkIntent(message, slots = {}) {
   );
 }
 
-const glassAliases = ["sticla", "geam", "geamuri", "parbriz", "glass", "windshield"];
+const glassAliases = [
+  "sticla",
+  "geam",
+  "geamuri",
+  "parbriz",
+  "glass",
+  "windshield",
+  "oglinda",
+  "oglinzi",
+  "mirror",
+  "mirrors"
+];
 const TOOL_CARE_KEYWORDS = [
   "prosop",
   "prosoape",
@@ -179,10 +190,12 @@ function hasCleaningDomainSignal(message, slots = {}) {
 }
 
 const objectAliasGroups = {
-  glass: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
-  sticla: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
-  geam: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
-  geamuri: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield"],
+  glass: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield", "oglinda", "oglinzi", "mirror", "mirrors"],
+  sticla: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield", "oglinda", "oglinzi", "mirror", "mirrors"],
+  geam: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield", "oglinda", "oglinzi", "mirror", "mirrors"],
+  geamuri: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield", "oglinda", "oglinzi", "mirror", "mirrors"],
+  oglinda: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield", "oglinda", "oglinzi", "mirror", "mirrors"],
+  oglinzi: ["glass", "sticla", "geam", "geamuri", "parbriz", "windshield", "oglinda", "oglinzi", "mirror", "mirrors"],
   wheels: ["wheels", "jante", "roti", "anvelope"],
   jante: ["wheels", "jante", "roti", "anvelope"],
   roti: ["wheels", "jante", "roti", "anvelope"],
@@ -222,6 +235,14 @@ function getFlowSpecificityScore(flow, slots, message) {
   const msgNorm = typeof message === "string" ? normalizeForInsectMatch(message) : "";
 
   let score = 0;
+
+  if (
+    flow?.flowId === "glass_clean_basic" &&
+    slotObject === "glass" &&
+    /\b(oglind|oglinz|mirror)\b/.test(msg)
+  ) {
+    score += 12;
+  }
 
   const keywords = flowKeywords[flow?.flowId] || [];
   const matchedKeyword = keywords.find(
@@ -432,7 +453,13 @@ function findMatchingFlows(request, allowPartial = false) {
       continue;
     }
 
-    if ((slotObject === "parbriz" || slotObject === "glass") && flowId === "exterior_wash_beginner") {
+    if (
+      (slotObject === "parbriz" ||
+        slotObject === "glass" ||
+        slotObject === "oglinda" ||
+        slotObject === "oglinzi") &&
+      flowId === "exterior_wash_beginner"
+    ) {
       continue;
     }
 

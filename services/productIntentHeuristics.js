@@ -196,6 +196,19 @@ function inferHighLevelIntent(text) {
   if (hasNoun && tokenCount(raw) <= 10) return "product_search";
   if (hasVerb && tokenCount(raw) <= 12) return "product_search";
 
+  // Prod: "bmw negru sa luceasca" — finish/shine goal + vehicle cue → product search, not knowledge dead-end.
+  const shineFinish =
+    /\b(luceasc|straluc|lucios|luciu|shine|gloss|opalesc|reflex)\b/.test(norm);
+  const carMake =
+    /\b(bmw|audi|mercedes|dacia|ford|vw|volkswagen|skoda|seat|peugeot|renault|toyota|honda|mazda|hyundai|kia|opel|porsche|tesla)\b/.test(
+      norm
+    );
+  const carColor =
+    /\b(negru|neagra|alb|alba|gri|rosu|albastru|albastra|verde|argintiu|metalic)\b/.test(norm);
+  if (shineFinish && (carMake || carColor)) {
+    return "product_search";
+  }
+
   return "unknown";
 }
 

@@ -28,8 +28,8 @@ const baseNow = 1700000000000;
 
 async function main() {
   const suite = JSON.parse(fs.readFileSync(SUITE_PATH, "utf8"));
-  if (!Array.isArray(suite.cases) || suite.cases.length !== 25) {
-    console.error(`Expected exactly 25 cases in ${SUITE_PATH}, got ${suite.cases?.length}`);
+  if (!Array.isArray(suite.cases) || suite.cases.length < 25) {
+    console.error(`Expected at least 25 cases in ${SUITE_PATH}, got ${suite.cases?.length}`);
     process.exit(1);
   }
 

@@ -68,6 +68,7 @@ const {
   matchesInformationalBypass,
   isLegacySelectionFollowupShape,
   isSelectionFollowupMessage,
+  isSelectionNarrowingFollowupReply,
   normalizeRo: normalizeLowSignalText
 } = require("./lowSignalService");
 const {
@@ -909,7 +910,18 @@ const SLOT_DOMAIN_RULES = {
   oglinzi:   { context: "exterior", allowedSurfaces: [] },
   oglinda:   { context: "exterior", allowedSurfaces: [] }
 };
-const GLASS_OBJECT_ALIASES = ["sticla", "geam", "geamuri", "parbriz", "glass", "windshield"];
+const GLASS_OBJECT_ALIASES = [
+  "sticla",
+  "geam",
+  "geamuri",
+  "parbriz",
+  "glass",
+  "windshield",
+  "oglinda",
+  "oglinzi",
+  "mirror",
+  "mirrors"
+];
 const PAINT_OBJECT_ALIASES = [
   "vopsea",
   "vopseaua",
@@ -1386,7 +1398,7 @@ function getClarificationQuestion(missingSlot, slots, responseLocale = "ro") {
   }
 
   if (missingSlot === "intent_level") {
-    return buildLowSignalClarificationQuestion("", "");
+    return buildLowSignalClarificationQuestion("", "", responseLocale);
   }
 
   return loc === "en" ? "Can you share a bit more detail?" : "Poți sa-mi dai mai multe detalii?";
@@ -2415,7 +2427,11 @@ function extractSlotsFromMessage(message) {
   const gateNorm = normalizeRomanianTextForGate(message);
   let inferredSurface = parseCtoSurfaceFromNormalizedGateText(gateNorm);
   const hasPaintLexeme = /\b(vopsea|vopseaua|lac|lacul|paint|clear coat|clearcoat)\b/.test(gateNorm);
-  const hasGlassLexeme = /\b(geam|geamuri|parbriz|sticla|glass|windshield)\b/.test(gateNorm);
+  // Romanian mirror/glass inflections (e.g. oglinzile) do not have a word boundary after oglinz/oglind stems.
+  const hasGlassLexeme =
+    /\b(geam|geamuri|parbriz|sticla|glass|windshield|window|windows)\b/.test(gateNorm) ||
+    /(oglind|oglinz)/.test(gateNorm) ||
+    /\b(mirror|mirrors)\b/.test(gateNorm);
   const tokenCount = gateNorm ? gateNorm.split(/\s+/).filter(Boolean).length : 0;
   const hasExteriorPaintContext = /\b(exterior|exteriorul|exterioara|afara|caroserie|masin[aei]?)\b/.test(gateNorm);
   if (hasPaintLexeme) {
@@ -2452,6 +2468,22 @@ function extractSlotsFromMessage(message) {
         confidence: inf.confidence
       });
     }
+  }
+
+  // Prod: mirrors / obvious exterior glass — default exterior so glass flow runs without an extra turn.
+  // Bare "sticla" / "geam" stay ambiguous (interior vs exterior); see glassRouting tests.
+  const shouldDefaultGlassToExterior =
+    /(oglind|oglinz)/.test(gateNorm) ||
+    /\b(geamuri|parbriz|windshield)\b/.test(gateNorm) ||
+    /\b(mirror|mirrors)\b/.test(gateNorm);
+  if (!resolvedContext && object === "glass" && shouldDefaultGlassToExterior) {
+    resolvedContext = "exterior";
+    logContextInferenceTrace({
+      phase: "extract_slots",
+      inferredContext: "exterior",
+      reason: "glass_mirror_default_exterior",
+      confidence: "strong"
+    });
   }
 
   const baseSlots = {
@@ -5002,6 +5034,22 @@ function detectLanguage(message) {
   return hasRomanian ? "ro" : "en";
 }
 
+/**
+ * Use detector "en" for low-signal copy only when the message has clear English cues or is long enough.
+ * Avoids RO phrases that lack Romanian diacritics/keywords (e.g. "recomanda ceva") and one-token ASCII ("test").
+ */
+function shouldUseDetectorLocaleForLowSignalMessage(message) {
+  const t = String(message || "").trim();
+  if (!t || detectLanguage(message) !== "en") return false;
+  const hasEnCue =
+    /\b(the|what|how|which|why|need|want|hello|hi|hey|help|cleaning|clean|car|wash|wax|recommend|steps|product|exterior|interior|please|thanks)\b/i.test(
+      t
+    );
+  const tokens = t.split(/\s+/).filter(Boolean);
+  if (hasEnCue) return true;
+  return tokens.length >= 6;
+}
+
 const KNOWLEDGE_MIN_SCORE = 2;
 const OBJECT_TAGS = ["cotiera", "scaun", "volan", "bord", "tapiterie"];
 
@@ -5565,7 +5613,11 @@ function tryClarificationLoopBreaker(sessionContext, interactionRef, sessionId, 
     type: "intent_level"
   });
   saveSession(sessionId, sessionContext);
-  const q = buildLowSignalClarificationQuestion("", "");
+  const q = buildLowSignalClarificationQuestion(
+    "",
+    "",
+    sessionContext.responseLocale || sessionContext.language || "ro"
+  );
   return endInteraction(
     interactionRef,
     { type: "question", message: q },
@@ -6398,6 +6450,21 @@ function shouldSkipProductIntentOverride(sessionContext) {
   return ["context", "surface", "object"].includes(String(p.slot));
 }
 
+/** Keep procedural routing for wheel/tire product asks so flow (e.g. wheel_tire_deep_clean) still wins. */
+function isWheelsTiresProductFramingAsk(intentCore) {
+  const gate = normalizeRomanianTextForGate(intentCore);
+  if (
+    !/\b(jante|janta|jantele|roti|rotile|anvelope|anvelopa|cauciuc|wheel|wheels|tire|tires|tyres)\b/.test(
+      gate
+    )
+  ) {
+    return false;
+  }
+  return /\b(solutie|produs|recomand|recomanda|recomandă|ce\s+imi|ce\s+mi|dressing|gel|spray|aplic)\b/.test(
+    gate
+  );
+}
+
 function applyIntentHeuristicToQueryType(interactionRef, queryType, intentCore, sessionContext) {
   if (queryType === "safety") return queryType;
   if (shouldSkipProductIntentOverride(sessionContext)) return queryType;
@@ -6415,6 +6482,13 @@ function applyIntentHeuristicToQueryType(interactionRef, queryType, intentCore, 
     } else if (hl === "product_guidance") {
       next = "procedural";
       reason = "procedural_how_to_shape";
+    }
+  }
+
+  if (queryType === "procedural" && hl === "product_search") {
+    if (!isWheelsTiresProductFramingAsk(intentCore)) {
+      next = "selection";
+      reason = "procedural_product_search_intent";
     }
   }
 
@@ -7334,6 +7408,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     logChatPipelineStage("load_session", { clarificationPendingAtEntry });
 
+    if (sessionContext.responseLocale == null && sessionContext.language == null) {
+      const seeded = normalizeResponseLocale(
+        shouldUseDetectorLocaleForLowSignalMessage(userMessage)
+          ? detectLanguage(userMessage)
+          : "ro"
+      );
+      sessionContext.responseLocale = seeded;
+      sessionContext.language = seeded;
+      saveSession(sessionId, sessionContext);
+    }
+
     interactionRef = {
       timestamp: getNowIso(),
       traceId,
@@ -7474,6 +7559,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
+    // Low-signal intent_level can emit before LOCALE_SET; prefer persisted session locale, then cautious EN detection.
+    const responseLocaleForLowSignal = normalizeResponseLocale(
+      sessionContext.responseLocale ??
+        sessionContext.language ??
+        sessionContext.pendingClarification?.responseLocale ??
+        (shouldUseDetectorLocaleForLowSignalMessage(userMessage)
+          ? detectLanguage(userMessage)
+          : "ro")
+    );
+
     logChatPipelineStage("low_signal_gate");
     const continuationGuardActive =
       sessionContext?.pendingSelection === true ||
@@ -7562,6 +7657,20 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
+    const narrowingReplyBypass =
+      isSelectionNarrowingFollowupReply(userMessage, lowSignalNormalized) &&
+      String(sessionContext?.lastResponseType || "").toLowerCase() === "recommendation";
+    if (narrowingReplyBypass && lowSignalCheck.lowSignal) {
+      lowSignalCheck = { lowSignal: false, reason: "selection_narrowing_followup" };
+      lowSignalTelemetryFirst.lowSignalDetected = false;
+      lowSignalTelemetryFirst.lowSignalReason = "selection_narrowing_followup";
+      lowSignalTelemetryFirst.lowSignalRecoveryApplied = true;
+      logInfo("LOW_SIGNAL_TRACE", {
+        branch: "bypass_selection_narrowing_reply",
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
     if (
       !clarificationPendingAtEntry &&
       !continuationGuardActive &&
@@ -7580,6 +7689,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.originalIntent = null;
       sessionContext.pendingSelection = false;
       clearPendingClarificationSlots(sessionContext);
+      sessionContext.responseLocale = responseLocaleForLowSignal;
+      sessionContext.language = responseLocaleForLowSignal;
       saveSession(sessionId, sessionContext);
       interactionRef.lowSignalTelemetry = lowSignalTelemetryFirst;
       logInfo("LOW_SIGNAL_INPUT", {
@@ -7595,7 +7706,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       const lowSignalQuestion = buildLowSignalClarificationQuestion(
         userMessage,
-        lowSignalNormalized
+        lowSignalNormalized,
+        responseLocaleForLowSignal
       );
 
       const lowSignalDecision = enforceClarificationContract(resolveAction({
@@ -7847,7 +7959,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           });
           return endInteraction(
             interactionRef,
-            { type: "question", message: buildLowSignalMenuPrompt() },
+            {
+              type: "question",
+              message: buildLowSignalMenuPrompt(sessionContext.responseLocale || sessionContext.language || "ro")
+            },
             {
               decision: {
                 action: "clarification",
@@ -7860,7 +7975,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             }
           );
         } else if (pendingIntentLevelLowSignal) {
-          const replayQ = buildLowSignalClarificationQuestion(userMessage, norm);
+          const replayQ = buildLowSignalClarificationQuestion(
+            userMessage,
+            norm,
+            sessionContext.responseLocale || sessionContext.language || "ro"
+          );
           saveSession(sessionId, sessionContext);
           interactionRef.lowSignalTelemetry = {
             lowSignalDetected: false,
@@ -7939,6 +8058,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       queryType = "selection";
       logInfo("QUERY_TYPE_OVERRIDE", {
         reason: "explicit_selection_phrase",
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
+
+    const narrowingSelectionFollowup =
+      !pendingSlotClarificationActive &&
+      isSelectionNarrowingFollowupReply(userMessage, normalizeLowSignalText(intentCore)) &&
+      String(sessionContext?.lastResponseType || "").toLowerCase() === "recommendation";
+    if (narrowingSelectionFollowup) {
+      queryType = "selection";
+      logInfo("QUERY_TYPE_OVERRIDE", {
+        reason: "selection_narrowing_followup",
         messagePreview: String(userMessage || "").slice(0, 120)
       });
     }
@@ -8940,7 +9071,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const escalationBundle = buildProductBundle(escalationFiltered);
       const finalEscalationProducts = enforceProductLimit(escalationBundle, MAX_SELECTION_PRODUCTS);
       const escalationReply = finalEscalationProducts.length > 0
-        ? formatSelectionResponse(finalEscalationProducts, { context: escalationContextHint || null })
+        ? formatSelectionResponse(finalEscalationProducts, {
+            context: escalationContextHint || null,
+            responseLocale: sessionContext.responseLocale || sessionContext.language || "ro"
+          })
         : "Nu am gasit produse potrivite pentru aceasta selectie.";
 
       updateSessionWithProducts(sessionId, finalEscalationProducts, "recommendation");
@@ -9421,7 +9555,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         finalNames: finalProducts.map(p => p?.name).filter(Boolean)
       });
 
-      const reply = formatSelectionResponse(finalProducts, selectionSlots);
+      const reply = formatSelectionResponse(finalProducts, {
+        ...selectionSlots,
+        responseLocale: sessionContext.responseLocale || sessionContext.language || "ro"
+      });
       trackProductImpressions(finalProducts, sessionId);
       updateSessionWithProducts(sessionId, finalProducts, "recommendation");
       emit("products_recommended", { products: finalProducts, tags: roleConfig?.matchTags || selectionTags });

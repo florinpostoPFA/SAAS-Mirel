@@ -185,14 +185,20 @@ function isLowSignalMessage(message, normalizedMessage, intent, slots, tags) {
   return { lowSignal: false, reason: "sufficient_signal" };
 }
 
+function normalizeResponseLocaleHint(locale) {
+  return String(locale || "ro").toLowerCase().startsWith("en") ? "en" : "ro";
+}
+
 /**
  * @param {string} message
  * @param {string} [normalizedMessage]
+ * @param {string} [responseLocale] session response locale ("ro" | "en")
  * @returns {string}
  */
-function buildLowSignalClarificationQuestion(message, normalizedMessage) {
+function buildLowSignalClarificationQuestion(message, normalizedMessage, responseLocale = "ro") {
   const raw = String(message || "");
   const norm = normalizedMessage != null ? String(normalizedMessage) : normalizeRo(raw);
+  const loc = normalizeResponseLocaleHint(responseLocale);
 
   const interiorOnly =
     /\binterior\b/i.test(norm) &&
@@ -204,14 +210,37 @@ function buildLowSignalClarificationQuestion(message, normalizedMessage) {
     !hasDomainNoun(norm);
 
   if (interiorOnly || exteriorOnly) {
-    return "Ce zonă vrei să tratezi? (ex: bord, scaune, mocheta, geamuri)";
+    return loc === "en"
+      ? "Which area do you want to treat? (e.g. dash, seats, carpet, glass)"
+      : "Ce zonă vrei să tratezi? (ex: bord, scaune, mocheta, geamuri)";
   }
 
   if (hasCleaningHintWithoutObject(norm)) {
-    return "Ce vrei să cureți: interior, exterior, geamuri, jante sau anvelope?";
+    return loc === "en"
+      ? "What do you want to clean: interior, exterior, glass, wheels, or tires?"
+      : "Ce vrei să cureți: interior, exterior, geamuri, jante sau anvelope?";
   }
 
-  return "Vrei pași (cum se face) sau vrei recomandare de produse?";
+  return loc === "en"
+    ? "Do you want steps (how-to) or product recommendations?"
+    : "Vrei pași (cum se face) sau vrei recomandare de produse?";
+}
+
+/**
+ * Short reply after a product recommendation that answers soil-level / narrowing (prod friction).
+ */
+function isSelectionNarrowingFollowupReply(message, normalizedMessage) {
+  const norm = normalizedMessage != null ? String(normalizedMessage).trim() : normalizeRo(message);
+  if (!norm) return false;
+  if (/\b(murdarie|murdărie)\s+(grea|usoara|usor|ușoară|ușoara)\b/.test(norm)) return true;
+  if (/\b(soil|dirt)\s+(heavy|light)\b/.test(norm)) return true;
+  if (/\b(heavy|light)\s+(soil|dirt)\b/.test(norm)) return true;
+  const tokens = norm.split(/\s+/).filter(Boolean).length;
+  if (norm.length < 40 && tokens <= 4 && /\b(grea|greu|usoara|usor|ușoară|ușoara|extrema|extremă|persistenta)\b/.test(norm)) {
+    return true;
+  }
+  if (/^(grea|usoara|usor|ușoară|ușoara|greu|light|heavy)$/i.test(norm.trim())) return true;
+  return false;
 }
 
 /**
@@ -246,7 +275,11 @@ function classifyIntentLevelReply(message, normalizedMessage) {
   return { kind: "none" };
 }
 
-function buildLowSignalMenuPrompt() {
+function buildLowSignalMenuPrompt(responseLocale = "ro") {
+  const loc = normalizeResponseLocaleHint(responseLocale);
+  if (loc === "en") {
+    return "Pick one: (1) Steps / how-to  (2) Product picks  (3) Name the area (e.g. glass, wheels).";
+  }
   return "Alege una: (1) Pași / cum se face  (2) Recomandare produse  (3) Spune ce zonă (ex: geamuri, jante).";
 }
 
@@ -320,5 +353,6 @@ module.exports = {
   matchesInformationalBypass,
   isLegacySelectionFollowupShape,
   isSelectionFollowupMessage,
+  isSelectionNarrowingFollowupReply,
   DOMAIN_NOUNS
 };

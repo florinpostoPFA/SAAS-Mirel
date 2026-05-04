@@ -41,6 +41,7 @@
         "conversationContextMvp": null,
         "conversationHistory": [],
         "currentTopic": "apc",
+        "language": "ro",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "reply",
@@ -62,6 +63,7 @@
         "pendingSlots": null,
         "previousAction": "safety",
         "questionCount": 0,
+        "responseLocale": "ro",
         "routingTurnIndex": 0,
         "safetyTrust": {
           "active": true,
@@ -84,6 +86,7 @@
         "conversationContextMvp": null,
         "conversationHistory": [],
         "currentTopic": "apc",
+        "language": "ro",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "reply",
@@ -105,6 +108,7 @@
         "pendingSlots": null,
         "previousAction": "safety",
         "questionCount": 0,
+        "responseLocale": "ro",
         "routingTurnIndex": 0,
         "safetyTrust": {
           "active": true,

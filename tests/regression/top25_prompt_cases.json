@@ -270,6 +270,54 @@
         "actionMustBe": "clarification",
         "missingSlotAnyOf": ["intent_level"]
       }
+    },
+    {
+      "id": "P01",
+      "source": "Prod locale",
+      "title": "EN session — intent_level clarification in English",
+      "steps": [
+        "Hello I need help cleaning my car exterior",
+        "x"
+      ],
+      "expect": {
+        "actionMustBe": "clarification",
+        "missingSlotAnyOf": ["intent_level"],
+        "assistantReplyIncludes": ["steps", "product"],
+        "assistantReplyNotIncludes": ["recomandare de produse", "vrei pași"]
+      }
+    },
+    {
+      "id": "P02",
+      "source": "Prod mirrors",
+      "title": "oglinzi — glass flow not full exterior wash",
+      "steps": ["cum curat oglinzile?"],
+      "expect": {
+        "actionMustBe": "flow",
+        "flowIdAnyOf": ["glass_clean_basic"]
+      }
+    },
+    {
+      "id": "P03",
+      "source": "Prod shine",
+      "title": "bmw negru sa luceasca — not knowledge dead-end",
+      "steps": ["bmw negru mat vreau sa luceasca"],
+      "expect": {
+        "forbidActionAnyOf": ["knowledge"],
+        "actionAnyOf": ["selection", "recommend", "clarification", "flow"]
+      }
+    },
+    {
+      "id": "P04",
+      "source": "Prod narrowing",
+      "title": "after recommendation, murdărie grea — not intent_level loop",
+      "steps": [
+        "ce produs recomanzi pentru cotiera textil murdara",
+        "murdarie grea"
+      ],
+      "expect": {
+        "missingSlotNot": "intent_level",
+        "forbidActionAnyOf": ["knowledge"]
+      }
     }
   ]
 }

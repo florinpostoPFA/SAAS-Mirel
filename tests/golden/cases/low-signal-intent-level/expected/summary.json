@@ -44,6 +44,7 @@
         "activeProducts": [],
         "conversationContextMvp": null,
         "conversationHistory": [],
+        "language": "ro",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "question",
@@ -70,6 +71,7 @@
         "pendingSlots": null,
         "previousAction": "clarification",
         "questionCount": 0,
+        "responseLocale": "ro",
         "routingTurnIndex": 0,
         "schemaVersion": 2,
         "slotMeta": {
@@ -85,6 +87,7 @@
         "activeProducts": [],
         "conversationContextMvp": null,
         "conversationHistory": [],
+        "language": "ro",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "question",
@@ -111,6 +114,7 @@
         "pendingSlots": null,
         "previousAction": "clarification",
         "questionCount": 0,
+        "responseLocale": "ro",
         "routingTurnIndex": 0,
         "schemaVersion": 2,
         "slotMeta": {

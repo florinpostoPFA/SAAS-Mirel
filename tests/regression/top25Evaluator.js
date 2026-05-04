@@ -43,6 +43,30 @@ function evaluateTop25Expectation(entry, expectSpec) {
     }
   }
 
+  if (expectSpec.missingSlotNot != null) {
+    const ms = missingSlot === null || missingSlot === undefined ? null : String(missingSlot);
+    if (ms === String(expectSpec.missingSlotNot)) {
+      failures.push(`missingSlot must not be "${expectSpec.missingSlotNot}" (got ${JSON.stringify(missingSlot)})`);
+    }
+  }
+
+  const assistantReply = entry && entry.assistantReply != null ? String(entry.assistantReply) : "";
+  const assistantReplyLower = assistantReply.toLowerCase();
+  if (Array.isArray(expectSpec.assistantReplyIncludes) && expectSpec.assistantReplyIncludes.length > 0) {
+    for (const frag of expectSpec.assistantReplyIncludes) {
+      if (!assistantReplyLower.includes(String(frag).toLowerCase())) {
+        failures.push(`assistantReply missing fragment ${JSON.stringify(frag)}`);
+      }
+    }
+  }
+  if (Array.isArray(expectSpec.assistantReplyNotIncludes) && expectSpec.assistantReplyNotIncludes.length > 0) {
+    for (const frag of expectSpec.assistantReplyNotIncludes) {
+      if (assistantReplyLower.includes(String(frag).toLowerCase())) {
+        failures.push(`assistantReply must not include ${JSON.stringify(frag)}`);
+      }
+    }
+  }
+
   if (Array.isArray(expectSpec.flowIdAnyOf) && expectSpec.flowIdAnyOf.length > 0) {
     const allowed = expectSpec.flowIdAnyOf.map((x) => (x == null ? null : String(x)));
     const fid = flowId == null ? null : String(flowId);

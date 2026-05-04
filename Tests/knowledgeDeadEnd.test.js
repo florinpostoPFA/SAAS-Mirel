@@ -73,7 +73,7 @@ describe("Knowledge dead-end recovery (integration)", () => {
   });
 
   it("Salut vreau ceva pt jante — no dead-end stall (recovery or substantive)", async () => {
-    askLLM.mockResolvedValueOnce("Da.");
+    askLLM.mockImplementation(async () => "Iti pot recomanda produse pentru jante.");
     const sessionId = `kde-jante-${Date.now()}`;
     await handleChat("Salut vreau ceva pt jante", "C1", [], sessionId);
     const log = lastLog();
