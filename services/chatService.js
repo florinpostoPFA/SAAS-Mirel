@@ -16,6 +16,7 @@ const { getSession, saveSession } = require("./sessionStore");
 const { decideNextAction } = require("./decisionService");
 const { info, debug, error, warn, logInfo } = require("./logger");
 const { appendInteractionLine } = require("./interactionLog");
+const { classifyInteraction } = require("./logClassification");
 const supportService = require("./supportService");
 const { emit } = require("./eventBus");
 const {
@@ -2321,6 +2322,22 @@ function endInteraction(interactionRef, result, patch = {}) {
       sessionState: sessionContext?.state ?? null
     }
   };
+
+  const analysis = classifyInteraction({
+    decision: interactionRef.decision,
+    products: finalProducts,
+    pendingQuestion: sessionContext?.pendingQuestion || null,
+    message: interactionRef.message,
+    lowSignalDetected: Boolean(interactionRef.lowSignalTelemetry?.lowSignalDetected),
+    clarificationEscalated: entry.clarificationEscalated,
+    clarificationAttemptCount:
+      entry.clarificationAttemptCount != null ? Number(entry.clarificationAttemptCount) : 0,
+    queryType: interactionRef.queryType,
+    finalOutputType,
+    productsReason: entry.output.productsReason
+  });
+  interactionRef.analysis = analysis;
+  entry.analysis = analysis;
 
   logInfo("DECISION_PAYLOAD", {
     traceId: interactionRef.traceId ?? null,

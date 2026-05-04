@@ -15,7 +15,8 @@
     "catalog:refresh": "npm run import:products && npm run tag:products && npm test",
     "coverage:report": "node scripts/coverage-report.js",
     "coverage:report:llm": "ENABLE_LLM_FALLBACK=1 node scripts/coverage-report.js",
-    "tag:coverage:audit": "node scripts/tag-coverage-audit.js"
+    "tag:coverage:audit": "node scripts/tag-coverage-audit.js",
+    "report:logs": "node scripts/log-report.js"
   },
   "keywords": [],
   "author": "",
