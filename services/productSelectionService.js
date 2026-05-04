@@ -253,6 +253,29 @@ function stripInternalFields(p) {
   return rest;
 }
 
+function findGenericSafeProduct(catalog) {
+  const safeCatalog = Array.isArray(catalog) ? catalog.map((p) => normalizeProduct(p)) : [];
+  if (safeCatalog.length === 0) return null;
+
+  const apcByTag = safeCatalog.find((product) => {
+    const tags = normalizeProductTags(product);
+    return tags.includes("apc");
+  });
+  if (apcByTag) return apcByTag;
+
+  const apcByText = safeCatalog.find((product) => {
+    const text = `${product?.name || ""} ${product?.description || ""}`.toLowerCase();
+    return /\b(apc|all purpose|all-purpose|universal|multi[-\s]?surface)\b/.test(text);
+  });
+  if (apcByText) return apcByText;
+
+  const genericCleaner = safeCatalog.find((product) => {
+    const tags = normalizeProductTags(product);
+    return tags.includes("cleaning") || tags.includes("cleaner");
+  });
+  return genericCleaner || null;
+}
+
 /**
  * @param {object} params
  * @returns {{ candidates: object[], ranked: object[], chosen: object[], debug?: object }}
@@ -296,7 +319,7 @@ function selectProducts(params) {
       applyInteriorExteriorFilter: relaxed
         ? false
         : constraints.applyInteriorExteriorFilter !== false,
-      applySlotObjectFilter: constraints.applySlotObjectFilter !== false
+      applySlotObjectFilter: relaxed ? false : constraints.applySlotObjectFilter !== false
     };
     const out = [];
     for (const raw of pool) {
@@ -322,16 +345,28 @@ function selectProducts(params) {
   }
 
   if (candidates.length === 0) {
-    const sorted = [...(catalog || [])]
-      .map((p) => normalizeProduct(p))
-      .sort((a, b) => stableProductId(a).localeCompare(stableProductId(b)));
-    const take = sorted.slice(0, limit).map((product) => ({
-      product,
-      roleMatches: ["fallback_catalog_order"],
-      reasons: ["fallback:no_role_pass_catalog_order"]
-    }));
-    candidates = take;
-    fallbackUsed = "catalog_order";
+    const genericSafe = findGenericSafeProduct(catalog);
+    if (genericSafe) {
+      candidates = [
+        {
+          product: genericSafe,
+          roleMatches: ["fallback_safe_generic"],
+          reasons: ["fallback:safe_generic_apc"]
+        }
+      ];
+      fallbackUsed = "safe_generic_apc";
+    } else {
+      const sorted = [...(catalog || [])]
+        .map((p) => normalizeProduct(p))
+        .sort((a, b) => stableProductId(a).localeCompare(stableProductId(b)));
+      const take = sorted.slice(0, limit).map((product) => ({
+        product,
+        roleMatches: ["fallback_catalog_order"],
+        reasons: ["fallback:no_role_pass_catalog_order"]
+      }));
+      candidates = take;
+      fallbackUsed = "catalog_order";
+    }
   }
 
   let rankedRows = candidates.map((c) => {

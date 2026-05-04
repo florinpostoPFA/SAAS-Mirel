@@ -2397,12 +2397,15 @@ function formatSelectionResponse(products = [], slots = {}) {
   const safeProducts = Array.isArray(products)
     ? products.slice(0, MAX_SELECTION_PRODUCTS)
     : [];
+  const hasGenericFallback = safeProducts.some(
+    (product) => product?.selectionMeta?.fallback === "safe_generic_apc"
+  );
 
   if (safeProducts.length === 0) {
     const emptyBody =
       loc === "en"
-        ? "No matching products in the current catalog slice."
-        : "Nu am gasit produse potrivite in lista disponibila.";
+        ? "No exact matching products found, but I can suggest a safe generic alternative."
+        : "Nu am găsit produse exact potrivite, dar îți recomand o variantă sigură.";
     return formatSelectionReply({
       body: emptyBody,
       narrowingQuestion: slots.narrowingQuestion,
@@ -2414,7 +2417,16 @@ function formatSelectionResponse(products = [], slots = {}) {
   const accessories = safeProducts.filter(product => isAccessoryProduct(product)).slice(0, 1);
   const stableSolutions = solutions.length > 0 ? solutions : safeProducts.slice(0, 2);
 
-  const lines = ["• Soluție:"];
+  const lines = [];
+  if (hasGenericFallback) {
+    lines.push(
+      loc === "en"
+        ? "No exact product match found, but here is a safe generic recommendation:"
+        : "Nu am găsit produse exact potrivite, dar îți recomand o variantă sigură:"
+    );
+    lines.push("");
+  }
+  lines.push("• Soluție:");
 
   stableSolutions.forEach((product) => {
     lines.push(`- ${product?.name || "Produs"} ${buildMicroExplanation(product, slots)}`.trim());
@@ -9721,6 +9733,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       let finalProducts = selectionBundle.slice(0, MAX_SELECTION_PRODUCTS);
       finalProducts = ensureApcProductIncluded(finalProducts, products, selectionTags).slice(0, MAX_SELECTION_PRODUCTS);
       let productsReason = "strict";
+      if (finalProducts.some((product) => product?.selectionMeta?.fallback === "safe_generic_apc")) {
+        productsReason = "no_matching_products";
+      }
 
       // Defensive: remove excluded-tag products that may have slipped through
       if (hardFilterResult.meta.applied && hardFilterResult.meta.exclude.length > 0) {
