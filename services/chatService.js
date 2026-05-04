@@ -153,9 +153,15 @@ function logChatPipelineStage(stage, meta = {}) {
 
 const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "tires", "piele"];
 function normalizeResponseLocale(locale) {
-  const s = String(locale || "ro").toLowerCase().trim();
-  if (s.startsWith("en")) return "en";
+  // EPIC 4.1: Romanian-only output policy.
+  const _s = String(locale || "ro").toLowerCase().trim();
   return "ro";
+}
+
+function containsEnglishPhrases(text) {
+  const s = String(text || "").toLowerCase().trim();
+  if (!s) return false;
+  return /\b(what|which|recommend|product|products|please|sorry|no matching|interior|exterior|surface|material)\b/.test(s);
 }
 
 function getProceduralSurfaceEnumQuestion(responseLocale) {
@@ -2166,6 +2172,15 @@ function endInteraction(interactionRef, result, patch = {}) {
     responseLocaleUsed: sessionLocaleForOut,
     consistent: consistentLocale
   });
+  const localeText = String(finalResult?.reply ?? finalResult?.message ?? "").trim();
+  if (containsEnglishPhrases(localeText)) {
+    logInfo("LOCALE_VIOLATION", {
+      sessionId: interactionRef.sessionId,
+      traceId: interactionRef.traceId ?? null,
+      responseLocaleUsed: sessionLocaleForOut || "ro",
+      preview: localeText.slice(0, 140)
+    });
+  }
   console.log("FINAL_DECISION", interactionRef.decision);
 
   if (sessionContext) {
@@ -6631,10 +6646,40 @@ function isNegationCorrection(message) {
   const text = String(message || "").toLowerCase().trim();
   const negationPatterns = [
     /\bnu\s+(avem|e|este|am)/,  // nu avem, nu e, nu este, nu am
+    /\bnu\s+vreau\b/,
     /\bfara\s+/,                 // fara...
     /\bn-avem/,                   // n-avem
   ];
   return negationPatterns.some(pattern => pattern.test(text));
+}
+
+function detectCorrectionSignal(message) {
+  const text = String(message || "").toLowerCase().trim();
+  if (!/\bnu\s+vreau\b/.test(text)) return null;
+
+  const map = [
+    { slot: "context", value: "interior", labels: ["interior", "inauntru"] },
+    { slot: "context", value: "exterior", labels: ["exterior", "afara"] },
+    { slot: "surface", value: "textile", labels: ["textil", "textile"] },
+    { slot: "surface", value: "leather", labels: ["piele", "leather"] },
+    { slot: "surface", value: "plastic", labels: ["plastic"] },
+    { slot: "surface", value: "alcantara", labels: ["alcantara"] },
+    { slot: "surface", value: "glass", labels: ["geam", "sticla", "parbriz", "glass"] },
+    { slot: "object", value: "cotiera", labels: ["cotiera"] },
+    { slot: "object", value: "mocheta", labels: ["mocheta"] },
+    { slot: "object", value: "bord", labels: ["bord"] },
+    { slot: "object", value: "jante", labels: ["jante", "janta", "roti"] },
+    { slot: "object", value: "anvelope", labels: ["anvelope", "anvelopa", "cauciuc"] },
+    { slot: "object", value: "glass", labels: ["geam", "sticla", "parbriz"] }
+  ];
+
+  const match = map.find((entry) => entry.labels.some((label) => text.includes(label)));
+  if (!match) return null;
+  return {
+    slot: match.slot,
+    value: match.value,
+    ack: `Am înțeles, nu vrei ${match.value}.`
+  };
 }
 
 /**
@@ -6665,6 +6710,32 @@ function applyClarificationNormalization(partial, opts) {
     completedSlotFollowUp,
     userMessage
   } = routingContext;
+
+  const correction = detectCorrectionSignal(userMessage);
+  if (correction) {
+    if (correction.slot === "object") {
+      slots.object = null;
+      slots.surface = null;
+    } else if (correction.slot === "surface") {
+      slots.surface = null;
+    } else if (correction.slot === "context") {
+      slots.context = null;
+    }
+    const correctionMissingSlot = getMissingSlot(slots) || correction.slot || "object";
+    resolvedAction = {
+      ...resolvedAction,
+      action: "clarification",
+      flowId: null,
+      missingSlot: correctionMissingSlot,
+      correctionAck: correction.ack
+    };
+    logInfo("CORRECTION_HANDLING_APPLIED", {
+      message: userMessage,
+      resetSlot: correction.slot,
+      resetValue: correction.value,
+      nextMissingSlot: correctionMissingSlot
+    });
+  }
 
   if (previousState && previousState.startsWith("NEEDS_")) {
     const pendingSlotFilled = slotResultMissing === null && completedSlotFollowUp;
@@ -10749,7 +10820,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         logInfo("CONTEXT_CLARIFICATION_TRACE", { branch: "confirm_interior_hint", contextHint });
         return endInteraction(interactionRef, {
           type: "question",
-          message: "Este vorba despre interior (cotiera), corect?"
+        message: resolvedAction?.correctionAck
+          ? `${resolvedAction.correctionAck}\nEste vorba despre interior (cotiera), corect?`
+          : "Este vorba despre interior (cotiera), corect?"
         }, {
           decision: resolvedAction,
           outputType: "question",
@@ -10783,7 +10856,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         logInfo("CONTEXT_CLARIFICATION_TRACE", { branch: "confirm_exterior_hint", contextHint });
         return endInteraction(interactionRef, {
           type: "question",
-          message: "Este vorba despre exterior, corect?"
+        message: resolvedAction?.correctionAck
+          ? `${resolvedAction.correctionAck}\nEste vorba despre exterior, corect?`
+          : "Este vorba despre exterior, corect?"
         }, {
           decision: resolvedAction,
           outputType: "question",
@@ -10815,7 +10890,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       logInfo("CONTEXT_CLARIFICATION_TRACE", { branch: "ask_context_open", contextHint: null });
       return endInteraction(interactionRef, {
         type: "question",
-        message: getClarificationQuestion("context", sessionContext.slots || {}, sessionContext.responseLocale)
+        message: resolvedAction?.correctionAck
+          ? `${resolvedAction.correctionAck}\n${getClarificationQuestion("context", sessionContext.slots || {}, sessionContext.responseLocale)}`
+          : getClarificationQuestion("context", sessionContext.slots || {}, sessionContext.responseLocale)
       }, {
         decision: resolvedAction,
         outputType: "question",
@@ -10856,7 +10933,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       logResponseSummary("question", { products: 0 });
       return endInteraction(interactionRef, {
         type: "question",
-        message: `Ce obiect vrei sa cureti? (${options})`
+        message: resolvedAction?.correctionAck
+          ? `${resolvedAction.correctionAck}\nCe obiect vrei sa cureti? (${options})`
+          : `Ce obiect vrei sa cureti? (${options})`
       }, {
         decision: resolvedAction,
         outputType: "question"
@@ -10962,7 +11041,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       logResponseSummary("question", { products: 0 });
       return endInteraction(interactionRef, {
         type: "question",
-        message: questionMessage
+        message: resolvedAction?.correctionAck
+          ? `${resolvedAction.correctionAck}\n${questionMessage}`
+          : questionMessage
       }, {
         decision: resolvedAction,
         outputType: "question"
@@ -11138,7 +11219,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
         return endInteraction(interactionRef, {
           type: "question",
-          message: clarificationMessage
+          message: resolvedAction?.correctionAck
+            ? `${resolvedAction.correctionAck}\n${clarificationMessage}`
+            : clarificationMessage
         }, {
           decision: clarificationDecisionPayload,
           outputType: "question"
