@@ -1,0 +1,187 @@
+{
+  "suite": "ux-regression-week1",
+  "version": 1,
+  "cases": [
+    {
+      "id": "ux-01",
+      "title": "Clarificare ghidata pentru obiect lipsa",
+      "steps": ["Vreau ceva pentru masina mea."],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-02",
+      "title": "Clarificare ghidata pentru buget",
+      "steps": ["Am nevoie de o solutie de detailing exterior."],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-03",
+      "title": "Clarificare ghidata pentru suprafata",
+      "steps": ["Ce produs sa folosesc pentru piele?"],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-04",
+      "title": "Follow-up nu intra in bucla",
+      "steps": [
+        "Vreau sa curat bordul.",
+        "Bugetul meu este 80 lei."
+      ],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-05",
+      "title": "Follow-up cu obiect clarificat",
+      "steps": [
+        "Am nevoie de o recomandare.",
+        "E pentru jante."
+      ],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-06",
+      "title": "Follow-up cu context complet",
+      "steps": [
+        "Ce imi recomanzi pentru interior?",
+        "Am scaune textile si pete vechi."
+      ],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true,
+        "requireSelectionExplanation": true
+      }
+    },
+    {
+      "id": "ux-07",
+      "title": "Ton in romana pentru cerere directa",
+      "steps": ["Recomanda-mi un produs pentru spalare fara apa."],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true,
+        "requireSelectionExplanation": true
+      }
+    },
+    {
+      "id": "ux-08",
+      "title": "Ton in romana pentru cerere rapida",
+      "steps": ["Ce aleg pentru protectie ceramica usoara?"],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-09",
+      "title": "Fara raspuns gol pe prompt vag",
+      "steps": ["Ajutor cu detailing, te rog."],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-10",
+      "title": "Fara intrebare repetata in acelasi raspuns",
+      "steps": ["Ce solutie am pentru pete de cafea pe tapiterie?"],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-11",
+      "title": "Selectia include explicatie la recomandare exterior",
+      "steps": ["Am nevoie de recomandare pentru insecte pe capota."],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true,
+        "requireSelectionExplanation": true
+      }
+    },
+    {
+      "id": "ux-12",
+      "title": "Selectia include explicatie la recomandare interior",
+      "steps": ["Ce produs sa iau pentru miros neplacut in habitaclu?"],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true,
+        "requireSelectionExplanation": true
+      }
+    },
+    {
+      "id": "ux-13",
+      "title": "Clarificare orientata pe utilizare",
+      "steps": ["Vreau ceva eficient pentru geamuri."],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-14",
+      "title": "Follow-up dupa preferinta pret",
+      "steps": [
+        "Vreau o recomandare pentru anvelope.",
+        "As prefera ceva sub 60 de lei."
+      ],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    },
+    {
+      "id": "ux-15",
+      "title": "Clarificare ghidata fara bucla la prompt scurt",
+      "steps": ["Nu stiu ce sa aleg."],
+      "expect": {
+        "noEnglish": true,
+        "noGenericClarification": true,
+        "noEmptyReply": true,
+        "noRepeatedQuestion": true
+      }
+    }
+  ]
+}
