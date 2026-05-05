@@ -3306,8 +3306,8 @@ function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sess
   } else if (s.context === "exterior") {
     base =
       loc === "en"
-        ? "What do you want to clean outside: paint, wheels, or glass?"
-        : "Ce vrei sa cureti la exterior: vopsea, jante sau geamuri?";
+        ? "Which surface are you working on? (paint / glass / wheels)"
+        : "Pe ce suprafata lucrezi? (vopsea / geamuri / jante)";
   } else {
     base = getProceduralSurfaceEnumQuestion(loc);
   }
@@ -11871,6 +11871,7 @@ module.exports = {
     formatSelectionResponse,
     buildMicroExplanation,
     isCleaningProduct,
+    getClarificationQuestion,
     hasExplicitSelectionIntent,
     appendSoftKnowledgeCtaIfEligible
   }
