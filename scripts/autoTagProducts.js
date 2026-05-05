@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 const { askLLM } = require("../services/llm");
+const { normalizeTagList, applyProductTagOverrides } = require("../services/tagNormalization");
 
 dotenv.config();
 
@@ -82,9 +83,7 @@ function normalizeTag(tag) {
 }
 
 function normalizeTags(tags) {
-  return tags.map(tag =>
-    tag.toLowerCase().trim()
-  );
+  return normalizeTagList(tags);
 }
 
 function loadProducts() {
@@ -189,15 +188,7 @@ tags = tags.filter(tag => {
   return true;
 });
 
-  const seen = new Set();
-  const result = [];
-  for (const tag of tags) {
-    const normalized = String(tag || "").toLowerCase().trim();
-    if (normalized && ALLOWED_TAGS.has(normalized) && !seen.has(normalized)) {
-      seen.add(normalized);
-      result.push(normalized);
-    }
-  }
+  const result = normalizeTagList(tags).filter((tag) => ALLOWED_TAGS.has(tag));
   return result;
 }
 
@@ -237,7 +228,7 @@ async function generateTagsForProduct(product) {
 function mergeDeterministicTags(product) {
   const fromKeywords = inferDeterministicTags(product);
   const existing = Array.isArray(product?.tags) ? product.tags : [];
-  return sanitizeTags([...existing, ...fromKeywords]);
+  return applyProductTagOverrides(sanitizeTags([...existing, ...fromKeywords]), product);
 }
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -260,7 +251,7 @@ async function main() {
           console.log(`Merged deterministic tags: ${product.name}`);
         } else {
           const parsedTags = await generateTagsForProduct(product);
-          product.tags = normalizeTags(parsedTags);
+          product.tags = normalizeTags(applyProductTagOverrides(parsedTags, product));
           console.log(`Tagged: ${product.name}`);
         }
       } catch (err) {

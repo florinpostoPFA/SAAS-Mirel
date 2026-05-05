@@ -1,3 +1,5 @@
+const { applyProductTagOverrides, normalizeTagList } = require("./tagNormalization");
+
 function autoTagProduct(product) {
   const text = `${product.name || ""} ${product.description || ""}`.toLowerCase();
 
@@ -23,7 +25,7 @@ function autoTagProduct(product) {
     }
   });
 
-  return Array.from(tags);
+  return applyProductTagOverrides(normalizeTagList(Array.from(tags)), product);
 }
 
 module.exports = { autoTagProduct };

@@ -3668,6 +3668,43 @@ function isCleaningProduct(product) {
   return tags.some((tag) => cleaningTags.has(tag));
 }
 
+function findSafeGenericFallbackProducts(limit = 1) {
+  const safeCatalog = Array.isArray(fallbackProductsCatalog) ? fallbackProductsCatalog : [];
+  if (safeCatalog.length === 0) return [];
+
+  const byApc = safeCatalog.find((product) => normalizeProductTags(product).includes("apc"));
+  if (byApc) return [byApc].slice(0, limit);
+
+  const byText = safeCatalog.find((product) => {
+    const text = `${product?.name || ""} ${product?.description || ""}`.toLowerCase();
+    return /\b(apc|all purpose|all-purpose|universal|multi[-\s]?surface)\b/.test(text);
+  });
+  if (byText) return [byText].slice(0, limit);
+
+  const genericCleaner = safeCatalog.find((product) => isCleaningProduct(product));
+  return genericCleaner ? [genericCleaner].slice(0, limit) : [];
+}
+
+function buildNoProductFallbackResponse(selectionSlots = null, responseLocale = "ro") {
+  const missingSlot = getMissingSlot(selectionSlots || {});
+  if (missingSlot) {
+    return {
+      type: "question",
+      missingSlot,
+      message: getClarificationQuestion(missingSlot, selectionSlots || {}, responseLocale)
+    };
+  }
+
+  const fallbackProducts = findSafeGenericFallbackProducts(1);
+  const fallbackName = fallbackProducts[0]?.name ? String(fallbackProducts[0].name) : "un APC sigur";
+  return {
+    type: "fallback_products",
+    recommendedProductName: fallbackName,
+    message:
+      `Nu am găsit produse potrivite în catalog pentru combinația exactă. Ca fallback sigur, poți începe cu ${fallbackName} pentru curățare generală până confirmăm detalii suplimentare.`
+  };
+}
+
 function returnSelectionFailSafe(
   interactionRef,
   sessionId,
@@ -3675,13 +3712,35 @@ function returnSelectionFailSafe(
   selectionSlots = null,
   options = {}
 ) {
-  const reply =
-    options.reply ||
-    "Nu am găsit produse potrivite în catalog pentru combinația ta de suprafață/context. Spune-mi materialul exact sau nivelul de murdărie și îți propun variante sigure.";
   const productsReason =
     options.productsReason != null && String(options.productsReason).trim() !== ""
       ? String(options.productsReason)
       : "no_matching_products";
+  const responseLocale = interactionRef?.sessionContext?.responseLocale || "ro";
+  const fallbackPlan = buildNoProductFallbackResponse(selectionSlots || {}, responseLocale);
+  if (fallbackPlan.type === "question") {
+    const questionMessage = options.reply || fallbackPlan.message;
+    const failSafeDecision = {
+      ...(selectionDecision || {}),
+      action: "clarification",
+      flowId: null,
+      missingSlot: fallbackPlan.missingSlot,
+      productsReason
+    };
+    interactionRef.slots = selectionSlots || interactionRef.slots || null;
+    return endInteraction(
+      interactionRef,
+      { type: "question", message: questionMessage },
+      {
+        decision: failSafeDecision,
+        outputType: "question",
+        productsReason,
+        slots: selectionSlots || {}
+      }
+    );
+  }
+  const reply = options.reply || fallbackPlan.message;
+  const safeFallbackProducts = [];
   logInfo("NO_MATCHING_PRODUCTS_FALLBACK", {
     sessionId: String(sessionId),
     productsReason,
@@ -3696,14 +3755,14 @@ function returnSelectionFailSafe(
     productsReason
   };
   interactionRef.slots = selectionSlots || interactionRef.slots || null;
-  updateSessionWithProducts(sessionId, [], "guidance");
+  updateSessionWithProducts(sessionId, safeFallbackProducts, "guidance");
   emit("ai_response", { response: reply });
-  logResponseSummary("knowledge", { products: 0 });
-  return endInteraction(interactionRef, { reply, products: [] }, {
+  logResponseSummary("knowledge", { products: safeFallbackProducts.length });
+  return endInteraction(interactionRef, { reply, products: safeFallbackProducts }, {
     decision: failSafeDecision,
     outputType: "reply",
     productsReason,
-    products: []
+    products: summarizeProductsForLog(safeFallbackProducts)
   });
 }
 
@@ -11871,6 +11930,7 @@ module.exports = {
     formatSelectionResponse,
     buildMicroExplanation,
     isCleaningProduct,
+    buildNoProductFallbackResponse,
     getClarificationQuestion,
     hasExplicitSelectionIntent,
     appendSoftKnowledgeCtaIfEligible

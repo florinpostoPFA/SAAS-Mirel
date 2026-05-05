@@ -34,6 +34,7 @@ const {
   detectProductType
 } = require("./search");
 const { calculatePriceFit } = require("./rankingService");
+const { normalizeTagList: canonicalizeTags, dropStrictFilterNoise } = require("./tagNormalization");
 
 const PIPELINE = "unified";
 
@@ -42,12 +43,12 @@ function stableProductId(product) {
 }
 
 function normalizeTagList(tags) {
-  return (tags || []).map((t) => String(t).toLowerCase()).filter(Boolean);
+  return canonicalizeTags(tags);
 }
 
 function normalizeProductTags(product) {
   const p = normalizeProduct(product);
-  return (p.tags || p.aiTags || []).map((t) => String(t).toLowerCase());
+  return canonicalizeTags(p.tags || p.aiTags || []);
 }
 
 function passesStock(product) {
@@ -139,7 +140,11 @@ function evaluateRoles(product, { tags, slots, constraints }) {
 
   if (constraints.strictTagFilter === true && userTags.length > 0) {
     const pt = normalizeProductTags(product);
-    const hit = userTags.some((t) => pt.includes(t));
+    const strictUserTags = dropStrictFilterNoise(userTags);
+    const strictProductTags = dropStrictFilterNoise(pt);
+    const left = strictUserTags.length > 0 ? strictUserTags : userTags;
+    const right = strictProductTags.length > 0 ? strictProductTags : pt;
+    const hit = left.some((t) => right.includes(t));
     if (!hit) {
       return {
         ok: false,

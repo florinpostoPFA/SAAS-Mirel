@@ -1,6 +1,27 @@
 const { selectProducts } = require("../services/productSelectionService");
+const { __test } = require("../services/chatService");
 
 describe("EPIC 2.1 no-product fallback", () => {
+  test("missing slot asks exactly one targeted clarification question", () => {
+    const result = __test.buildNoProductFallbackResponse(
+      { context: "interior", surface: null, object: "scaune" },
+      "ro"
+    );
+    expect(result.type).toBe("question");
+    expect(result.missingSlot).toBe("surface");
+    expect(result.message).toMatch(/material|suprafata|textil|piele/i);
+  });
+
+  test("complete slots + still empty returns safe generic fallback product", () => {
+    const result = __test.buildNoProductFallbackResponse(
+      { context: "interior", surface: "textile", object: "scaune" },
+      "ro"
+    );
+    expect(result.type).toBe("fallback_products");
+    expect(String(result.recommendedProductName || "").length).toBeGreaterThan(0);
+    expect(result.message).toMatch(/fallback sigur|catalog/i);
+  });
+
   test("relaxed retry ignores object filter when initial pass is empty", () => {
     const catalog = [
       {

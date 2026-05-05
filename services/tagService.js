@@ -12,6 +12,7 @@ const { askLLM } = require("./llm");
 const { debug } = require("./logger");
 const tagDictionary = require("./tagDictionary");
 const normalize = require("../utils/normalize");
+const { normalizeTagList: canonicalizeTags } = require("./tagNormalization");
 
 const SOURCE = "TagService";
 
@@ -72,7 +73,7 @@ function detectTagsByRules(message, tagRules) {
     detectedTags.add("interior");
   }
 
-  return Array.from(detectedTags);
+  return canonicalizeTags(Array.from(detectedTags));
 }
 
 /**
@@ -102,8 +103,9 @@ If no tags match, respond: "none"
       .map(t => t.trim())
       .filter(t => t && t !== "none" && availableTags.includes(t));
 
-    debug(SOURCE, "AI detected tags", tags);
-    return tags;
+    const normalized = canonicalizeTags(tags);
+    debug(SOURCE, "AI detected tags", normalized);
+    return normalized;
   } catch (err) {
     debug(SOURCE, "AI fallback failed", { error: err.message });
     return [];

@@ -121,14 +121,21 @@ describe("productSelectionService", () => {
     expect(r.chosen.map((c) => c.id).join(",")).toBe("m,n");
   });
 
-  it("evaluateRoles documents tag_overlap when strict", () => {
-    const ev = evaluateRoles(catalog[1], {
-      tags: ["interior"],
+  it("evaluateRoles documents strict failure reason when overlap missing", () => {
+    const strictTaggedProduct = {
+      id: "strict-1",
+      name: "Strict tagged interior product",
+      tags: ["interior", "apc"],
+      aiTags: ["interior", "apc"],
+      stock: 2
+    };
+    const ev = evaluateRoles(strictTaggedProduct, {
+      tags: ["glass"],
       slots: {},
-      constraints: { strictTagFilter: true, applyInteriorExteriorFilter: true, applySlotObjectFilter: true }
+      constraints: { strictTagFilter: true, applyInteriorExteriorFilter: false, applySlotObjectFilter: true }
     });
-    expect(ev.ok).toBe(true);
-    expect(ev.roleMatches).toContain("tag_overlap");
+    expect(ev.ok).toBe(false);
+    expect(ev.reasons).toContain("tag_overlap:required_failed");
   });
 
   it("passesSlotObjectRole false for glass slot on wheel-only product", () => {
