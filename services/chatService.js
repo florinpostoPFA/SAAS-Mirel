@@ -6169,13 +6169,22 @@ const SINGLE_TOKEN_SLOT_VALUES = {
   },
   surface: {
     vopsea: "paint",
+    vopseaua: "paint",
     textil: "textile",
     textile: "textile",
     piele: "piele",
     leather: "piele",
     alcantara: "alcantara",
     plastic: "plastic",
-    plastice: "plastic"
+    plastice: "plastic",
+    geam: "glass",
+    geamuri: "glass",
+    parbriz: "glass",
+    oglinda: "glass",
+    oglinzi: "glass",
+    jante: "wheels",
+    roti: "wheels",
+    anvelope: "tires"
   },
   object: {
     parbriz: "glass",
@@ -6244,6 +6253,36 @@ function getSingleTokenBindingForPendingQuestion(message, pendingQuestion) {
   }
 
   return null;
+}
+
+function resolvePendingQuestionFirst(sessionContext, message) {
+  const pending = sessionContext?.pendingQuestion;
+  if (!pending || !pending.slot || pending.slot === "intent_level") {
+    return { resolved: false };
+  }
+  const binding = getSingleTokenBindingForPendingQuestion(message, pending);
+  if (!binding) {
+    return { resolved: false };
+  }
+
+  sessionContext.slots = sessionContext.slots || {};
+  sessionContext.slotMeta = sessionContext.slotMeta || {
+    context: "unknown",
+    surface: "unknown",
+    object: "unknown"
+  };
+  sessionContext.slots[binding.slot] = binding.value;
+  sessionContext.slotMeta[binding.slot] = "confirmed";
+  resetAskCountForSlot(sessionContext, binding.slot);
+  sessionContext.pendingQuestion = null;
+  if (
+    binding.slot === "context" &&
+    canonicalizeObjectValue(sessionContext.slots?.object) === "glass"
+  ) {
+    sessionContext.glassFlowContextLocked = true;
+  }
+
+  return { resolved: true, binding };
 }
 
 function hasStrongSlots(slots) {
@@ -8012,6 +8051,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
+    if (sessionContext?.pendingQuestion?.active === true || sessionContext?.pendingQuestion?.slot) {
+      const earlyPendingResolution = resolvePendingQuestionFirst(sessionContext, userMessage);
+      if (earlyPendingResolution.resolved) {
+        handledPendingQuestionAnswerEarly = true;
+        saveSession(sessionId, sessionContext);
+        logInfo("PENDING_SLOT_RESOLVED_EARLY", {
+          slot: earlyPendingResolution.binding?.slot || null,
+          value: earlyPendingResolution.binding?.value || null
+        });
+      }
+    }
+
     // Low-signal intent_level can emit before LOCALE_SET; prefer persisted session locale, then cautious EN detection.
     const responseLocaleForLowSignal = normalizeResponseLocale(
       sessionContext.responseLocale ??
@@ -8215,12 +8266,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       String(previousState || "").startsWith("NEEDS_") &&
       sessionContext?.pendingClarification?.active === true;
     let pendingClarificationActive =
-      Boolean(sessionContext?.pendingQuestion) || needsStateContinuation;
+      Boolean(sessionContext?.pendingQuestion) ||
+      needsStateContinuation ||
+      Boolean(handledPendingQuestionAnswerEarly);
     const pendingIntentLevelLowSignal =
       sessionContext?.pendingQuestion?.slot === "intent_level" &&
       sessionContext?.pendingQuestion?.source === "low_signal";
     let pendingSlotClarificationActive =
-      pendingClarificationActive && !pendingIntentLevelLowSignal;
+      (pendingClarificationActive && !pendingIntentLevelLowSignal) ||
+      Boolean(handledPendingQuestionAnswerEarly);
     const hadPendingSlotClarificationAtStart = pendingSlotClarificationActive;
 
     let didContextResetForLocale = false;
