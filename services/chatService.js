@@ -2179,6 +2179,38 @@ function endInteraction(interactionRef, result, patch = {}) {
   applyEndInteractionRefPatch(interactionRef, patch);
 
   const prep = prepareTurnCompletionPayload(interactionRef, result, patch);
+  const pendingSlotContract =
+    prep?.sessionContext?.pendingQuestion &&
+    prep.sessionContext.pendingQuestion.active !== false
+      ? String(prep.sessionContext.pendingQuestion.slot || "").toLowerCase().trim()
+      : "";
+  if (
+    pendingSlotContract &&
+    prep?.workingDecision?.action === "clarification" &&
+    pendingSlotContract !== "intent_level" &&
+    prep?.workingDecision?.missingSlot !== pendingSlotContract
+  ) {
+    warn("CHAT", "Pending clarification slot mismatch; forcing safe pending-slot clarification", {
+      expectedPendingSlot: pendingSlotContract,
+      decisionMissingSlot: prep?.workingDecision?.missingSlot ?? null
+    });
+    prep.workingDecision = {
+      ...prep.workingDecision,
+      missingSlot: pendingSlotContract
+    };
+    const forcedPrompt = getClarificationQuestion(
+      pendingSlotContract,
+      prep?.sessionContext?.slots || interactionRef?.slots || {},
+      prep?.sessionContext?.responseLocale || prep?.sessionContext?.language || "ro"
+    );
+    prep.finalResult = {
+      type: "question",
+      message: forcedPrompt,
+      reply: forcedPrompt
+    };
+    prep.finalOutputType = "question";
+    prep.finalProducts = [];
+  }
 
   const turnDecisionValidation = validateDecisionForCommit(prep.workingDecision);
   if (!turnDecisionValidation.ok) {
