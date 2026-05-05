@@ -38,6 +38,7 @@
       "sessionMutations": [],
       "sessionServiceAfter": {
         "activeProducts": [],
+        "clarificationCountIncrement": 0,
         "conversationContextMvp": null,
         "conversationHistory": [],
         "currentTopic": "apc",
@@ -83,6 +84,7 @@
       },
       "sessionStoreAfter": {
         "activeProducts": [],
+        "clarificationCountIncrement": 0,
         "conversationContextMvp": null,
         "conversationHistory": [],
         "currentTopic": "apc",

@@ -153,9 +153,8 @@ function logChatPipelineStage(stage, meta = {}) {
 
 const SURFACE_TAGS = ["paint", "textile", "leather", "alcantara", "plastic", "glass", "wheels", "tires", "piele"];
 function normalizeResponseLocale(locale) {
-  // EPIC 4.1: Romanian-only output policy.
-  const _s = String(locale || "ro").toLowerCase().trim();
-  return "ro";
+  const s = String(locale || "ro").toLowerCase().trim();
+  return s.startsWith("en") ? "en" : "ro";
 }
 
 function containsEnglishPhrases(text) {
@@ -166,8 +165,8 @@ function containsEnglishPhrases(text) {
 
 function getProceduralSurfaceEnumQuestion(responseLocale) {
   return normalizeResponseLocale(responseLocale) === "en"
-    ? "Is it textile, leather, or plastic? If you're not sure, tell me your car model."
-    : "Este textil, piele sau plastic? Daca nu esti sigur, spune-mi modelul masinii.";
+    ? "What surface is it: textile, piele, plastic, or alcantara?"
+    : "Ce suprafata este: textile, piele, plastic sau alcantara?";
 }
 
 function getInteriorSurfaceLlmAssistBaseQuestion(responseLocale) {
@@ -3306,8 +3305,8 @@ function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sess
   } else if (s.context === "exterior") {
     base =
       loc === "en"
-        ? "Which surface are you working on? (paint / glass / wheels)"
-        : "Pe ce suprafata lucrezi? (vopsea / geamuri / jante)";
+        ? "Is it interior or exterior? Which surface are you working on? (paint / glass / wheels)"
+        : "Este interior sau exterior? Pe ce suprafata lucrezi? (vopsea / geamuri / jante)";
   } else {
     base = getProceduralSurfaceEnumQuestion(loc);
   }
@@ -7158,12 +7157,20 @@ function applySelectionAdjustments(partial, opts) {
   }
 
   if (selectionEscalation) {
-    resolvedAction = {
-      ...resolvedAction,
-      action: "selection",
-      flowId: null,
-      missingSlot: null
-    };
+    const missingSlot = getMissingSlot(slots);
+    resolvedAction = missingSlot
+      ? {
+          ...resolvedAction,
+          action: "clarification",
+          flowId: null,
+          missingSlot
+        }
+      : {
+          ...resolvedAction,
+          action: "recommend",
+          flowId: null,
+          missingSlot: null
+        };
   }
 
   return resolvedAction;
@@ -9770,11 +9777,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     // SELECTION (strict slot logic, no fallback/knowledge)
-    if (
-      !isSafetyEnforced &&
-      queryType === "selection" &&
-      previewAction === "selection"
-    ) {
+    if (!isSafetyEnforced && previewAction === "selection") {
       const pendingCoverageGoalQuestionAtEntry =
         sessionContext?.pendingQuestion?.source === "coverage_role_goal"
           ? sessionContext.pendingQuestion
@@ -11522,6 +11525,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       default:
         throw new Error("Unknown decision.action: " + resolvedAction.action);
+    }
+
+    if (resolvedAction.action === "selection" && shouldAllowSelection) {
+      resolvedAction = {
+        ...resolvedAction,
+        action: "recommend",
+        flowId: null,
+        missingSlot: null
+      };
     }
 
     // PRIORITY OVERRIDE: Safety / guidance strategies bypass product search ranking

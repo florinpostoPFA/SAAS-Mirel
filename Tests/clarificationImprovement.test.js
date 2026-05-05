@@ -24,8 +24,8 @@ describe("Clarification improvement prompts", () => {
     );
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.reply).toContain("Este textil, piele sau plastic?");
-    expect(res.body.reply).toContain("spune-mi modelul masinii");
+    expect(res.body.reply).toContain("Ce suprafata este: textile, piele, plastic sau alcantara?");
+    expect(res.body.reply).toContain("Nu esti sigur?");
   });
 
   it("asks improved object clarification prompt", async () => {

@@ -22,12 +22,12 @@ describe("locale consistency (EPIC 4.1)", () => {
     jest.clearAllMocks();
   });
 
-  it("keeps response locale Romanian by default", async () => {
+  it("uses English locale for explicit English input", async () => {
     await handleChat("what can i use for dashboard", "C1", [], `loc-${Date.now()}`);
 
     const responseRender = logInfo.mock.calls.find((c) => c[0] === "RESPONSE_RENDER");
     expect(responseRender).toBeTruthy();
-    expect(responseRender[1]?.responseLocaleUsed).toBe("ro");
+    expect(responseRender[1]?.responseLocaleUsed).toBe("en");
   });
 
   it("logs LOCALE_VIOLATION when output contains English phrases", async () => {
