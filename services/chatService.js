@@ -5885,12 +5885,21 @@ function hasExplicitSelectionIntent(message) {
     "recomandare",
     "ce mi recomanzi",
     "ce imi recomanzi",
+    "recomanda mi",
+    "recomanda mi un",
+    "recomanda mi niste",
     "ce mi dai",
     "ce imi dai",
     "vreau produs",
     "vreau produse",
     "ce produs",
     "ce produse",
+    "ce folosesc",
+    "ce sa folosesc",
+    "ce iau",
+    "ce sa iau",
+    "de care",
+    "link",
     "da mi 2",
     "da mi 2 3 optiuni",
     "2 3 optiuni"
@@ -8550,6 +8559,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     const isPendingSelectionContinuation = sessionContext?.pendingSelection === true;
     let queryType = isPendingSelectionContinuation ? "selection" : detectQueryType(routingMessage, intentCore);
+    const commerceIntentDetected = hasExplicitSelectionIntent(userMessage);
+    if (!isPendingSelectionContinuation && commerceIntentDetected) {
+      queryType = "selection";
+      logInfo("QUERY_TYPE_OVERRIDE", {
+        reason: "commerce_intent_detected",
+        messagePreview: String(userMessage || "").slice(0, 120)
+      });
+    }
 
     // Preserve selection path across clarification turns
     const SELECTION_WAIT_STATES = ["NEEDS_CONTEXT", "NEEDS_OBJECT", "NEEDS_SURFACE"];
@@ -9193,6 +9210,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     let intentResult = shouldBypassIntentClassifier
       ? rawIntent
       : overrideIntent(intentCore, rawIntent);
+    if (commerceIntentDetected) {
+      intentResult = typeof intentResult === "string"
+        ? "selection"
+        : { ...(intentResult || {}), type: "selection", confidence: 1.0 };
+      queryType = "selection";
+      interactionRef.queryType = "selection";
+    }
     const deterministicIntent = shouldBypassIntentClassifier ? null : getDeterministicIntent(userMessage);
     if (deterministicIntent) {
       const deterministicType =
@@ -10766,7 +10790,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
     }
     logChatPipelineStage("resolve_action", { queryType, routingAction: routingDecision.action });
-    const resolvedAction = enforceClarificationContract(resolveActionFinal({
+    let resolvedAction = enforceClarificationContract(resolveActionFinal({
       problemType,
       traceId: interactionRef.traceId ?? null,
       message: {
@@ -10810,6 +10834,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.pendingSelection = true;
       sessionContext.pendingSelectionMissingSlot = resolvedAction.missingSlot;
       saveSession(sessionId, sessionContext);
+    }
+
+    if (commerceIntentDetected && resolvedAction.action === "flow") {
+      const commerceMissing = getMissingSlot(sessionContext.slots || {});
+      resolvedAction = {
+        ...resolvedAction,
+        action: commerceMissing ? "clarification" : "selection",
+        flowId: null,
+        missingSlot: commerceMissing || null,
+        reasonCode: commerceMissing
+          ? "routing.clarification.commerce_intent"
+          : "routing.selection.commerce_intent"
+      };
     }
 
     logInfo("SELECTION_ESCALATION_ROUTING", {
@@ -11834,6 +11871,7 @@ module.exports = {
     formatSelectionResponse,
     buildMicroExplanation,
     isCleaningProduct,
+    hasExplicitSelectionIntent,
     appendSoftKnowledgeCtaIfEligible
   }
 };
