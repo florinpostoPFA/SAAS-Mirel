@@ -26,6 +26,7 @@ const {
 const logger = require("./services/logger");
 const { normalizeChatSessionIdFromBody } = require("./services/chatSessionId");
 const { getArtifactVersions } = require("./services/artifactVersions");
+const { validateFeedbackPayload, appendFeedbackRow } = require("./services/feedbackService");
 
 const surfaceAssistStartup = computeSurfaceAssistEnabled({
   env: process.env,
@@ -139,6 +140,16 @@ app.post("/chat", chatLimiter, async (req, res) => {
       traceId: null
     });
   }
+});
+
+app.post("/feedback", (req, res) => {
+  const validation = validateFeedbackPayload(req.body);
+  if (!validation.ok) {
+    return res.status(400).json({ ok: false, error: validation.error });
+  }
+
+  appendFeedbackRow(validation.value);
+  return res.status(200).json({ ok: true });
 });
 
 // 🖱 CLICK
