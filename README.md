@@ -11,3 +11,5 @@ npm start
 
 - Expect `lsof -i :3001` to be empty before start.
 - After `npm start`, expect a single `node` process bound to `*:3001`.
+
+Operational continuity artifacts live in Posto-SaaS-Company (/docs/operations/current-state.md, /docs/operations/current-priority.md).
