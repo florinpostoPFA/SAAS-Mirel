@@ -59,6 +59,13 @@ app.use((req, res, next) => {
 });
 app.use(express.static("public"));
 
+const FRONTEND_BUILD_PATH = path.join(__dirname, "frontend", "build");
+const FRONTEND_INDEX = path.join(FRONTEND_BUILD_PATH, "index.html");
+const frontendBuildExists = fs.existsSync(FRONTEND_INDEX);
+if (frontendBuildExists) {
+  app.use(express.static(FRONTEND_BUILD_PATH, { redirect: false }));
+}
+
 function checkApiKey(req, res, next) {
   const apiKey = req.header("x-api-key");
 
@@ -190,6 +197,17 @@ app.get("/products", (req, res) => {
 // health
 app.get("/health", (req, res) => {
   res.send("OK");
+});
+
+// SPA fallback: any unmatched GET that doesn't look like a file
+// returns the React app's index.html so client-side routing can handle it
+// (e.g. direct navigation / hard refresh on /blog/<slug>).
+app.use((req, res, next) => {
+  if (req.method !== "GET") return next();
+  if (req.path.startsWith("/api/")) return next();
+  if (path.extname(req.path)) return next();
+  if (!frontendBuildExists) return next();
+  res.sendFile(FRONTEND_INDEX);
 });
 
 // Session cleanup - run every hour

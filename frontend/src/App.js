@@ -1,8 +1,21 @@
-import React, { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React, { Suspense, lazy, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
 import ProductAIDashboard from "./components/ProductAIDashboard";
 import SettingsPage from "./SettingsPage";
 import TagSetupPage from "./TagSetupPage";
+import ErrorBoundary from "./components/ErrorBoundary";
+
+const BlogIndexPage = lazy(() => import("./pages/BlogIndexPage"));
+const BlogPostPage = lazy(() => import("./pages/BlogPostPage"));
+const BlogLayout = lazy(() => import("./blog/BlogLayout"));
+
+function BlogRouteFallback() {
+  return (
+    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-500">
+      <p className="mx-auto max-w-3xl">Loading…</p>
+    </div>
+  );
+}
 
 // 🔹 Landing Page
 function Landing() {
@@ -27,6 +40,12 @@ function Landing() {
 
         <p className="mt-3 text-sm text-gray-500">
           Live assistant: Turbo for Carhub
+        </p>
+
+        <p className="mt-6 text-sm text-gray-400">
+          <Link to="/blog" className="underline underline-offset-4 hover:text-white">
+            Read the blog
+          </Link>
         </p>
       </div>
 
@@ -156,13 +175,35 @@ function ProtectedApp() {
 // 🔹 App Router
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/assistant/carhub" element={<Password />} />
-        <Route path="/assistant/carhub/*" element={<ProtectedApp />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route
+            path="/blog"
+            element={
+              <Suspense fallback={<BlogRouteFallback />}>
+                <BlogLayout>
+                  <BlogIndexPage />
+                </BlogLayout>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/blog/:slug"
+            element={
+              <Suspense fallback={<BlogRouteFallback />}>
+                <BlogLayout>
+                  <BlogPostPage />
+                </BlogLayout>
+              </Suspense>
+            }
+          />
+          <Route path="/assistant/carhub" element={<Password />} />
+          <Route path="/assistant/carhub/*" element={<ProtectedApp />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

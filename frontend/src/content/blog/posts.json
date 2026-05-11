@@ -1,0 +1,17 @@
+[
+  {
+    "slug": "hello-world",
+    "title": "Hello, world",
+    "date": "2026-05-10",
+    "description": "First post on the Posto blog. A short introduction to what we are building and why.",
+    "categories": ["Product"],
+    "coverImage": "/blog/hello-world-cover.svg"
+  },
+  {
+    "slug": "shipping-the-blog",
+    "title": "Shipping the blog",
+    "date": "2026-05-11",
+    "description": "How we built the Posto blog inside an existing CRA app without adding a new framework.",
+    "categories": ["Engineering"]
+  }
+]

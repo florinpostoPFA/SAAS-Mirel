@@ -156,8 +156,6 @@ export default function ProductAIDashboard() {
   };
 
   const sendMessage = async () => {
-    console.log("STEP 1");
-
     if (!input.trim()) return;
 
     /** @type {ChatMessage} */
@@ -171,8 +169,6 @@ export default function ProductAIDashboard() {
     setInput("");
 
     try {
-      console.log("STEP 2 - before fetch");
-
       const response = await fetch(`${process.env.REACT_APP_API_URL}/chat`, {
         method: "POST",
         headers: {
@@ -180,8 +176,6 @@ export default function ProductAIDashboard() {
         },
         body: JSON.stringify({ message: input, sessionId }),
       });
-
-      console.log("STEP 3 - after fetch");
 
       const data = await response.json();
 
