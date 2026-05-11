@@ -39,6 +39,42 @@ describe("getDeployVersion", () => {
   });
 });
 
+describe("GET /api/health", () => {
+  const app = require("../server");
+  const logger = require("../services/logger");
+
+  test("returns JSON contract for proxy /api/ prefix", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      ok: true,
+      path: "/api/health"
+    });
+    expect(res.headers["x-backend-sha"]).toBeDefined();
+    expect(res.headers["x-request-id"]).toBeDefined();
+    expect(res.headers["x-upstream-path"]).toContain("/api/health");
+  });
+
+  test("echoes incoming x-request-id and emits HTTP_API log on finish", async () => {
+    const spy = jest.spyOn(logger, "logInfo");
+    const res = await request(app)
+      .get("/api/health")
+      .set("x-request-id", "edge-test-123");
+
+    expect(res.headers["x-request-id"]).toBe("edge-test-123");
+    expect(spy).toHaveBeenCalledWith(
+      "HTTP_API",
+      expect.objectContaining({
+        requestId: "edge-test-123",
+        method: "GET",
+        path: "/api/health",
+        status: 200
+      })
+    );
+    spy.mockRestore();
+  });
+});
+
 describe("GET /api/version", () => {
   const app = require("../server");
 

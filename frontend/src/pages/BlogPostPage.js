@@ -34,6 +34,7 @@ export default function BlogPostPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Depend only on `slug`: `getPostBySlug` returns a new object each render; including `post` would re-fetch markdown in a loop.
   useEffect(() => {
     let cancelled = false;
 
@@ -66,6 +67,7 @@ export default function BlogPostPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- slug is stable; `post` is a new object each render (see comment above).
   }, [slug]);
 
   if (!post) {

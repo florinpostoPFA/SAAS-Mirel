@@ -1,6 +1,7 @@
 import postsIndex from "../content/blog/posts.json";
 import helloWorldUrl from "../content/blog/posts/hello-world.md";
 import shippingTheBlogUrl from "../content/blog/posts/shipping-the-blog.md";
+import thePageLoadsMeansNothingUrl from "../content/blog/posts/the-page-loads-means-nothing.md";
 
 function fetchMarkdown(url) {
   return fetch(url).then((res) => {
@@ -14,6 +15,8 @@ function fetchMarkdown(url) {
 const markdownLoaders = {
   "hello-world": () => fetchMarkdown(helloWorldUrl),
   "shipping-the-blog": () => fetchMarkdown(shippingTheBlogUrl),
+  "the-page-loads-means-nothing": () =>
+    fetchMarkdown(thePageLoadsMeansNothingUrl),
 };
 
 function normalizePost(post) {

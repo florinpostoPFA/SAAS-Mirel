@@ -13,5 +13,12 @@
     "date": "2026-05-11",
     "description": "How we built the Posto blog inside an existing CRA app without adding a new framework.",
     "categories": ["Engineering"]
+  },
+  {
+    "slug": "the-page-loads-means-nothing",
+    "title": "The moment we realized “the page loads” means almost nothing",
+    "date": "2026-05-11",
+    "description": "Deploy trust + runtime verification (evidence-first).",
+    "categories": ["Engineering", "Operations"]
   }
 ]

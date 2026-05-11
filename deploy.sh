@@ -41,4 +41,11 @@ npm ci
 sudo nginx -t
 sudo systemctl reload nginx
 
+if [[ "${VERIFY:-}" == "1" ]]; then
+  VERIFY_BASE="${VERIFY_BASE:-https://postosaas.com}"
+  bash "$REPO_ROOT/scripts/deploy-smoke.sh" "$VERIFY_BASE"
+fi
+
 echo "[deploy] Done. Restart Node (pm2/systemd) so the API loads deploy-version.env." >&2
+echo "[deploy] Prod: set TRUST_PROXY=1 on Node behind nginx (see deploy/nginx/postosaas.proxy.example.conf)." >&2
+echo "[deploy] Optional: VERIFY=1 ./deploy.sh runs scripts/deploy-smoke.sh after nginx." >&2

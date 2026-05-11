@@ -34,6 +34,7 @@ const { normalizeChatSessionIdFromBody } = require("./services/chatSessionId");
 const { getArtifactVersions } = require("./services/artifactVersions");
 const { getDeployVersion } = require("./services/deployVersion");
 const { validateFeedbackPayload, appendFeedbackRow } = require("./services/feedbackService");
+const { applyTrustProxy, apiProxyObservability } = require("./services/proxyBoundary");
 
 const surfaceAssistStartup = computeSurfaceAssistEnabled({
   env: process.env,
@@ -50,6 +51,8 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 const API_KEY = process.env.API_KEY;
 
+applyTrustProxy(app);
+
 app.use((req, res, next) => {
   const { sha } = getDeployVersion();
   res.setHeader("x-backend-sha", sha);
@@ -59,15 +62,26 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-api-key"],
-  exposedHeaders: ["x-backend-sha"]
+  allowedHeaders: ["Content-Type", "x-api-key", "x-request-id"],
+  exposedHeaders: [
+    "x-backend-sha",
+    "x-request-id",
+    "x-upstream-path"
+  ]
 }));
 app.use(express.json());
+
+app.use("/api", apiProxyObservability(logger));
+
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type,x-api-key");
+    res.header("Access-Control-Allow-Headers", "Content-Type,x-api-key,x-request-id");
+    res.header(
+      "Access-Control-Expose-Headers",
+      "x-backend-sha,x-request-id,x-upstream-path"
+    );
     return res.sendStatus(204);
   }
   next();
@@ -212,6 +226,10 @@ app.get("/products", (req, res) => {
 // health
 app.get("/health", (req, res) => {
   res.send("OK");
+});
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ ok: true, path: "/api/health" });
 });
 
 app.get("/api/version", (req, res) => {
