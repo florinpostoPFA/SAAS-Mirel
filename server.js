@@ -1,8 +1,14 @@
 require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+
+const deployVersionEnvPath = path.join(__dirname, "deploy-version.env");
+if (fs.existsSync(deployVersionEnvPath)) {
+  require("dotenv").config({ path: deployVersionEnvPath, override: true });
+}
+
+const express = require("express");
+const cors = require("cors");
 
 const config = require("./config");
 const { computeSurfaceAssistEnabled } = require("./services/surfaceAssistFeature");
@@ -26,6 +32,7 @@ const {
 const logger = require("./services/logger");
 const { normalizeChatSessionIdFromBody } = require("./services/chatSessionId");
 const { getArtifactVersions } = require("./services/artifactVersions");
+const { getDeployVersion } = require("./services/deployVersion");
 const { validateFeedbackPayload, appendFeedbackRow } = require("./services/feedbackService");
 
 const surfaceAssistStartup = computeSurfaceAssistEnabled({
@@ -42,10 +49,18 @@ logger.logInfo("SURFACE_ASSIST_FEATURE_STARTUP", {
 const rateLimit = require("express-rate-limit");
 const app = express();
 const API_KEY = process.env.API_KEY;
+
+app.use((req, res, next) => {
+  const { sha } = getDeployVersion();
+  res.setHeader("x-backend-sha", sha);
+  next();
+});
+
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-api-key"]
+  allowedHeaders: ["Content-Type", "x-api-key"],
+  exposedHeaders: ["x-backend-sha"]
 }));
 app.use(express.json());
 app.use((req, res, next) => {
@@ -199,6 +214,10 @@ app.get("/health", (req, res) => {
   res.send("OK");
 });
 
+app.get("/api/version", (req, res) => {
+  res.json(getDeployVersion());
+});
+
 // SPA fallback: any unmatched GET that doesn't look like a file
 // returns the React app's index.html so client-side routing can handle it
 // (e.g. direct navigation / hard refresh on /blog/<slug>).
@@ -226,8 +245,14 @@ if (require.main === module) {
 
   app.listen(config.server.port, () => {
     const artifactVersions = getArtifactVersions();
+    const deployVersion = getDeployVersion();
     logger.logInfo("ARTIFACT_VERSIONS", artifactVersions);
-    logger.logInfo("SERVER", { event: "startup", port: config.server.port });
+    logger.logInfo("SERVER", {
+      event: "startup",
+      port: config.server.port,
+      deploySha: deployVersion.sha,
+      deployBuildTime: deployVersion.buildTime || null
+    });
   });
 }
 

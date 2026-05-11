@@ -2,6 +2,7 @@ node_modules/
 logs/
 tests/golden/cases/*/actual/
 .env
+deploy-version.env
 *.pem
 *.key
 *id_ed25519*
