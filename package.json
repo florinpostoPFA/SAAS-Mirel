@@ -19,7 +19,9 @@
     "tag:coverage:audit": "node scripts/tag-coverage-audit.js",
     "report:logs": "node scripts/log-report.js",
     "logs:ingest": "node scripts/ingestDailyLogsToNotion.js",
-    "logs:daily": "bash scripts/daily-log-rotation.sh"
+    "logs:daily": "bash scripts/daily-log-rotation.sh",
+    "demo:op": "node scripts/op-demo.js --all",
+    "demo:op:one": "node scripts/op-demo.js --topic matte_paint_summer_maintenance"
   },
   "keywords": [],
   "author": "",

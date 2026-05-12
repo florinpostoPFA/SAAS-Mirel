@@ -1,0 +1,206 @@
+{
+  "topicId": "ceramic_coating_maintenance_wash",
+  "title": "Ceramic coating maintenance wash",
+  "whyThisMatters": "Coated paint needs pH-neutral maintenance and compatible wash chemistry to preserve hydrophobics between top-ups.",
+  "workflow": [
+    {
+      "stepId": "prewash",
+      "title": "Pre-spălare",
+      "goal": "Îndepărtează murdăria grosieră fără contact pentru a reduce riscul de zgârieturi.",
+      "roles": [
+        "prewash_cleaner"
+      ],
+      "knowledgeResolved": [
+        {
+          "source": "knowledge_flow",
+          "id": "prewash_importanta",
+          "title": "De ce este importanta prespalarea",
+          "content": "Prespalarea indeparteaza murdaria grosiera si filmul rutier inainte de contact. Reduce riscul de zgariere in timpul spalarii manuale."
+        }
+      ]
+    },
+    {
+      "stepId": "contact_wash",
+      "title": "Spălare manuală",
+      "goal": "Curăță suprafața în siguranță folosind lubrifiere și mișcări blânde.",
+      "roles": [
+        "contact_cleaner",
+        "wash_tool"
+      ],
+      "knowledgeResolved": [
+        {
+          "source": "knowledge_flow",
+          "id": "sampon_neutru_rol",
+          "title": "Ce face samponul cu pH neutru",
+          "content": "Samponul cu pH neutru curata murdaria usoara si ofera lubrifiere pentru spalare sigura. Este ideal pentru intretinerea regulata a masinii."
+        },
+        {
+          "source": "knowledge_flow",
+          "id": "protective_shampoo_usage",
+          "title": "Cum alegi samponul cu efect de protectie",
+          "content": "Spala masina cu samponul cu efect de protectie folosind miscari blande si clateste complet suprafata. Dupa spalare, lasa protectia ramasa sa sustina luciul si efectul hidrofob."
+        },
+        {
+          "source": "knowledge",
+          "id": "ceramic_shampoo_usage",
+          "title": "Când folosești un șampon ceramic?",
+          "content": "Se folosește pentru întreținerea și revitalizarea protecțiilor existente, oferind un plus de hidrofobicitate și luciu între aplicările de protecție."
+        },
+        {
+          "source": "knowledge",
+          "id": "shampoo_for_ceramic_coating",
+          "title": "Ce șampon alegi pentru o mașină cu protecție ceramică?",
+          "content": "Pentru mașinile protejate ceramic se recomandă șampoane pH neutru care nu afectează coating-ul și oferă lubrifiere bună."
+        },
+        {
+          "source": "knowledge",
+          "id": "ceramic_shampoo_benefits",
+          "title": "Ce este un șampon auto cu aditivi ceramic (SiO₂)?",
+          "content": "Este un șampon care conține polimeri sau SiO₂ pentru a îmbunătăți efectul hidrofob, luciul și durata protecției existente."
+        }
+      ]
+    },
+    {
+      "stepId": "drying",
+      "title": "Uscare",
+      "goal": "Elimină apa pentru a preveni petele și urmele.",
+      "roles": [
+        "drying_tool"
+      ],
+      "knowledgeResolved": [
+        {
+          "source": "knowledge_flow",
+          "id": "laveta_uscare_auto",
+          "title": "Cum alegi prosopul de uscare auto",
+          "content": "Prosoapele din microfibra au absorbtie mare si previn zgarieturile. Se aleg modele dense pentru eficienta maxima."
+        },
+        {
+          "source": "knowledge",
+          "id": "laveta_coating_ceramic",
+          "title": "Ce laveta folosesti pentru coating ceramic",
+          "content": "Lavetele foarte fine sunt necesare pentru stergerea coatingurilor ceramice. Previn urmele si asigura un finisaj corect."
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "source": "knowledge",
+      "id": "evitare_uscare_solutii",
+      "title": "De ce nu trebuie lasate solutiile sa se usuce",
+      "content": "Majoritatea solutiilor pot lasa pete sau urme daca se usuca pe suprafata. Se recomanda clatirea rapida si aplicarea pe suprafete reci."
+    },
+    {
+      "source": "knowledge",
+      "id": "shampoo_common_mistake",
+      "title": "Poți folosi orice șampon auto pe o mașină protejată?",
+      "content": "Da, dar nu este recomandat să folosești frecvent șampoane acide sau alcaline pe mașini protejate, deoarece pot afecta protecția."
+    }
+  ],
+  "mistakes": [
+    {
+      "source": "knowledge",
+      "id": "sampon_acid_utilizare",
+      "title": "Cand folosesti sampon acid",
+      "content": "Samponul acid este util pentru indepartarea depunerilor minerale. Se foloseste pe masini cu protectii ceramice sau inainte de polish."
+    },
+    {
+      "source": "knowledge",
+      "id": "shampoo_common_mistake",
+      "title": "Poți folosi orice șampon auto pe o mașină protejată?",
+      "content": "Da, dar nu este recomandat să folosești frecvent șampoane acide sau alcaline pe mașini protejate, deoarece pot afecta protecția."
+    }
+  ],
+  "faq": [
+    {
+      "source": "knowledge",
+      "id": "ceramic_shampoo_usage",
+      "title": "Când folosești un șampon ceramic?",
+      "content": "Se folosește pentru întreținerea și revitalizarea protecțiilor existente, oferind un plus de hidrofobicitate și luciu între aplicările de protecție."
+    },
+    {
+      "source": "knowledge",
+      "id": "shampoo_for_ceramic_coating",
+      "title": "Ce șampon alegi pentru o mașină cu protecție ceramică?",
+      "content": "Pentru mașinile protejate ceramic se recomandă șampoane pH neutru care nu afectează coating-ul și oferă lubrifiere bună."
+    }
+  ],
+  "maintenanceIntervalText": "Use a maintenance wash suitable for coatings every 2–3 weeks; adjust frequency by environment and water hardness.",
+  "productRoles": [
+    "contact_cleaner",
+    "drying_tool",
+    "prewash_cleaner",
+    "wash_tool"
+  ],
+  "bundleSuggestions": [
+    "pH-neutral shampoo suitable for coated vehicles",
+    "Soft drying towel dedicated to coated finishes"
+  ],
+  "baseFlowId": "exterior_wash_beginner",
+  "products": [
+    {
+      "role": "contact_cleaner",
+      "products": [
+        {
+          "id": "ADB000134",
+          "name": "ADBL Snowball 1L, Sampon Auto",
+          "tags": [
+            "exterior",
+            "paint",
+            "cleaner",
+            "cleaning",
+            "leather"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "drying_tool",
+      "products": [
+        {
+          "id": "X2020",
+          "name": "3x prosop microfibra 40x60cm - Supreme shine microfiber towel Meguiar's X2020",
+          "tags": [
+            "interior",
+            "textile",
+            "detailer",
+            "polish",
+            "plastic",
+            "wheels"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "prewash_cleaner",
+      "products": [
+        {
+          "id": "EW-ALK",
+          "name": "Spuma activa alcalina EWOCAR ALK Prewash - Traffic Film Remover",
+          "tags": [
+            "exterior",
+            "paint",
+            "apc",
+            "cleaning",
+            "tires"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "wash_tool",
+      "products": [
+        {
+          "id": "splushy+grit",
+          "name": "ADBL SPLUSHY BUCKET+ADBL DIRT BLOCKER",
+          "tags": [
+            "exterior",
+            "paint",
+            "cleaner",
+            "cleaning"
+          ]
+        }
+      ]
+    }
+  ]
+}

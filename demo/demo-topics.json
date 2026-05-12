@@ -1,0 +1,60 @@
+{
+  "matte_paint_summer_maintenance": {
+    "title": "Matte paint summer maintenance",
+    "whyThisMatters": "Summer heat and sun increase the risk of water spots, product drying on panels, and visible defects on sensitive finishes. This blueprint sequences trusted wash knowledge for safe maintenance.",
+    "workflow": [
+      {
+        "title": "Pre-wash in shade",
+        "knowledgeFlowIds": ["prewash_importanta"],
+        "knowledgeIds": []
+      },
+      {
+        "title": "Contact wash (gentle, pH-neutral)",
+        "knowledgeFlowIds": ["sampon_neutru_rol"],
+        "knowledgeIds": ["evitare_uscare_solutii", "ph_neutral_shampoo"]
+      },
+      {
+        "title": "Dry safely",
+        "knowledgeFlowIds": ["laveta_uscare_auto"],
+        "knowledgeIds": ["laveta_coating_ceramic"]
+      }
+    ],
+    "productRoles": ["prewash_cleaner", "contact_cleaner", "wash_tool", "drying_tool"],
+    "warningsKnowledgeIds": ["evitare_uscare_solutii", "wax_faq_sun_application"],
+    "mistakesKnowledgeIds": ["wax_common_mistakes", "shampoo_common_mistake"],
+    "faqKnowledgeIds": ["wax_faq_removal_time", "water_spot_remover_utilizare"],
+    "maintenanceIntervalText": "Maintenance wash every 2–4 weeks in summer, or sooner if the vehicle is exposed to insects, road film, or hard water.",
+    "bundleSuggestions": [
+      "Meguiar's Gold Class Car Wash Shampoo and Conditioner",
+      "Microfiber drying towel (high GSM)"
+    ]
+  },
+  "ceramic_coating_maintenance_wash": {
+    "title": "Ceramic coating maintenance wash",
+    "whyThisMatters": "Coated paint needs pH-neutral maintenance and compatible wash chemistry to preserve hydrophobics between top-ups.",
+    "baseFlowId": "exterior_wash_beginner",
+    "overrides": {
+      "workflow": [
+        {
+          "stepId": "contact_wash",
+          "knowledgeIds": ["ceramic_shampoo_usage", "shampoo_for_ceramic_coating", "ceramic_shampoo_benefits"],
+          "knowledgeFlowIds": ["protective_shampoo_usage"]
+        },
+        {
+          "stepId": "drying",
+          "knowledgeIds": ["laveta_coating_ceramic"],
+          "knowledgeFlowIds": []
+        }
+      ]
+    },
+    "productRoles": ["prewash_cleaner", "contact_cleaner", "wash_tool", "drying_tool"],
+    "warningsKnowledgeIds": ["evitare_uscare_solutii", "shampoo_common_mistake"],
+    "mistakesKnowledgeIds": ["shampoo_common_mistake", "sampon_acid_utilizare"],
+    "faqKnowledgeIds": ["shampoo_for_ceramic_coating", "ceramic_shampoo_usage"],
+    "maintenanceIntervalText": "Use a maintenance wash suitable for coatings every 2–3 weeks; adjust frequency by environment and water hardness.",
+    "bundleSuggestions": [
+      "pH-neutral shampoo suitable for coated vehicles",
+      "Soft drying towel dedicated to coated finishes"
+    ]
+  }
+}
