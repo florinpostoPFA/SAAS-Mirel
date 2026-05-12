@@ -2,7 +2,7 @@ import React from "react";
 import { Helmet } from "react-helmet-async";
 
 const DEFAULT_SITE_URL =
-  process.env.REACT_APP_SITE_URL || "https://posto.ai";
+  process.env.REACT_APP_SITE_URL || "https://postosaas.com";
 
 function buildAbsoluteUrl(path) {
   const base = DEFAULT_SITE_URL.replace(/\/$/, "");

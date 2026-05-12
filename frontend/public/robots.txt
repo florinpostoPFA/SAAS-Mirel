@@ -2,4 +2,4 @@
 User-agent: *
 Disallow:
 
-Sitemap: https://posto.ai/sitemap.xml
+Sitemap: https://postosaas.com/sitemap.xml
