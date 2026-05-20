@@ -1,4 +1,6 @@
 // Chat logic - orchestrate search, prompt building, and LLM
+const fs = require("fs");
+const path = require("path");
 const config = require("../config");
 const { selectProducts, passesSlotObjectRole } = require("./productSelectionService");
 const { hasExplicitCommerceProductIntent } = require("./commerceIntentSignals");
@@ -1701,7 +1703,8 @@ function forceFlowExecutionAtBoundary(interactionRef, sessionContext, decisionOv
       flowId
     });
     const filteredFlowProducts = flowFilterOutcome.products;
-    const flowBundle = buildProductBundle(filteredFlowProducts);
+    const tierOneFlowProducts = applyTierOneManufacturerGate(filteredFlowProducts);
+    const flowBundle = buildProductBundle(tierOneFlowProducts);
     const finalFlowProducts = flowBundle.slice(0, 3);
     const flowReply = buildMinimalFlowReply(prioritizedFlow, flowResult, flowLocale);
 
@@ -3765,6 +3768,80 @@ function returnSelectionFailSafe(
   });
 }
 
+const TIER_ONE_CONFIG_PATH = path.join(__dirname, "..", "data", "tier-one-manufacturer-ids.json");
+
+function loadTierOneGateConfig() {
+  try {
+    if (!fs.existsSync(TIER_ONE_CONFIG_PATH)) {
+      console.log("[TIER_ONE_GATE] enabled=false skipped (config file missing)");
+      return { gateEnabled: false, allowedIds: new Set() };
+    }
+
+    const parsed = JSON.parse(fs.readFileSync(TIER_ONE_CONFIG_PATH, "utf8"));
+    const ids = Array.isArray(parsed?.tierOneManufacturerIds) ? parsed.tierOneManufacturerIds : [];
+
+    if (ids.length === 0) {
+      console.log("[TIER_ONE_GATE] enabled=false skipped (empty tierOneManufacturerIds)");
+      return { gateEnabled: false, allowedIds: new Set() };
+    }
+
+    const allowedIds = new Set(
+      ids.map(id => Number(id)).filter(n => Number.isFinite(n))
+    );
+
+    const sorted = [...allowedIds].sort((a, b) => a - b);
+    console.log(`[TIER_ONE_GATE] enabled=true allowedIds=[${sorted.join(", ")}]`);
+    return { gateEnabled: true, allowedIds };
+  } catch (err) {
+    const message = err && err.message ? err.message : String(err);
+    console.log(`[TIER_ONE_GATE] enabled=false skipped (config unparseable: ${message})`);
+    return { gateEnabled: false, allowedIds: new Set() };
+  }
+}
+
+const tierOneGateState = loadTierOneGateConfig();
+
+function applyTierOneManufacturerGate(products) {
+  const list = Array.isArray(products) ? products : [];
+
+  if (!tierOneGateState.gateEnabled) {
+    console.log("[TIER_ONE_GATE] enabled=false skipped");
+    return list;
+  }
+
+  const before = list.length;
+  const droppedManufacturerIds = new Set();
+
+  const surviving = list.filter(product => {
+    const raw = product?.manufacturerId;
+    if (raw == null || String(raw).trim() === "") {
+      droppedManufacturerIds.add("null");
+      return false;
+    }
+
+    const id = Number(raw);
+    if (!Number.isFinite(id) || !tierOneGateState.allowedIds.has(id)) {
+      droppedManufacturerIds.add(String(raw));
+      return false;
+    }
+
+    return true;
+  });
+
+  const dropped = before - surviving.length;
+  const sortedDropped = [...droppedManufacturerIds].sort((a, b) => {
+    if (a === "null") return -1;
+    if (b === "null") return 1;
+    return String(a).localeCompare(String(b), undefined, { numeric: true });
+  });
+
+  console.log(
+    `[TIER_ONE_GATE] enabled=true before=${before} after=${surviving.length} dropped=${dropped} droppedManufacturerIds=[${sortedDropped.join(", ")}]`
+  );
+
+  return surviving;
+}
+
 function filterProducts(products, slots) {
   if (!products || !Array.isArray(products)) return [];
 
@@ -4207,7 +4284,7 @@ function tryCoverageRoleRelaxedRetry(role, roleConfig, products, settings) {
   if (!Array.isArray(roleCandidates) || roleCandidates.length === 0) return [];
   const ranked = applyRanking(roleCandidates, { tags: roleConfig.matchTags || [], priceRange: null }, settings);
   const limited = enforceProductLimit(ranked, Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS));
-  return buildProductBundle(limited).slice(0, MAX_SELECTION_PRODUCTS);
+  return buildProductBundle(applyTierOneManufacturerGate(limited)).slice(0, MAX_SELECTION_PRODUCTS);
 }
 
 function matchesRoleConfig(product, roleConfig) {
@@ -9696,7 +9773,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         enrichProducts(escalationRanked, products),
         { context: escalationContextHint || null, object: null, surface: null }
       );
-      const escalationBundle = buildProductBundle(escalationFiltered);
+      const escalationTierOne = applyTierOneManufacturerGate(escalationFiltered);
+      const escalationBundle = buildProductBundle(escalationTierOne);
       const finalEscalationProducts = enforceProductLimit(escalationBundle, MAX_SELECTION_PRODUCTS);
       const escalationReply = finalEscalationProducts.length > 0
         ? formatSelectionResponse(finalEscalationProducts, {
@@ -10055,7 +10133,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       );
       const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
       const filteredSelectionProducts = filterProducts(enrichedSelectionProducts, selectionSlots);
-      const selectionBundle = buildProductBundle(filteredSelectionProducts, {
+      const tierOneSelectionProducts = applyTierOneManufacturerGate(filteredSelectionProducts);
+      const selectionBundle = buildProductBundle(tierOneSelectionProducts, {
         hardFilterKey: hardFilterResult?.meta?.key || null
       });
       console.log("PRODUCT_FILTER", {
@@ -10077,7 +10156,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
       }
       let finalProducts = selectionBundle.slice(0, MAX_SELECTION_PRODUCTS);
-      finalProducts = ensureApcProductIncluded(finalProducts, products, selectionTags).slice(0, MAX_SELECTION_PRODUCTS);
+      finalProducts = applyTierOneManufacturerGate(
+        ensureApcProductIncluded(finalProducts, products, selectionTags).slice(0, MAX_SELECTION_PRODUCTS)
+      );
       let productsReason = "strict";
       if (finalProducts.some((product) => product?.selectionMeta?.fallback === "safe_generic_apc")) {
         productsReason = "no_matching_products";
@@ -11450,7 +11531,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           { flowId }
         );
         const filteredFlowProducts = flowFilterOutcome.products;
-        const flowBundle = buildProductBundle(filteredFlowProducts);
+        const tierOneFlowProducts = applyTierOneManufacturerGate(filteredFlowProducts);
+        const flowBundle = buildProductBundle(tierOneFlowProducts);
         const flowReply = buildMinimalFlowReply(resolvedPrioritizedFlow, flowResult, flowLocale);
         console.log("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
@@ -11589,7 +11671,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         );
         safetyProducts = enforceProductLimit(safetyProducts, settings.max_products || 3);
         const filteredSafetyProducts = filterProducts(safetyProducts, sessionContext.slots || {});
-        const safetyBundle = buildProductBundle(filteredSafetyProducts);
+        const tierOneSafetyProducts = applyTierOneManufacturerGate(filteredSafetyProducts);
+        const safetyBundle = buildProductBundle(tierOneSafetyProducts);
         console.log("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
           before: safetyProducts.length,
@@ -11829,7 +11912,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         // Step 10: Enforce product limits BEFORE sending to LLM
         found = enforceProductLimit(found, settings.max_products || 3);
         const filteredFound = filterProducts(found, sessionContext.slots || {});
-        const searchBundle = buildProductBundle(filteredFound);
+        const tierOneFound = applyTierOneManufacturerGate(filteredFound);
+        const searchBundle = buildProductBundle(tierOneFound);
         console.log("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
           before: found.length,

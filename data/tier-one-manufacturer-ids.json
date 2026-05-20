@@ -1,0 +1,11 @@
+{
+  "_comment": "Tier-1 brands eligible for assistant recommendation at launch. Edit + restart server to update. Empty array or missing file = gate OFF (passthrough).",
+  "tierOneManufacturerIds": [13, 39, 44, 70, 92],
+  "_brandLabels": {
+    "13": "Koch Chemie",
+    "39": "Gtechniq",
+    "44": "ZviZZer",
+    "70": "Ewocar",
+    "92": "ADBL"
+  }
+}
