@@ -5,6 +5,62 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const JSON_PATH = path.join(__dirname, "..", "data", "products.json");
+const BRAND_WHITELIST_PATH = path.join(__dirname, "..", "data", "brand-whitelist.json");
+
+let brandWhitelistCache = null;
+
+function loadBrandWhitelist() {
+  if (brandWhitelistCache) {
+    return brandWhitelistCache;
+  }
+  brandWhitelistCache = JSON.parse(fs.readFileSync(BRAND_WHITELIST_PATH, "utf8"));
+  return brandWhitelistCache;
+}
+
+function escapeRegExp(text) {
+  return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Longest whitelist match against product name (case-insensitive, word boundaries).
+ * @param {string} name
+ * @param {string[]} whitelist
+ * @returns {string|null}
+ */
+function resolveBrandFromName(name, whitelist) {
+  const safeName = String(name || "");
+  if (!safeName) {
+    return null;
+  }
+
+  const sorted = [...whitelist].sort((a, b) => b.length - a.length);
+
+  for (const brand of sorted) {
+    const brandText = String(brand || "").trim();
+    if (!brandText) {
+      continue;
+    }
+
+    const pattern = new RegExp(
+      `(?:^|[^A-Za-z0-9])${escapeRegExp(brandText)}(?:[^A-Za-z0-9]|$)`,
+      "i"
+    );
+
+    if (pattern.test(safeName)) {
+      return brandText;
+    }
+  }
+
+  return null;
+}
+
+function getManufacturerId(product) {
+  const raw = getAttr(product, "manufacturer");
+  if (raw == null || String(raw).trim() === "") {
+    return null;
+  }
+  return String(raw).trim();
+}
 
 function normalizeText(text) {
   return String(text || "")
@@ -56,6 +112,8 @@ function toProduct(row) {
     price: numericPrice,
     category,
     meta_keyword,
+    manufacturerId: row.manufacturerId ?? null,
+    brand: row.brand ?? null,
     searchText: normalizeText(
       (name || "") + " " +
       (description || "") + " " +
@@ -70,14 +128,19 @@ function getAttr(product, code) {
 }
 
 function mapMagentoToRow(product) {
+  const whitelist = loadBrandWhitelist();
+  const name = product.name;
+
   return {
     sku: product.sku,
-    name: product.name,
+    name,
     price: product.price,
     description: getAttr(product, "description"),
     short_description: getAttr(product, "short_description"),
     meta_keyword: getAttr(product, "meta_keyword"),
-    category: ""
+    category: "",
+    manufacturerId: getManufacturerId(product),
+    brand: resolveBrandFromName(name, whitelist)
   };
 }
 
@@ -142,6 +205,9 @@ module.exports = {
   importProducts,
   mapMagentoToRow,
   getAttr,
+  getManufacturerId,
+  resolveBrandFromName,
+  loadBrandWhitelist,
   readProductsFromMagento,
   toProduct,
   cleanText,
