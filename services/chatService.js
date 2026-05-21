@@ -3953,7 +3953,7 @@ function filterProducts(products, slots) {
         tags.includes("tire") ||
         tags.includes("tire_dressing") ||
         (tags.includes("rubber") && (tags.includes("dressing") || tags.includes("cleaner"))) ||
-        /anvelop|tire|tyre|cauciuc/.test(productText);
+        /anvelop|tire|tyre/.test(productText);
       if (!tireOk) return false;
     }
 

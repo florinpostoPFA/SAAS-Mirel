@@ -45,4 +45,22 @@ describe("tire slot filter — vreau ceva pentru anvelope", () => {
     expect(after.length).toBeGreaterThan(0);
     expect(after[0].id).toBe("G7516");
   });
+
+  test("PRODUCT_FILTER drops non-tire SKU when description contains cauciuc but name is not tire", () => {
+    const msg = "vreau ceva pentru anvelope";
+    const slots = inferWheelsSurfaceFromObject(extractSlotsFromMessage(msg));
+    expect(slots.surface).toBe("tires");
+
+    const interiorRubberMention = {
+      id: "G13616",
+      name: "Solutie detailing interior Quick Interior Detailer Meguiar's, G13616",
+      description:
+        "Curata rapid plastic, piele, vinil, cauciuc, metal, sticla — produs interior, nu roti.",
+      tags: [],
+      manufacturerId: "9"
+    };
+
+    const after = filterProducts([interiorRubberMention], slots);
+    expect(after.length).toBe(0);
+  });
 });
