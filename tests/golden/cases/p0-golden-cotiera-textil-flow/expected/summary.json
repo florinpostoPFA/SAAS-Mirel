@@ -505,6 +505,7 @@
               "surface": "confirmed"
             },
             "slots": {
+              "brand": null,
               "context": "interior",
               "object": "cotiera",
               "surface": "textile"
@@ -576,6 +577,7 @@
               "surface": "confirmed"
             },
             "slots": {
+              "brand": null,
               "context": "interior",
               "object": "cotiera",
               "surface": "textile"
@@ -627,6 +629,7 @@
             "objective": {
               "needsCompletion": false,
               "slots": {
+                "brand": null,
                 "context": "interior",
                 "object": "cotiera",
                 "surface": "textile",
@@ -659,6 +662,7 @@
               "surface": "confirmed"
             },
             "slots": {
+              "brand": null,
               "context": "interior",
               "object": "cotiera",
               "surface": "textile",
@@ -709,6 +713,7 @@
             "objective": {
               "needsCompletion": false,
               "slots": {
+                "brand": null,
                 "context": "interior",
                 "object": "cotiera",
                 "surface": "textile",
@@ -741,6 +746,7 @@
               "surface": "confirmed"
             },
             "slots": {
+              "brand": null,
               "context": "interior",
               "object": "cotiera",
               "surface": "textile",
@@ -802,6 +808,7 @@
         "objective": {
           "needsCompletion": false,
           "slots": {
+            "brand": null,
             "context": "interior",
             "object": "cotiera",
             "surface": "textile",
@@ -834,6 +841,7 @@
           "surface": "confirmed"
         },
         "slots": {
+          "brand": null,
           "context": "interior",
           "object": "cotiera",
           "surface": "textile",
@@ -891,6 +899,7 @@
         "objective": {
           "needsCompletion": false,
           "slots": {
+            "brand": null,
             "context": "interior",
             "object": "cotiera",
             "surface": "textile",
@@ -923,6 +932,7 @@
           "surface": "confirmed"
         },
         "slots": {
+          "brand": null,
           "context": "interior",
           "object": "cotiera",
           "surface": "textile",
