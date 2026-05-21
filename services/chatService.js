@@ -2814,6 +2814,7 @@ function mergeSlots(sessionSlots, newSlots) {
     context: next.context || prev.context || null,
     surface: next.surface || prev.surface || null,
     object: next.object || prev.object || null,
+    brand: next.brand || prev.brand || null,
     vehicleMake: next.vehicleMake ?? prev.vehicleMake ?? null,
     vehicleModel: next.vehicleModel ?? prev.vehicleModel ?? null,
     vehicleYear: next.vehicleYear ?? prev.vehicleYear ?? null
@@ -2828,6 +2829,7 @@ function mergePendingClarificationSlots(previousSlots, parsedSlots) {
     context: parsed.context ?? previous.context ?? null,
     surface: parsed.surface ?? previous.surface ?? null,
     object: parsed.object ?? previous.object ?? null,
+    brand: parsed.brand ?? previous.brand ?? null,
     vehicleMake: parsed.vehicleMake ?? previous.vehicleMake ?? null,
     vehicleModel: parsed.vehicleModel ?? previous.vehicleModel ?? null,
     vehicleYear: parsed.vehicleYear ?? previous.vehicleYear ?? null
@@ -10370,9 +10372,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       emit("ai_response", { response: reply });
       logResponseSummary("product_search", { products: finalProducts.length });
       interactionRef.slots = {
-        context: slotResult.slots?.context || null,
-        object: slotResult.slots?.object || null,
-        surface: slotResult.slots?.surface || null
+        context: selectionSlots.context || slotResult.slots?.context || null,
+        object: selectionSlots.object || slotResult.slots?.object || null,
+        surface: selectionSlots.surface || slotResult.slots?.surface || null,
+        brand: selectionSlots.brand || slotResult.slots?.brand || null,
+        vehicleMake: selectionSlots.vehicleMake ?? slotResult.slots?.vehicleMake ?? null,
+        vehicleModel: selectionSlots.vehicleModel ?? slotResult.slots?.vehicleModel ?? null,
+        vehicleYear: selectionSlots.vehicleYear ?? slotResult.slots?.vehicleYear ?? null
       };
       interactionRef.intentType = "selection";
       return endInteraction(interactionRef, { reply, products: finalProducts }, {
