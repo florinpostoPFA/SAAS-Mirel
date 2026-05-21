@@ -111,6 +111,8 @@ const {
   wheelTireTagBoost,
   selectionRoleFromWheelTire
 } = require("./wheelTireSemantics");
+const { stripInferredMaterialTags } = require("./materialTagGuard");
+const { extractBrandFromMessage, productMatchesBrand } = require("./brandExtraction");
 const contextLossMvp = require("./contextLossMvp");
 const {
   buildPendingQuestionState,
@@ -1066,7 +1068,8 @@ function shouldStripLeatherForTowelMessage(message, slots = {}) {
 }
 
 function sanitizeTagsForMessage(message, tags, slots = {}) {
-  const safeTags = Array.isArray(tags) ? tags : [];
+  let safeTags = Array.isArray(tags) ? tags : [];
+  safeTags = stripInferredMaterialTags(message, safeTags);
   if (!shouldStripLeatherForTowelMessage(message, slots)) {
     return safeTags;
   }
@@ -1192,7 +1195,12 @@ function summarizeProductsForLog(products) {
   return products.slice(0, 25).map(p => ({
     id: p.id != null ? p.id : null,
     sku: p.sku != null ? String(p.sku) : null,
-    name: p.name != null ? String(p.name) : null
+    name: p.name != null ? String(p.name) : null,
+    manufacturerId:
+      p.manufacturerId != null && String(p.manufacturerId).trim() !== ""
+        ? Number(p.manufacturerId)
+        : null,
+    brand: p.brand != null ? String(p.brand) : null
   }));
 }
 
@@ -2730,10 +2738,12 @@ function extractSlotsFromMessage(message) {
     });
   }
 
+  const brand = extractBrandFromMessage(message);
   const baseSlots = {
     context: resolvedContext,
     surface: inferredSurface,
-    object
+    object,
+    ...(brand ? { brand } : {})
   };
   return applyWheelTireObjectToSlots(message, baseSlots);
 }
@@ -3465,6 +3475,47 @@ function matchesAllProductTags(product, tagsToMatch = []) {
   return safeTagsToMatch.every(tag => normalizedTags.includes(tag));
 }
 
+function productNameDescriptionText(product) {
+  return `${String(product?.name || "")} ${String(product?.short_description || product?.description || "")}`
+    .toLowerCase();
+}
+
+/** Name-based wheel vs tire disambiguation when catalog tags are empty. */
+function isTireOnlyNamedProduct(product) {
+  const text = productNameDescriptionText(product);
+  const tireLike = /anvelop|tire|tyre|cauciuc/.test(text);
+  const wheelLike = /jante|janta|wheel|felg|roti|rim/.test(text);
+  return tireLike && !wheelLike;
+}
+
+function matchesWheelHardFilterAllow(product, allow = []) {
+  const text = productNameDescriptionText(product);
+  if (isTireOnlyNamedProduct(product)) {
+    return false;
+  }
+  const allowSet = new Set(
+    (Array.isArray(allow) ? allow : []).map((t) => String(t || "").toLowerCase())
+  );
+  const wheelNamed = /jante|janta|wheel|felg|roti|rim/.test(text);
+  const wheelCleanerNamed =
+    /wheel\s*cleaner|curatare\s*jante|curățare\s*jante|iron\s*remover|degresant\s*jante|decontaminare/.test(
+      text
+    );
+  if (wheelNamed && (allowSet.has("wheels") || allowSet.has("wheel_cleaner"))) {
+    return true;
+  }
+  if (wheelCleanerNamed && allowSet.has("wheel_cleaner")) {
+    return true;
+  }
+  if (/\b(perie|brush)\b/.test(text) && allowSet.has("brush")) {
+    return true;
+  }
+  if (/\b(microfiber|microfibr)\b/.test(text) && allowSet.has("microfiber")) {
+    return true;
+  }
+  return false;
+}
+
 function isFragranceOrOdorProduct(product) {
   const tags = normalizeProductTags(product);
   const name = String(product?.name || "").toLowerCase();
@@ -3515,7 +3566,10 @@ function applyHardFilter(candidates, slots) {
     : [];
 
   const allowExcludeFiltered = safeCandidates.filter(product => {
-    const matchesAllow = allow.length === 0 || matchesAnyProductTag(product, allow);
+    const matchesAllow =
+      allow.length === 0 ||
+      matchesAnyProductTag(product, allow) ||
+      (key === "exterior|wheels" && matchesWheelHardFilterAllow(product, allow));
     const matchesExclude = matchesAnyProductTag(product, exclude);
     return matchesAllow && !matchesExclude;
   });
@@ -3891,25 +3945,33 @@ function filterProducts(products, slots) {
     if (safeSlots.surface === "glass" && !tags.includes("glass")) return false;
 
     if (safeSlots.surface === "tires") {
+      const productText = `${product.name || ""} ${product.description || ""}`.toLowerCase();
       const tireOk =
         tags.includes("tires") ||
         tags.includes("tire") ||
         tags.includes("tire_dressing") ||
-        (tags.includes("rubber") && (tags.includes("dressing") || tags.includes("cleaner")));
+        (tags.includes("rubber") && (tags.includes("dressing") || tags.includes("cleaner"))) ||
+        /anvelop|tire|tyre|cauciuc/.test(productText);
       if (!tireOk) return false;
     }
 
     if (safeSlots.surface === "wheels") {
+      const productText = `${product.name || ""} ${product.description || ""}`.toLowerCase();
       const wheelOk =
         tags.includes("wheels") ||
         tags.includes("wheel_cleaner") ||
         (tags.includes("metal") && tags.includes("cleaner")) ||
-        tags.includes("iron_remover");
+        tags.includes("iron_remover") ||
+        /jante|janta|wheel|felg|roti/.test(productText);
       if (!wheelOk) return false;
     }
 
     // P1.10 — Object/slot coarse gate (deterministic; drops irrelevant SKUs when object is known)
     if (!isAccessory && safeSlots.object && !passesSlotObjectRole(product, safeSlots)) {
+      return false;
+    }
+
+    if (safeSlots.brand && !productMatchesBrand(product, safeSlots.brand)) {
       return false;
     }
 
@@ -4414,20 +4476,25 @@ function applyDeterministicTagFallback(message, detectedTags) {
     if (t) tags.add(t);
   }
 
+  if (/\bjante?\b|\bjantele\b/.test(text)) {
+    const wt = analyzeWheelTireMessage(message);
+    if (wt.wheelTireIntent !== "tire_dressing") {
+      if (!tags.has("wheels")) {
+        tags.add("wheels");
+        fallbackUsed = true;
+      }
+      if (!tags.has("exterior")) {
+        tags.add("exterior");
+        fallbackUsed = true;
+      }
+    }
+  }
+
   if (!Array.isArray(detectedTags) || normalizedTags.length === 0) {
     if (text.includes("parbriz")) {
       tags.add("glass");
       tags.add("exterior");
       fallbackUsed = true;
-    }
-
-    if (text.includes("jante")) {
-      const wt = analyzeWheelTireMessage(message);
-      if (wt.wheelTireIntent !== "tire_dressing") {
-        tags.add("wheels");
-        tags.add("exterior");
-        fallbackUsed = true;
-      }
     }
 
     if (text.includes("interior")) {
@@ -4441,7 +4508,8 @@ function applyDeterministicTagFallback(message, detectedTags) {
     fallbackUsed = true;
   }
 
-  const finalTags = Array.from(tags);
+  let finalTags = Array.from(tags);
+  finalTags = stripInferredMaterialTags(message, finalTags);
   if (fallbackUsed) {
     console.log("TAG_FALLBACK_USED", finalTags);
   }
@@ -6868,6 +6936,20 @@ function applyIntentHeuristicToQueryType(interactionRef, queryType, intentCore, 
     if (!isWheelsTiresProductFramingAsk(intentCore)) {
       next = "selection";
       reason = "procedural_product_search_intent";
+    }
+  }
+
+  if (queryType === "procedural" && hl === "product_guidance") {
+    const wt = analyzeWheelTireMessage(intentCore);
+    const gate = normalizeRomanianTextForGate(intentCore);
+    if (
+      wt.wheelTireIntent === "wheel_cleaning" &&
+      /\b(cum\s+curat|cum\s+curăț|cum\s+spal|cum\s+spăl|ce\s+produs|recomand|recomanda|recomandă)\b/.test(
+        gate
+      )
+    ) {
+      next = "selection";
+      reason = "wheel_cleaning_guidance_as_selection";
     }
   }
 
@@ -9383,8 +9465,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       if (deterministicIntent === "procedural") {
-        queryType = "procedural";
-        interactionRef.queryType = queryType;
+        const keepWheelSelection =
+          interactionRef.intentRoutingTelemetry?.intentHeuristicOverrideTo === "selection" &&
+          interactionRef.intentRoutingTelemetry?.intentHeuristicReason ===
+            "wheel_cleaning_guidance_as_selection";
+        if (!keepWheelSelection) {
+          queryType = "procedural";
+          interactionRef.queryType = queryType;
+        }
       } else if (deterministicIntent === "knowledge") {
         queryType = "informational";
         interactionRef.queryType = queryType;
@@ -9855,7 +9943,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     // SELECTION (strict slot logic, no fallback/knowledge)
-    if (!isSafetyEnforced && previewAction === "selection") {
+    // queryType drives this path; routing may normalize action to "recommend" while slots are complete.
+    if (!isSafetyEnforced && queryType === "selection") {
       const pendingCoverageGoalQuestionAtEntry =
         sessionContext?.pendingQuestion?.source === "coverage_role_goal"
           ? sessionContext.pendingQuestion
@@ -10110,13 +10199,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
       }
 
-      let qualityCandidates = hardFilterResult.products.filter(product => !isGenericProduct(product));
+      const wheelHardFilterKey = hardFilterResult.meta.key === "exterior|wheels";
+      let qualityCandidates = hardFilterResult.products.filter((product) => {
+        if (
+          wheelHardFilterKey &&
+          matchesWheelHardFilterAllow(product, hardFilterResult.meta.allow)
+        ) {
+          return true;
+        }
+        return !isGenericProduct(product);
+      });
       if (qualityCandidates.length === 0) {
         const bestSolution = hardFilterResult.products.find(product => !isAccessoryProduct(product));
         if (bestSolution) {
           qualityCandidates = [bestSolution];
         }
       }
+
+      qualityCandidates = applyTierOneManufacturerGate(qualityCandidates);
 
       if (qualityCandidates.length === 0) {
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
@@ -12017,6 +12117,7 @@ module.exports = {
     validateCombination,
     inferWheelsSurfaceFromObject,
     filterProducts,
+    applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
     applyDeterministicSessionResetInPlace,

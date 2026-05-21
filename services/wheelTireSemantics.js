@@ -356,7 +356,14 @@ function wheelTireTagBoost(message) {
     return ["exterior", "tires", "rubber", "dressing"];
   }
   if (a.wheelTireIntent === "wheel_cleaning") {
-    return ["exterior", "wheels", "cleaning", "metal"];
+    const tags = ["exterior", "wheels", "cleaning"];
+    const normFull = normText(message);
+    if (
+      /\b(aluminiu|aluminum|aluminium|metal|crom|otel|inox|chrome|chromium)\b/.test(normFull)
+    ) {
+      tags.push("metal");
+    }
+    return tags;
   }
   return [];
 }
