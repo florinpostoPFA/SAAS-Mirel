@@ -1,0 +1,506 @@
+{
+  "version": "1.0-proposed-2026-05-22",
+  "vocabulary_version": "1.1",
+  "status": "proposed",
+  "description": "Proposed tier-1 ground truth for founder/CTO review. Rename to Tests/tierOneGroundTruth.json after batch approval. Used by Step 1.4 tagger validation harness.",
+  "categories": {
+    "tires": {
+      "description": "Tier-1 tire dressings + cleaners. Diverse finish and concentration for tagger validation.",
+      "products": [
+        {
+          "_source_knowledge_id": "meguiars_endurance_tire_gel",
+          "magento_id": "ADB000141",
+          "sku": "ADB000141",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Dressing luciu anvelope Adbl Black Water, 1L",
+          "rationale": "ADBL Black Water 1L — high-gloss tire dressing, ready to use. Tier-1 SKU for gloss finish pattern.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "tires"
+            ],
+            "purpose": "protection",
+            "product_type": "tire_dressing",
+            "finish": "gloss",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "meguiars_endurance_tire_gel",
+          "magento_id": "T2 0.25",
+          "sku": "T2 0.25",
+          "manufacturer": "Gtechniq",
+          "manufacturerId": "39",
+          "name": "Solutie intretinere anvelope T2 Tyre Dressing Gtechniq, 250ml",
+          "rationale": "Gtechniq T2 Tyre Dressing — subtle OEM-style tire finish (mapped to finish:natural).",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "tires"
+            ],
+            "purpose": "protection",
+            "product_type": "tire_dressing",
+            "finish": "natural",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "meguiars_endurance_tire_gel",
+          "magento_id": "196612",
+          "sku": "196612",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Dressing spuma anvelope Kock Chemie RFS KCU-Reifenschaum, 600ML",
+          "rationale": "Koch Chemie Reifenschaum — foam tire dressing with wet-look shine.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "tires"
+            ],
+            "purpose": "protection",
+            "product_type": "tire_dressing",
+            "finish": "wet_look",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "tire_rubber_cleaner_utilizare",
+          "magento_id": "ADB000026",
+          "sku": "ADB000026",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Solutie curatare anvelope si cauciuc Adbl Tire and Rubber Cleaner 500ml",
+          "rationale": "ADBL Tire and Rubber Cleaner 500ml — degreasing prep before dressing.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "tires",
+              "rubber"
+            ],
+            "purpose": "cleaning",
+            "product_type": "tire_cleaner",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "tire_rubber_cleaner_utilizare",
+          "magento_id": "ADB000028",
+          "sku": "ADB000028",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Solutie curatare anvelope si cauciuc Adbl Tire and Rubber Cleaner, 5L",
+          "rationale": "ADBL Tire and Rubber Cleaner 5L — concentrate dilution for tire cleaning.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "tires",
+              "rubber"
+            ],
+            "purpose": "cleaning",
+            "product_type": "tire_cleaner",
+            "concentration": "concentrate"
+          }
+        }
+      ]
+    },
+    "wheels": {
+      "description": "Tier-1 wheel cleaners: acidic, pH-neutral, iron fallout, concentrate, reactive decon.",
+      "products": [
+        {
+          "_source_knowledge_id": "solutie_jante_acida",
+          "magento_id": "187011",
+          "sku": "187011",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare jante acida concentrata Felgenreiniger Extrem Koch Chemie, 11kg",
+          "rationale": "Koch Felgenreiniger Extrem 11L — acidic wheel cleaner concentrate for heavy brake dust.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "wheels"
+            ],
+            "purpose": "cleaning",
+            "product_type": "wheel_cleaner",
+            "ph": "acidic",
+            "concentration": "concentrate",
+            "coating_safety": "coating_caution"
+          }
+        },
+        {
+          "_source_knowledge_id": "curatare_jante_indicator_rosu",
+          "magento_id": "218011",
+          "sku": "218011",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare jante Felgenblitz Saurefrei Koch Chemie, Fb, 11L",
+          "rationale": "Koch Felgenblitz Saurefrei 11L — acid-free (pH-neutral) wheel cleaner, coating-safe maintenance.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "wheels"
+            ],
+            "purpose": "cleaning",
+            "product_type": "wheel_cleaner",
+            "ph": "ph_neutral",
+            "concentration": "concentrate",
+            "coating_safety": "coating_safe"
+          }
+        },
+        {
+          "_source_knowledge_id": "curatare_jante_indicator_rosu",
+          "magento_id": "W6 0.5",
+          "sku": "W6 0.5",
+          "manufacturer": "Gtechniq",
+          "manufacturerId": "39",
+          "name": "Solutie decontaminare jante si caroserie Gtechniq W6 Iron and Fallout Remover, 500ml",
+          "rationale": "Gtechniq W6 Iron and Fallout Remover — iron decontamination on wheels and paint fallout.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "wheels",
+              "paint"
+            ],
+            "purpose": "decontamination",
+            "product_type": "iron_remover",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "solutie_jante_acida",
+          "magento_id": "ADB000532",
+          "sku": "ADB000532",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Gel acid pentru jante ADBL WHEEL WARRIOR GEL, 500ml",
+          "rationale": "ADBL Wheel Warrior Gel 500ml — acidic gel wheel cleaner, RTU application.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "wheels"
+            ],
+            "purpose": "cleaning",
+            "product_type": "wheel_cleaner",
+            "ph": "acidic",
+            "concentration": "ready_to_use",
+            "coating_safety": "uncoated_only"
+          }
+        },
+        {
+          "_source_knowledge_id": "curatare_jante_indicator_rosu",
+          "magento_id": "77704750",
+          "sku": "77704750",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie decontaminare jante Reactive Wheel Cleaner Koch Chemie, 750ml",
+          "rationale": "Koch Reactive Wheel Cleaner 750ml — reactive wheel decontamination before protection.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "wheels"
+            ],
+            "purpose": "decontamination",
+            "product_type": "wheel_cleaner",
+            "ph": "ph_neutral",
+            "concentration": "ready_to_use"
+          }
+        }
+      ]
+    },
+    "interior_plastic": {
+      "description": "Tier-1 interior plastic trim dressings: gloss, matte, satin, concentrate, RTU protection.",
+      "products": [
+        {
+          "_source_knowledge_id": "dressing_plastic_interior",
+          "magento_id": "20001",
+          "sku": "20001",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Dressing interior lucios Cockpit Super Pflege Koch Chemie, Csp, 1L",
+          "rationale": "Koch Cockpit Super Pflege 1L — glossy interior plastic dressing (Csp).",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "plastic_interior"
+            ],
+            "purpose": "protection",
+            "product_type": "trim_dressing",
+            "finish": "gloss",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "dressing_plastic_interior",
+          "magento_id": "48001",
+          "sku": "48001",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Dressing mat pentru plastic si cauciuc interior GUF Gummifix Koch Chemie, 1L",
+          "rationale": "Koch GUF Gummifix 1L — matte OEM look for interior plastic and rubber trim.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "plastic_interior",
+              "rubber"
+            ],
+            "purpose": "protection",
+            "product_type": "trim_dressing",
+            "finish": "matte",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "dressing_plastic_interior",
+          "magento_id": "132001",
+          "sku": "132001",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Dressing interior plastic si garnituri Ts Koch Chemie Top Star, semi-mat,1L",
+          "rationale": "Koch Top Star 1L — semi-mat interior plastic dressing (satin finish).",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "plastic_interior"
+            ],
+            "purpose": "protection",
+            "product_type": "trim_dressing",
+            "finish": "satin",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "dressing_plastic_interior",
+          "magento_id": "476001",
+          "sku": "476001",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Dressing plastic concentrat Hpc Hydro Plast Care Koch Chemie, 1L",
+          "rationale": "Koch Hydro Plast Care 1L — concentrate interior plastic dressing for dilution.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "plastic_interior"
+            ],
+            "purpose": "protection",
+            "product_type": "trim_dressing",
+            "finish": "satin",
+            "concentration": "concentrate"
+          }
+        },
+        {
+          "_source_knowledge_id": "protectie_ceramica_plastic_interior",
+          "magento_id": "ADB000065",
+          "sku": "ADB000065",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Dressing protectie suprafete din plastic interior Adbl Interior Wow, 1L",
+          "rationale": "ADBL Interior Wow 1L — RTU interior plastic protectant with satin finish.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "plastic_interior"
+            ],
+            "purpose": "protection",
+            "product_type": "trim_dressing",
+            "finish": "satin",
+            "concentration": "ready_to_use"
+          }
+        }
+      ]
+    },
+    "leather": {
+      "description": "Tier-1 leather cleaners and conditioners across ADBL, Koch, Ewocar.",
+      "products": [
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "ADB000466",
+          "sku": "ADB000466",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Solutie Curatare Piele ADBL Leather Cleaner, 500ml",
+          "rationale": "ADBL Leather Cleaner 500ml — dedicated leather cleaning before conditioning.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural",
+              "leather_synthetic"
+            ],
+            "purpose": "cleaning",
+            "product_type": "leather_cleaner",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "ADB000468",
+          "sku": "ADB000468",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Solutie Curatare Piele ADBL Leather Cleaner, 5L",
+          "rationale": "ADBL Leather Cleaner 5L — concentrate leather cleaner for pro dilution.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural",
+              "leather_synthetic"
+            ],
+            "purpose": "cleaning",
+            "product_type": "leather_cleaner",
+            "concentration": "concentrate"
+          }
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "ADB000327",
+          "sku": "ADB000327",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Balsam hidratare si protectie piele ADBL Leather Conditioner, 500ml",
+          "rationale": "ADBL Leather Conditioner 500ml — feed and protect natural/synthetic leather.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural"
+            ],
+            "purpose": "conditioning",
+            "product_type": "leather_conditioner",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "77709500",
+          "sku": "77709500",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie hidratare piele Protect Leather Care Koch Chemie, 500ml",
+          "rationale": "Koch Protect Leather Care 500ml — leather hydration and protection.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural"
+            ],
+            "purpose": "conditioning",
+            "product_type": "leather_conditioner",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "LC1",
+          "sku": "LC1",
+          "manufacturer": "Ewocar",
+          "manufacturerId": "70",
+          "name": "Solutie Curatare Piele EWOCAR LEATHERCLEAN, 500 ML",
+          "rationale": "Ewocar Leather Clean 500ml — RTU leather cleaner for maintenance washes.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural",
+              "leather_synthetic"
+            ],
+            "purpose": "cleaning",
+            "product_type": "leather_cleaner",
+            "concentration": "ready_to_use"
+          }
+        }
+      ]
+    },
+    "glass": {
+      "description": "Tier-1 glass cleaners: RTU, concentrate, hydrophobic hybrid, pro formulas.",
+      "products": [
+        {
+          "_source_knowledge_id": "laveta_geam_utilizare",
+          "magento_id": "77703750",
+          "sku": "77703750",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare sticla Speed Glass Cleaner Koch Chemie, 750ml",
+          "rationale": "Koch Speed Glass Cleaner 750ml — standard RTU interior/exterior glass cleaning.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "glass"
+            ],
+            "purpose": "cleaning",
+            "product_type": "glass_cleaner",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "laveta_geam_utilizare",
+          "magento_id": "302001",
+          "sku": "302001",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare sticla Koch Chemie Gc - Glass Cleaner Pro, 1L",
+          "rationale": "Koch Glass Cleaner Pro 1L — pro glass cleaner concentrate line (Gc).",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "glass"
+            ],
+            "purpose": "cleaning",
+            "product_type": "glass_cleaner",
+            "concentration": "concentrate"
+          }
+        },
+        {
+          "_source_knowledge_id": "laveta_geam_utilizare",
+          "magento_id": "ADB000353",
+          "sku": "ADB000353",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Solutie curatare sticla cu efect hidrofob Adbl Hybrid Glass, 500ml",
+          "rationale": "ADBL Hybrid Glass 500ml — glass cleaner with hydrophobic maintenance effect.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "glass"
+            ],
+            "purpose": "cleaning",
+            "product_type": "glass_cleaner",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "laveta_geam_utilizare",
+          "magento_id": "G6 0.5",
+          "sku": "G6 0.5",
+          "manufacturer": "Gtechniq",
+          "manufacturerId": "39",
+          "name": "Solutie curatare geamuri Gtechniq G6 Perfect Glass, 500ml",
+          "rationale": "Gtechniq G6 Perfect Glass 500ml — coating-safe glass cleaner RTU.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "glass"
+            ],
+            "purpose": "cleaning",
+            "product_type": "glass_cleaner",
+            "concentration": "ready_to_use",
+            "coating_safety": "coating_safe"
+          }
+        },
+        {
+          "_source_knowledge_id": "laveta_geam_utilizare",
+          "magento_id": "GC1000",
+          "sku": "GC1000",
+          "manufacturer": "Ewocar",
+          "manufacturerId": "70",
+          "name": "Solutie curatare geamuri Ewocar CleanGlass-1 L",
+          "rationale": "Ewocar CleanGlass 1L — RTU glass cleaner for streak-free maintenance.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "glass"
+            ],
+            "purpose": "cleaning",
+            "product_type": "glass_cleaner",
+            "concentration": "ready_to_use"
+          }
+        }
+      ]
+    }
+  }
+}
