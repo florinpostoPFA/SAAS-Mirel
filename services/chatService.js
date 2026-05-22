@@ -123,6 +123,10 @@ const { getArtifactVersions } = require("./artifactVersions");
 
 const SOURCE = "ChatService";
 
+const TIER_ONE_UNAVAILABLE_COPY_RO =
+  "Pentru categoria aceasta nu avem momentan un produs dintre brand-urile pe care le recomandăm. Vrei să-ți sugerez o alternativă apropiată sau să trec la altă categorie?";
+const PRODUCTS_REASON_TIER_ONE_UNAVAILABLE = "tier_one_unavailable";
+
 /**
  * P0.4 — Canonical chat lifecycle (spec ↔ code ↔ logs). Typical turns emit CHAT_PIPELINE_STAGE
  * in this order; early exits omit later stages.
@@ -3777,7 +3781,10 @@ function returnSelectionFailSafe(
       : "no_matching_products";
   const responseLocale = interactionRef?.sessionContext?.responseLocale || "ro";
   const fallbackPlan = buildNoProductFallbackResponse(selectionSlots || {}, responseLocale);
-  if (fallbackPlan.type === "question") {
+  if (
+    fallbackPlan.type === "question" &&
+    productsReason !== PRODUCTS_REASON_TIER_ONE_UNAVAILABLE
+  ) {
     const questionMessage = options.reply || fallbackPlan.message;
     const failSafeDecision = {
       ...(selectionDecision || {}),
@@ -3897,6 +3904,41 @@ function applyTierOneManufacturerGate(products) {
   );
 
   return surviving;
+}
+
+function isTierOneGateWipe(preGateProducts, postGateProducts) {
+  const before = Array.isArray(preGateProducts) ? preGateProducts.length : 0;
+  const after = Array.isArray(postGateProducts) ? postGateProducts.length : 0;
+  return tierOneGateState.gateEnabled && before > 0 && after === 0;
+}
+
+function classifyEmptySelectionReason(preGateProducts, postGateProducts) {
+  if (isTierOneGateWipe(preGateProducts, postGateProducts)) {
+    return PRODUCTS_REASON_TIER_ONE_UNAVAILABLE;
+  }
+  return "no_matching_products";
+}
+
+function returnTierOneUnavailableFailSafe(
+  interactionRef,
+  sessionId,
+  selectionDecision,
+  selectionSlots,
+  { roleId = null, preGateProducts = [] } = {}
+) {
+  const preGateCount = Array.isArray(preGateProducts) ? preGateProducts.length : 0;
+  const droppedManufacturerIds = (Array.isArray(preGateProducts) ? preGateProducts : []).map((product) =>
+    product?.manufacturerId != null ? String(product.manufacturerId) : "null"
+  );
+  info(SOURCE, "TIER_ONE_UNAVAILABLE", {
+    roleId,
+    preGateCount,
+    droppedManufacturerIds
+  });
+  return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots, {
+    reply: TIER_ONE_UNAVAILABLE_COPY_RO,
+    productsReason: PRODUCTS_REASON_TIER_ONE_UNAVAILABLE
+  });
 }
 
 function filterProducts(products, slots) {
@@ -4218,7 +4260,7 @@ function buildFinalTags(coreTags, workingTags, slots = {}) {
   ].filter(Boolean))];
 }
 
-function findProductsByRoleConfig(roleConfig, products) {
+function findProductsByRoleConfig(roleConfig, products, roleId = null) {
   const safeRoleConfig = roleConfig && typeof roleConfig === "object" ? roleConfig : {};
   const matchTags = Array.isArray(safeRoleConfig.matchTags)
     ? safeRoleConfig.matchTags.map(tag => String(tag).toLowerCase())
@@ -4239,7 +4281,12 @@ function findProductsByRoleConfig(roleConfig, products) {
   const normalizeTags = (product) => Array.isArray(product?.tags)
     ? product.tags.map(tag => String(tag).toLowerCase())
     : [];
-  const roleId = safeRoleConfig.id != null ? String(safeRoleConfig.id) : null;
+  const resolvedRoleId =
+    roleId != null
+      ? String(roleId)
+      : safeRoleConfig.id != null
+        ? String(safeRoleConfig.id)
+        : null;
   const hasEmptyTags = (product) => normalizeTags(product).length === 0;
   const findMatchTextPhraseHit = (product) => {
     if (matchText.length === 0) return null;
@@ -4268,7 +4315,7 @@ function findProductsByRoleConfig(roleConfig, products) {
         const matchedPhrase = findMatchTextPhraseHit(product);
         if (matchedPhrase) {
           info(SOURCE, "ROLE_CONFIG_TEXT_FALLBACK", {
-            roleId,
+            roleId: resolvedRoleId,
             productId: product?.id ?? null,
             matchTextPhrase: matchedPhrase
           });
@@ -4378,7 +4425,7 @@ function detectCoverageGapRole(message, slots = {}) {
 
 function tryCoverageRoleRelaxedRetry(role, roleConfig, products, settings) {
   if (!COVERAGE_ROLE_SET.has(role) || !roleConfig) return [];
-  const roleCandidates = findProductsByRoleConfig(roleConfig, products);
+  const roleCandidates = findProductsByRoleConfig(roleConfig, products, role);
   if (!Array.isArray(roleCandidates) || roleCandidates.length === 0) return [];
   const ranked = applyRanking(roleCandidates, { tags: roleConfig.matchTags || [], priceRange: null }, settings);
   const limited = enforceProductLimit(ranked, Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS));
@@ -4400,7 +4447,7 @@ function findProductByRole(role, products) {
     return null;
   }
 
-  const matches = findProductsByRoleConfig(roleConfig, products);
+  const matches = findProductsByRoleConfig(roleConfig, products, role);
   return matches[0] || null;
 }
 
@@ -10201,7 +10248,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
 
       const broadCandidates = roleConfig
-        ? findProductsByRoleConfig(roleConfig, products)
+        ? findProductsByRoleConfig(roleConfig, products, role)
         : loggingV2.withSearchPhaseSync(
             () =>
               findRelevantProducts(selectionTags, products, MAX_SELECTION_PRODUCTS, {
@@ -10252,7 +10299,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
       }
 
+      const preTierOneQuality = qualityCandidates;
       qualityCandidates = applyTierOneManufacturerGate(qualityCandidates);
+
+      if (isTierOneGateWipe(preTierOneQuality, qualityCandidates)) {
+        return returnTierOneUnavailableFailSafe(
+          interactionRef,
+          sessionId,
+          selectionDecision,
+          selectionSlots,
+          { roleId: role, preGateProducts: preTierOneQuality }
+        );
+      }
 
       if (qualityCandidates.length === 0) {
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
@@ -10269,6 +10327,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       );
       const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
       const filteredSelectionProducts = filterProducts(enrichedSelectionProducts, selectionSlots);
+      const preTierOneFiltered = filteredSelectionProducts;
       const tierOneSelectionProducts = applyTierOneManufacturerGate(filteredSelectionProducts);
       const selectionBundle = buildProductBundle(tierOneSelectionProducts, {
         hardFilterKey: hardFilterResult?.meta?.key || null
@@ -10289,12 +10348,32 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         });
       }
       if (selectionBundle.length === 0) {
+        if (isTierOneGateWipe(preTierOneFiltered, tierOneSelectionProducts)) {
+          return returnTierOneUnavailableFailSafe(
+            interactionRef,
+            sessionId,
+            selectionDecision,
+            selectionSlots,
+            { roleId: role, preGateProducts: preTierOneFiltered }
+          );
+        }
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
       }
       let finalProducts = selectionBundle.slice(0, MAX_SELECTION_PRODUCTS);
-      finalProducts = applyTierOneManufacturerGate(
-        ensureApcProductIncluded(finalProducts, products, selectionTags).slice(0, MAX_SELECTION_PRODUCTS)
+      const preTierOneFinal = ensureApcProductIncluded(finalProducts, products, selectionTags).slice(
+        0,
+        MAX_SELECTION_PRODUCTS
       );
+      finalProducts = applyTierOneManufacturerGate(preTierOneFinal);
+      if (isTierOneGateWipe(preTierOneFinal, finalProducts)) {
+        return returnTierOneUnavailableFailSafe(
+          interactionRef,
+          sessionId,
+          selectionDecision,
+          selectionSlots,
+          { roleId: role, preGateProducts: preTierOneFinal }
+        );
+      }
       let productsReason = "strict";
       if (finalProducts.some((product) => product?.selectionMeta?.fallback === "safe_generic_apc")) {
         productsReason = "no_matching_products";
@@ -12152,6 +12231,12 @@ module.exports = {
     tryCoverageRoleRelaxedRetry,
     roleCoverageFallbackQuestion,
     findProductsByRoleConfig,
+    applyTierOneManufacturerGate,
+    isTierOneGateWipe,
+    classifyEmptySelectionReason,
+    returnSelectionFailSafe,
+    TIER_ONE_UNAVAILABLE_COPY_RO,
+    PRODUCTS_REASON_TIER_ONE_UNAVAILABLE,
     tryConsumeSurfaceAssistTurn,
     tryConsumeLlmSurfaceAssistTurn,
     validateCombination,

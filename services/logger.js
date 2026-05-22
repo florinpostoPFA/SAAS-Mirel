@@ -83,7 +83,6 @@ function logDebug(tag, data) {
 }
 
 function info(source, message, data) {
-  if (!DEBUG_ENABLED) return;
   emit("INFO", source, toPayload(message, data));
 }
 
