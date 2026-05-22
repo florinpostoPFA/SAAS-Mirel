@@ -94,11 +94,10 @@
           "expected_tags": {
             "location": "exterior",
             "surface": [
-              "tires",
               "rubber"
             ],
-            "purpose": "cleaning",
-            "product_type": "tire_cleaner",
+            "purpose": "protection",
+            "product_type": "rubber_protectant",
             "concentration": "ready_to_use"
           },
           "_match_candidates": [
@@ -244,15 +243,14 @@
           "manufacturer": "Koch Chemie",
           "manufacturerId": "13",
           "name": "Dressing mat pentru plastic si cauciuc interior GUF Gummifix Koch Chemie, 1L",
-          "rationale": "Koch GUF Gummifix 1L — matte OEM look for interior plastic and rubber trim.",
+          "rationale": "Koch GUF Gummifix 1L — rubber protectant (Gummifix name bias); interior mats/plastic zones per catalog.",
           "expected_tags": {
             "location": "interior",
             "surface": [
-              "plastic_interior",
               "rubber"
             ],
             "purpose": "protection",
-            "product_type": "trim_dressing",
+            "product_type": "rubber_protectant",
             "finish": "matte",
             "concentration": "ready_to_use"
           }

@@ -108,6 +108,42 @@ function applyConcentrationHeuristic(expectedTags, product, knowledgeId, knowled
   return tags;
 }
 
+/**
+ * Product name contains Gummi/Gummifix/rubber/cauciuc → rubber protectant (founder 2026-05-22).
+ * Gummifix is canonical: catalog lists "interior" but chemistry is rubber-specific.
+ */
+function applyRubberProductNameBias(expectedTags, product) {
+  const name = String(product?.name || "");
+  const isGummiLine = /\bgummifix\b|\bgummi\b/i.test(name);
+  const isRubberOnlyName =
+    /\b(cauciuc|rubber)\b/i.test(name) && !/\bplastic\b/i.test(name);
+  if (!isGummiLine && !isRubberOnlyName) {
+    return expectedTags;
+  }
+
+  const tags = { ...expectedTags };
+  const scan = [
+    product?.meta_keyword,
+    product?.short_description,
+    String(product?.description || "").slice(0, 500)
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  tags.surface = ["rubber"];
+  tags.product_type = "rubber_protectant";
+  tags.purpose = "protection";
+
+  if (/garnituri|weatherstrip|usi\b|door seal|exterior|parbriz/.test(scan)) {
+    tags.location = "exterior";
+  } else if (/interior|covorase|bord|cockpit|pardoseli/.test(scan)) {
+    tags.location = "interior";
+  }
+
+  return tags;
+}
+
 /** Acidic concentrates marketed as extreme/aggressive → uncoated_only (founder rule 2026-05-22). */
 function applyAggressiveAcidicCoatingSafety(expectedTags, product) {
   const tags = { ...expectedTags };
@@ -140,6 +176,7 @@ function buildEntry(byId, knowledgeById, spec) {
   );
   expected_tags = applyAggressiveAcidicCoatingSafety(expected_tags, p);
   expected_tags = applyIronIndicatorRetag(expected_tags, p);
+  expected_tags = applyRubberProductNameBias(expected_tags, p);
 
   return {
     _source_knowledge_id: spec.knowledgeId,
@@ -382,19 +419,19 @@ function main() {
         finish: "gloss"
       }
     },
-    {
-      id: "48001",
-      knowledgeId: "dressing_plastic_interior",
-      rationale:
-        "Koch GUF Gummifix 1L — matte OEM look for interior plastic and rubber trim.",
-      expected_tags: {
-        location: "interior",
-        surface: ["plastic_interior", "rubber"],
-        purpose: "protection",
-        product_type: "trim_dressing",
-        finish: "matte"
-      }
-    },
+        {
+          id: "48001",
+          knowledgeId: "dressing_plastic_interior",
+          rationale:
+            "Koch GUF Gummifix 1L — rubber protectant (Gummifix name bias); interior mats/plastic zones per catalog.",
+          expected_tags: {
+            location: "interior",
+            surface: ["plastic_interior", "rubber"],
+            purpose: "protection",
+            product_type: "trim_dressing",
+            finish: "matte"
+          }
+        },
     {
       id: "132001",
       knowledgeId: "dressing_plastic_interior",
