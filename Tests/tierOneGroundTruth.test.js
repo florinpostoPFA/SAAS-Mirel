@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { loadTagVocabulary } = require("../scripts/autoTagProducts");
 
-const FIXTURE_PATH = path.join(__dirname, "tierOneGroundTruth.proposed.json");
+const FIXTURE_PATH = path.join(__dirname, "tierOneGroundTruth.json");
 const REQUIRED_TAG_KEYS = ["location", "surface", "purpose", "product_type"];
 const REQUIRED_ENTRY_KEYS = [
   "_source_knowledge_id",
@@ -25,7 +25,7 @@ function collectTagValues(expectedTags) {
   return values;
 }
 
-describe("tierOneGroundTruth.proposed.json", () => {
+describe("tierOneGroundTruth.json", () => {
   let doc;
   let allowedTags;
 

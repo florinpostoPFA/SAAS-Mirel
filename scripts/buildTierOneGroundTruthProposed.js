@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds Tests/tierOneGroundTruth.proposed.json from catalog + knowledge links.
+ * Builds Tests/tierOneGroundTruth.json from catalog + knowledge links.
  * Run: node scripts/buildTierOneGroundTruthProposed.js
  *
  * Heuristic guardrails (re-run safety — do not widen without founder review):
@@ -45,7 +45,7 @@ const path = require("path");
 
 const PRODUCTS_PATH = path.join(__dirname, "../data/products.json");
 const KNOWLEDGE_PATH = path.join(__dirname, "../data/knowledge.json");
-const OUTPUT_PATH = path.join(__dirname, "../Tests/tierOneGroundTruth.proposed.json");
+const OUTPUT_PATH = path.join(__dirname, "../Tests/tierOneGroundTruth.json");
 
 const BRAND_BY_MFR = {
   "13": "Koch Chemie",
@@ -948,11 +948,11 @@ function main() {
   }
 
   const doc = {
-    version: "1.0-proposed-2026-05-22",
+    version: "1.0-2026-05-22",
     vocabulary_version: "1.1",
-    status: "proposed",
+    status: "approved",
     description:
-      "Proposed tier-1 ground truth for founder/CTO review. Rename to Tests/tierOneGroundTruth.json after batch approval. Used by Step 1.4 tagger validation harness.",
+      "Tier-1 ground truth (25 SKUs, v1.1 tags) for Step 1.4 tagger validation harness. Built from catalog + knowledge links via buildTierOneGroundTruthProposed.js.",
     categories
   };
 

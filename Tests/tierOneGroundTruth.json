@@ -1,8 +1,8 @@
 {
-  "version": "1.0-proposed-2026-05-22",
+  "version": "1.0-2026-05-22",
   "vocabulary_version": "1.1",
-  "status": "proposed",
-  "description": "Proposed tier-1 ground truth for founder/CTO review. Rename to Tests/tierOneGroundTruth.json after batch approval. Used by Step 1.4 tagger validation harness.",
+  "status": "approved",
+  "description": "Tier-1 ground truth (25 SKUs, v1.1 tags) for Step 1.4 tagger validation harness. Built from catalog + knowledge links via buildTierOneGroundTruthProposed.js.",
   "categories": {
     "tires": {
       "description": "Tier-1 tire dressings + cleaners. Diverse finish and concentration for tagger validation.",
