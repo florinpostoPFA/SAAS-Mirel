@@ -11,6 +11,9 @@ const {
   buildPagePayload,
   helpfulValue,
   ingestDailyLogs,
+  parseArgs,
+  isValidIsoDate,
+  resolveLogFile,
   yesterdayUtc,
   RAW_JSON_MAX,
   TRUNC_SUFFIX,
@@ -181,6 +184,42 @@ describe("ingestDailyLogsToNotion: yesterdayUtc", () => {
   test("returns the UTC date 24h before the given timestamp", () => {
     const today = new Date("2026-05-07T03:00:00.000Z").getTime();
     expect(yesterdayUtc(today)).toBe("2026-05-06");
+  });
+});
+
+describe("ingestDailyLogsToNotion: CLI args", () => {
+  const logDir = path.join(__dirname, "..", "logs");
+
+  test("parseArgs --help sets help flag", () => {
+    expect(parseArgs(["--help"])).toEqual({ help: true });
+    expect(parseArgs(["-h"])).toEqual({ help: true });
+  });
+
+  test("parseArgs --date resolves log file path", () => {
+    expect(parseArgs(["--date", "2026-05-22"])).toEqual({ date: "2026-05-22" });
+    expect(resolveLogFile({ date: "2026-05-22", logDir })).toBe(
+      path.join(logDir, "2026-05-22.jsonl")
+    );
+  });
+
+  test("parseArgs default (no args) leaves date unset for yesterdayUtc fallback", () => {
+    expect(parseArgs([])).toEqual({});
+  });
+
+  test("parseArgs rejects invalid --date", () => {
+    expect(() => parseArgs(["--date", "05-22-2026"])).toThrow(/Invalid --date/);
+    expect(() => parseArgs(["--date", "2026-13-40"])).toThrow(/Invalid --date/);
+  });
+
+  test("parseArgs rejects unknown flags", () => {
+    expect(() => parseArgs(["--nope"])).toThrow(/Unknown argument/);
+  });
+
+  test("isValidIsoDate accepts only real YYYY-MM-DD values", () => {
+    expect(isValidIsoDate("2026-05-22")).toBe(true);
+    expect(isValidIsoDate("2024-02-29")).toBe(true);
+    expect(isValidIsoDate("not-a-date")).toBe(false);
+    expect(isValidIsoDate("2026-13-01")).toBe(false);
   });
 });
 
