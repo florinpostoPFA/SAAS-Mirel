@@ -7,7 +7,7 @@ const { normalizeTagList, applyProductTagOverrides } = require("../services/tagN
 dotenv.config();
 
 const PRODUCTS_PATH = path.join(__dirname, "../data/products.json");
-const VOCABULARY_PATH = path.join(__dirname, "../tests/tagVocabulary.json");
+const VOCABULARY_PATH = path.join(__dirname, "../Tests/tagVocabulary.json");
 const VOCABULARY_CATEGORIES = [
   "location",
   "surface",
