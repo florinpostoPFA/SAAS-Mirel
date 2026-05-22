@@ -483,14 +483,15 @@
           "manufacturer": "Ewocar",
           "manufacturerId": "70",
           "name": "Solutie curatare geamuri Ewocar CleanGlass-1 L",
-          "rationale": "Ewocar CleanGlass 1L — RTU glass cleaner for streak-free maintenance.",
+          "rationale": "Ewocar CleanGlass 1L — RTU glass cleaner; coating residue removal per catalog.",
           "expected_tags": {
-            "location": "interior",
+            "location": "exterior",
             "surface": [
               "glass"
             ],
             "purpose": "cleaning",
             "product_type": "glass_cleaner",
+            "coating_safety": "coating_safe",
             "concentration": "ready_to_use"
           }
         }

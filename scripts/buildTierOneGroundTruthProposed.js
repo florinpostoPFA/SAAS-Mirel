@@ -30,6 +30,11 @@
  * 6. Leather conditioner surfaces — product_type leather_conditioner + catalog mentions
  *    orice tip / vinil / piele ecologica / eco-leather / synthetic / vinyl → both
  *    leather_natural and leather_synthetic.
+ *
+ * 7. Glass coating_safety — set ONLY on explicit catalog signal (extract, don't guess).
+ *    Positive: safe on coatings / coating residue removal / Gtechniq glass prep (G1/G5).
+ *    Negative: ammonia / amoniac → uncoated_only. Absence of ammonia alone does NOT
+ *    imply coating_safe; leave the field omitted when no explicit signal.
  */
 const fs = require("fs");
 const path = require("path");
@@ -174,6 +179,37 @@ function collectFinishSignals(entry, product) {
   return signals;
 }
 
+const GLASS_COATING_SAFE_POSITIVE_RE =
+  /safe\s+(?:on|for|pe)\s+coat|sigur\s+(?:pe|pentru)\s+coat|coating\s+residue|reziduuri\s+de\s+coating|reziduurile\s+de\s+coating|after\s+glass\s+coating|după\s+aplicarea\s+(?:unui\s+)?coat|pregatire.*\bG[15]\b|pregătire.*\bG[15]\b|perfect\s+glass.*\bG[15]\b/i;
+
+const GLASS_AMMONIA_RE = /\bammonia\b|\bamoniac\b/i;
+
+function applyGlassCoatingSafety(expectedTags, product) {
+  if (expectedTags.product_type !== "glass_cleaner") {
+    return expectedTags;
+  }
+  const tags = { ...expectedTags };
+  const text = catalogText(product);
+
+  if (GLASS_AMMONIA_RE.test(text)) {
+    tags.coating_safety = "uncoated_only";
+    return tags;
+  }
+
+  if (tags.coating_safety) {
+    return tags;
+  }
+
+  const isGtechniqGlassPrep =
+    /\bgtechniq\b/i.test(text) &&
+    /\bG[15]\b|hidrofob|coating|tratament/i.test(text);
+  if (GLASS_COATING_SAFE_POSITIVE_RE.test(text) || isGtechniqGlassPrep) {
+    tags.coating_safety = "coating_safe";
+  }
+
+  return tags;
+}
+
 function applyLeatherConditionerSurfaceDefault(expectedTags, product) {
   if (expectedTags.product_type !== "leather_conditioner") {
     return expectedTags;
@@ -301,6 +337,7 @@ function buildEntry(byId, knowledgeById, spec) {
   expected_tags = applyIronIndicatorRetag(expected_tags, p);
   expected_tags = applyRubberProductNameBias(expected_tags, p);
   expected_tags = applyLeatherConditionerSurfaceDefault(expected_tags, p);
+  expected_tags = applyGlassCoatingSafety(expected_tags, p);
 
   const normalizedName = normalizeProductNameForDedup(p.name);
   const dedupKey =
@@ -782,12 +819,13 @@ function main() {
       id: "GC1000",
       knowledgeId: "laveta_geam_utilizare",
       rationale:
-        "Ewocar CleanGlass 1L — RTU glass cleaner for streak-free maintenance.",
+        "Ewocar CleanGlass 1L — RTU glass cleaner; coating residue removal per catalog.",
       expected_tags: {
-        location: "interior",
+        location: "exterior",
         surface: ["glass"],
         purpose: "cleaning",
-        product_type: "glass_cleaner"
+        product_type: "glass_cleaner",
+        coating_safety: "coating_safe"
       }
     }
   ];
