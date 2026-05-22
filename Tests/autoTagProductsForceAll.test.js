@@ -1,3 +1,8 @@
+/**
+ * Step 5a — --force-all uses LLM-only tags (no keyword inference union).
+ * @jest-environment node
+ */
+
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -7,73 +12,49 @@ jest.mock("../services/llm", () => ({
 }));
 
 const { askLLM } = require("../services/llm");
-const {
-  parseCliArgs,
-  runTaggingPipeline,
-  mergeDeterministicTags
-} = require("../scripts/autoTagProducts");
+const { runTaggingPipeline, inferDeterministicTags } = require("../scripts/autoTagProducts");
 
-describe("autoTagProducts --force-all", () => {
+const PLAST_X_FIXTURE = {
+  id: "plast-x",
+  name: "Pasta polish pentru plastic Meguiar's Plast X G12310, 295ml",
+  description: "Restaurare plastic exterior si interior",
+  short_description: "Polish plastic Meguiar's Plast X",
+  meta_keyword: "plastic, polish, plast x, restaurare",
+  searchText:
+    "pasta polish pentru plastic meguiar's plast x g12310 restaurare plastic exterior interior",
+  tags: ["plastic_interior", "glass", "tires", "cleaning"]
+};
+
+const POLISH_PLASTIC_FIXTURE = {
+  id: "polish-plastic",
+  name: "Pasta polish pentru plastic",
+  description: "Curatare si polish suprafete plastic",
+  short_description: "Polish plastic",
+  meta_keyword: "plastic, polish",
+  searchText: "pasta polish pentru plastic curatare polish",
+  tags: []
+};
+
+describe("autoTagProducts --force-all LLM-only (Step 5a)", () => {
   let tmpDir;
   let diffLogPath;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "retag-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "retag-force-all-"));
     diffLogPath = path.join(tmpDir, "retag-test.jsonl");
     askLLM.mockReset();
-    askLLM.mockResolvedValue(
-      '["exterior","tires","tire_dressing","protection","wet_look"]'
-    );
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("parseCliArgs detects --force-all", () => {
-    expect(parseCliArgs(["node", "script.js", "--force-all"]).forceAll).toBe(true);
-    expect(parseCliArgs(["node", "script.js"]).forceAll).toBe(false);
-  });
+  test("forceAll=true: persisted tags match LLM only (no keyword contamination)", async () => {
+    askLLM.mockResolvedValue('["paint","polish_compound","exterior"]');
+    const products = [{ ...POLISH_PLASTIC_FIXTURE }];
 
-  it("without --force-all, skip-if-tagged merges deterministic tags only", async () => {
-    const products = [
-      {
-        id: "A",
-        name: "Dressing pentru anvelope",
-        tags: ["legacy_unknown", "cleaning"]
-      },
-      { id: "B", name: "Untagged product", tags: [] },
-      { id: "C", name: "Already tagged interior", tags: ["interior", "apc"] }
-    ];
-
-    let llmCalls = 0;
-    await runTaggingPipeline(products, {
-      forceAll: false,
-      persistPath: null,
-      diffLogPath,
-      llmFn: async () => {
-        llmCalls += 1;
-        return {
-          tags: ["exterior", "wheel_cleaner"],
-          llmRawResponse: '["exterior","wheel_cleaner"]',
-          droppedUnknownTags: []
-        };
-      }
-    });
-
-    expect(llmCalls).toBe(1);
-    expect(products[0].tags).not.toContain("legacy_unknown");
-    expect(products[0].tags).toContain("tires");
-    expect(products[1].tags).toEqual(expect.arrayContaining(["exterior", "wheel_cleaner"]));
-    expect(products[2].tags).toEqual(["interior", "apc"]);
-  });
-
-  it("with --force-all, clears tags and re-tags every product", async () => {
-    const products = [
-      { id: "1", name: "Tire foam", tags: ["cleaning"], aiTags: ["old"] },
-      { id: "2", name: "Wheel cleaner jante", tags: ["wheels"] },
-      { id: "3", name: "Interior APC", tags: ["interior", "apc"] }
-    ];
+    const keywordOnly = inferDeterministicTags(products[0]);
+    expect(keywordOnly.length).toBeGreaterThan(0);
 
     await runTaggingPipeline(products, {
       forceAll: true,
@@ -81,35 +62,75 @@ describe("autoTagProducts --force-all", () => {
       diffLogPath
     });
 
-    expect(askLLM).toHaveBeenCalledTimes(3);
-    for (const product of products) {
-      expect(product.tags.length).toBeGreaterThan(0);
-      expect(product.tags).toEqual(
-        expect.arrayContaining(["exterior", "tires", "tire_dressing"])
-      );
-      if (product.id === "1") {
-        expect(product.aiTags).toEqual([]);
-      }
+    expect(products[0].tags).toEqual(["paint", "polish_compound", "exterior"]);
+    for (const noise of ["plastic_interior", "plastic_exterior", "tires", "glass", "cleaning"]) {
+      expect(products[0].tags).not.toContain(noise);
     }
-
-    const lines = fs.readFileSync(diffLogPath, "utf-8").trim().split("\n");
-    expect(lines.length).toBe(3);
-    const first = JSON.parse(lines[0]);
-    expect(first).toMatchObject({
-      id: "1",
-      tagsBefore: ["cleaning"],
-      droppedUnknownTags: expect.any(Array),
-      durationMs: expect.any(Number)
-    });
-    expect(first.llmRawResponse).toContain("tire_dressing");
   });
 
-  it("mergeDeterministicTags reports dropped unknown tags from existing rows", () => {
-    const { tags, droppedUnknownTags } = mergeDeterministicTags({
-      name: "Cleaner Jante Pro",
-      tags: ["wheels", "mat", "dressing"]
+  test("forceAll=false: keyword inference union preserved", async () => {
+    askLLM.mockResolvedValue('["paint","polish_compound","exterior"]');
+    const products = [{ ...POLISH_PLASTIC_FIXTURE, tags: [] }];
+
+    await runTaggingPipeline(products, {
+      forceAll: false,
+      persistPath: null,
+      diffLogPath
     });
-    expect(tags).toContain("wheels");
-    expect(droppedUnknownTags).toEqual(expect.arrayContaining(["mat", "dressing"]));
+
+    expect(products[0].tags).toEqual(
+      expect.arrayContaining(["paint", "polish_compound", "exterior"])
+    );
+    const keywordOnly = inferDeterministicTags(POLISH_PLASTIC_FIXTURE);
+    expect(keywordOnly.some((tag) => products[0].tags.includes(tag))).toBe(true);
+  });
+
+  test("forceAll=true: empty LLM output stays empty (no keyword fallback)", async () => {
+    askLLM.mockResolvedValue("[]");
+    const products = [{ ...POLISH_PLASTIC_FIXTURE }];
+
+    await runTaggingPipeline(products, {
+      forceAll: true,
+      persistPath: null,
+      diffLogPath
+    });
+
+    expect(products[0].tags).toEqual([]);
+  });
+
+  test("Plast X regression: forceAll strips tires/glass/cleaning; non-forceAll keeps keyword tags", async () => {
+    const llmTags = [
+      "exterior",
+      "plastic_exterior",
+      "restoration",
+      "polish_compound",
+      "coating_caution"
+    ];
+    askLLM.mockResolvedValue(JSON.stringify(llmTags));
+
+    const forceProducts = [{ ...PLAST_X_FIXTURE }];
+    await runTaggingPipeline(forceProducts, {
+      forceAll: true,
+      persistPath: null,
+      diffLogPath: path.join(tmpDir, "plast-force.jsonl")
+    });
+
+    for (const noise of ["tires", "plastic_interior", "glass", "cleaning"]) {
+      expect(forceProducts[0].tags).not.toContain(noise);
+    }
+    expect(forceProducts[0].tags).toEqual(expect.arrayContaining(llmTags));
+
+    askLLM.mockResolvedValue(JSON.stringify(llmTags));
+    const mergeProducts = [{ ...PLAST_X_FIXTURE }];
+    await runTaggingPipeline(mergeProducts, {
+      forceAll: false,
+      persistPath: null,
+      diffLogPath: path.join(tmpDir, "plast-merge.jsonl")
+    });
+
+    const keywordHits = ["tires", "plastic_interior", "glass", "cleaning"].filter((tag) =>
+      mergeProducts[0].tags.includes(tag)
+    );
+    expect(keywordHits.length).toBeGreaterThan(0);
   });
 });

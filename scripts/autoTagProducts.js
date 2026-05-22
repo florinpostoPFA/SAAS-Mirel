@@ -245,8 +245,9 @@ function sanitizeTags(tags, allowedTags = ALLOWED_TAGS) {
   return { tags: kept, droppedUnknownTags };
 }
 
-async function generateTagsForProduct(product) {
-  const fromKeywords = inferDeterministicTags(product);
+async function generateTagsForProduct(product, options = {}) {
+  const llmOnly = options.llmOnly === true;
+  const fromKeywords = llmOnly ? [] : inferDeterministicTags(product);
 
   const prompt = buildPrompt(product);
   const raw = await askLLM(prompt);
@@ -366,7 +367,7 @@ async function runTaggingPipeline(products, options = {}) {
           droppedUnknownTags = merged.droppedUnknownTags;
           console.log(`Merged deterministic tags: ${product.name}`);
         } else {
-          const result = await llmFn(product);
+          const result = await llmFn(product, { llmOnly: forceAll });
           llmRawResponse = result.llmRawResponse || "";
           droppedUnknownTags = result.droppedUnknownTags || [];
           product.tags = normalizeTags(applyProductTagOverrides(result.tags, product));
