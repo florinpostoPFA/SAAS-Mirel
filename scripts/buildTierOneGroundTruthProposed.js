@@ -1,0 +1,963 @@
+#!/usr/bin/env node
+/**
+ * Builds Tests/tierOneGroundTruth.json from catalog + knowledge links.
+ * Run: node scripts/buildTierOneGroundTruthProposed.js
+ *
+ * Heuristic guardrails (re-run safety — do not widen without founder review):
+ *
+ * 1. applyRubberProductNameBias — ONLY when the product name matches Gummifix / Gummi /
+ *    standalone cauciuc|rubber (not "plastic … cauciuc" in the name) AND the catalog
+ *    description does NOT mention plastic, plastic+cauciuc, covorașe/covorase, or pardoseli,
+ *    AND the description does NOT enumerate multiple surface types (e.g. plastic + rubber).
+ *    Otherwise keep base expected_tags (combined surfaces win). Example: 48001 Gummifix keeps
+ *    trim_dressing + ["plastic_interior","rubber"] because the name and description are multi-surface.
+ *
+ * 2. applyIronIndicatorRetag — wheel-context only; uses word-boundary "indicator" so Romanian
+ *    "proprietăți" does not false-trigger. Felgenblitz-style iron chemistry on wheel SKUs.
+ *
+ * 3. applyConcentrationHeuristic — concentrate only when text mentions dilution/concentrate,
+ *    not from bottle size alone.
+ *
+ * 4. Same-product-line dedup — normalize catalog names by stripping
+ *    ,?\s*\d+(\.\d+)?\s*(ml|l|kg|g)\b (case-insensitive); same manufacturer + normalized
+ *    name → one entry, smaller parseVolumeMl wins, larger SKUs → _match_candidates.
+ *    Explicit spec.dedupGroup still works; auto key is mfrId + normalized name.
+ *
+ * 5. Finish-inference guardrail — within a dedup group, if expected_tags.finish or catalog
+ *    finish hints disagree across sizes, OMIT finish on the winner (e.g. ADBL Leather
+ *    Conditioner 200ml satin vs 500ml matte/none).
+ *
+ * 6. Leather conditioner surfaces — product_type leather_conditioner + catalog mentions
+ *    orice tip / vinil / piele ecologica / eco-leather / synthetic / vinyl → both
+ *    leather_natural and leather_synthetic.
+ *
+ * 7. Glass coating_safety — set ONLY on explicit catalog signal (extract, don't guess).
+ *    Positive: safe on coatings / coating residue removal / Gtechniq glass prep (G1/G5).
+ *    Negative: ammonia / amoniac → uncoated_only. Absence of ammonia alone does NOT
+ *    imply coating_safe; leave the field omitted when no explicit signal.
+ *
+ * 8. Dedup tiebreak — in a dedup group, if one SKU has price: 0 OR no volume token in the
+ *    product name (\d+(\.\d+)?\s*(ml|l|kg|g)\b), the other SKU wins as primary regardless
+ *    of volume (e.g. Koch Pol Star 92005 over placeholder KC-PO). Else smaller volume wins.
+ */
+const fs = require("fs");
+const path = require("path");
+
+const PRODUCTS_PATH = path.join(__dirname, "../data/products.json");
+const KNOWLEDGE_PATH = path.join(__dirname, "../data/knowledge.json");
+const OUTPUT_PATH = path.join(__dirname, "../Tests/tierOneGroundTruth.json");
+
+const BRAND_BY_MFR = {
+  "13": "Koch Chemie",
+  "39": "Gtechniq",
+  "44": "ZviZZer",
+  "70": "Ewocar",
+  "92": "ADBL"
+};
+
+const CONCENTRATE_RE =
+  /concentrat|concentrate|dilut|diluabil|diluable|se dilue|diluare|diluție|dilutie|diluare|1\s*:\s*\d/i;
+
+function loadProducts() {
+  const products = JSON.parse(fs.readFileSync(PRODUCTS_PATH, "utf-8"));
+  return new Map(products.map((p) => [String(p.id), p]));
+}
+
+function loadKnowledge() {
+  const rows = JSON.parse(fs.readFileSync(KNOWLEDGE_PATH, "utf-8"));
+  return new Map(rows.map((k) => [k.id, k]));
+}
+
+function catalogText(product) {
+  return [product?.name, product?.short_description, product?.description]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** meta_keyword + short_description + first ~500 chars of description (founder rule 2026-05-22). */
+function catalogIronIndicatorScanText(product) {
+  const desc = String(product?.description || "").slice(0, 500);
+  return [
+    product?.meta_keyword,
+    product?.short_description,
+    desc
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+const IRON_INDICATOR_RE =
+  /\bindicator\b|indicatorului de performanta|rosu|roșu|\bfier\b|reactive|iron(?!\s*and\s*fallout)/i;
+
+const WHEEL_PRODUCT_TYPE_RE = /^(wheel_cleaner|iron_remover|tar_remover)$/;
+const WHEEL_NAME_RE = /jant|felgen|wheel|reifen|rim\b/i;
+
+function impliesIronIndicatorChemistry(product) {
+  return IRON_INDICATOR_RE.test(catalogIronIndicatorScanText(product));
+}
+
+/**
+ * Felgenblitz-style iron-indicator wheel products: decontamination + iron_remover
+ * even when also marketed as wheel cleaners.
+ */
+function isWheelProductContext(expectedTags, product) {
+  if (expectedTags.surface?.includes("wheels")) {
+    return true;
+  }
+  if (WHEEL_PRODUCT_TYPE_RE.test(expectedTags.product_type || "")) {
+    return true;
+  }
+  return WHEEL_NAME_RE.test(String(product?.name || ""));
+}
+
+function applyIronIndicatorRetag(expectedTags, product) {
+  const tags = { ...expectedTags };
+  if (!impliesIronIndicatorChemistry(product) || !isWheelProductContext(expectedTags, product)) {
+    return tags;
+  }
+  tags.purpose = "decontamination";
+  tags.product_type = "iron_remover";
+  if (!tags.surface?.includes("wheels")) {
+    tags.surface = ["wheels", ...(tags.surface || [])].filter(
+      (s, i, arr) => arr.indexOf(s) === i
+    );
+  }
+  return tags;
+}
+
+function knowledgeText(knowledgeId, knowledgeById) {
+  const row = knowledgeById.get(knowledgeId);
+  if (!row) return "";
+  return [row.title, row.content, row.searchText].filter(Boolean).join(" ");
+}
+
+function impliesConcentrate(product, knowledgeId, knowledgeById) {
+  const text = `${catalogText(product)} ${knowledgeText(knowledgeId, knowledgeById)}`;
+  return CONCENTRATE_RE.test(text);
+}
+
+const VOLUME_STRIP_RE = /,?\s*\d+(\.\d+)?\s*(ml|l|kg|g)\b/gi;
+const VOLUME_IN_NAME_RE = /\d+(\.\d+)?\s*(ml|l|kg|g)\b/i;
+
+/** Placeholder / parent SKU: price 0 or no volume in name — loses dedup primary (rule 8). */
+function isDedupPlaceholderProduct(product) {
+  if (Number(product?.price) === 0) {
+    return true;
+  }
+  return !VOLUME_IN_NAME_RE.test(String(product?.name || ""));
+}
+
+function compareDedupPrimary(a, b, byId) {
+  const aPlaceholder = isDedupPlaceholderProduct(byId.get(a.magento_id));
+  const bPlaceholder = isDedupPlaceholderProduct(byId.get(b.magento_id));
+  if (aPlaceholder !== bPlaceholder) {
+    return aPlaceholder ? 1 : -1;
+  }
+  return a._volumeMl - b._volumeMl;
+}
+
+function pickDedupWinner(groupEntries, byId) {
+  const sorted = [...groupEntries].sort((a, b) => compareDedupPrimary(a, b, byId));
+  return {
+    winner: { ...sorted[0] },
+    candidates: sorted.slice(1).map((e) => e.magento_id)
+  };
+}
+
+function normalizeProductNameForDedup(name) {
+  return String(name || "")
+    .replace(VOLUME_STRIP_RE, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function parseVolumeMl(name) {
+  const n = String(name || "").toLowerCase();
+  const ml = n.match(/(\d+(?:[.,]\d+)?)\s*ml\b/);
+  if (ml) return parseFloat(ml[1].replace(",", "."));
+  const l = n.match(/(\d+(?:[.,]\d+)?)\s*l\b/);
+  if (l) return parseFloat(l[1].replace(",", ".")) * 1000;
+  const kg = n.match(/(\d+(?:[.,]\d+)?)\s*kg\b/);
+  if (kg) return parseFloat(kg[1].replace(",", ".")) * 1000;
+  const g = n.match(/(\d+(?:[.,]\d+)?)\s*g\b/);
+  if (g) return parseFloat(g[1].replace(",", "."));
+  return Number.POSITIVE_INFINITY;
+}
+
+const LEATHER_SYNTHETIC_CATALOG_RE =
+  /orice\s+tip|vinil|piele\s+ecologic|eco[- ]?leather|synthetic|vinyl/i;
+
+const FINISH_CATALOG_HINTS = [
+  [/semi[- ]?mat|aspect\s+satin|\bsatinat\b|\bsatin\b/i, "satin"],
+  [/fara\s+efect\s+de\s+stralucire|fară\s+efect|natural,\s*mat|aspect\s+mat\b|\bmatte\b|\bmat\b/i, "matte"],
+  [/luciu|lucios|gloss|stralucire|strălucire|wet\s*look/i, "gloss"],
+  [/finish:\s*natural|\bnatural\b/i, "natural"]
+];
+
+function collectFinishSignals(entry, product) {
+  const signals = new Set();
+  if (entry.expected_tags?.finish) {
+    signals.add(entry.expected_tags.finish);
+  }
+  const text = catalogText(product).toLowerCase();
+  for (const [re, finish] of FINISH_CATALOG_HINTS) {
+    if (re.test(text)) {
+      signals.add(finish);
+    }
+  }
+  return signals;
+}
+
+const GLASS_COATING_SAFE_POSITIVE_RE =
+  /safe\s+(?:on|for|pe)\s+coat|sigur\s+(?:pe|pentru)\s+coat|coating\s+residue|reziduuri\s+de\s+coating|reziduurile\s+de\s+coating|after\s+glass\s+coating|după\s+aplicarea\s+(?:unui\s+)?coat|pregatire.*\bG[15]\b|pregătire.*\bG[15]\b|perfect\s+glass.*\bG[15]\b/i;
+
+const GLASS_AMMONIA_RE = /\bammonia\b|\bamoniac\b/i;
+
+function applyGlassCoatingSafety(expectedTags, product) {
+  if (expectedTags.product_type !== "glass_cleaner") {
+    return expectedTags;
+  }
+  const tags = { ...expectedTags };
+  const text = catalogText(product);
+
+  if (GLASS_AMMONIA_RE.test(text)) {
+    tags.coating_safety = "uncoated_only";
+    return tags;
+  }
+
+  if (tags.coating_safety) {
+    return tags;
+  }
+
+  const isGtechniqGlassPrep =
+    /\bgtechniq\b/i.test(text) &&
+    /\bG[15]\b|hidrofob|coating|tratament/i.test(text);
+  if (GLASS_COATING_SAFE_POSITIVE_RE.test(text) || isGtechniqGlassPrep) {
+    tags.coating_safety = "coating_safe";
+  }
+
+  return tags;
+}
+
+function applyLeatherConditionerSurfaceDefault(expectedTags, product) {
+  if (expectedTags.product_type !== "leather_conditioner") {
+    return expectedTags;
+  }
+  if (!LEATHER_SYNTHETIC_CATALOG_RE.test(catalogText(product))) {
+    return expectedTags;
+  }
+  const tags = { ...expectedTags };
+  const surfaces = new Set(tags.surface || []);
+  surfaces.add("leather_natural");
+  surfaces.add("leather_synthetic");
+  tags.surface = [...surfaces];
+  return tags;
+}
+
+function applyConcentrationHeuristic(expectedTags, product, knowledgeId, knowledgeById) {
+  const tags = { ...expectedTags };
+  if (impliesConcentrate(product, knowledgeId, knowledgeById)) {
+    tags.concentration = "concentrate";
+  } else {
+    delete tags.concentration;
+    tags.concentration = "ready_to_use";
+  }
+  return tags;
+}
+
+const RUBBER_BIAS_PLASTIC_OR_INTERIOR_ZONES_RE =
+  /plastic|plastic\s+si\s+cauciuc|plastic\s+și\s+cauciuc|covorase|covora[sșş]e|pardoseli/i;
+
+/** Catalog text lists more than one surface family (plastic + rubber, etc.). */
+function descriptionEnumeratesMultipleSurfaces(descText) {
+  const d = String(descText || "").toLowerCase();
+  if (
+    /plastic.{0,80}(?:cauciuc|rubber|gummi)|(?:cauciuc|rubber|gummi).{0,80}plastic/i.test(
+      d
+    )
+  ) {
+    return true;
+  }
+  if (
+    /(?:cauciuc|rubber).{0,40}(?:si|și|sau|,).{0,40}plastic|plastic.{0,40}(?:si|și|sau|,).{0,40}(?:cauciuc|rubber)/i.test(
+      d
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Narrow rubber-only retag: see file-header rule (1). Combined tags from specs win when
+ * plastic/covorase/pardoseli or multi-surface copy is present (e.g. 48001 Gummifix).
+ */
+function applyRubberProductNameBias(expectedTags, product) {
+  const name = String(product?.name || "");
+  const isGummiLine = /\bgummifix\b|\bgummi\b/i.test(name);
+  const isRubberOnlyName =
+    /\b(cauciuc|rubber)\b/i.test(name) && !/\bplastic\b/i.test(name);
+  if (!isGummiLine && !isRubberOnlyName) {
+    return expectedTags;
+  }
+
+  const desc = [
+    product?.meta_keyword,
+    product?.short_description,
+    product?.description
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (RUBBER_BIAS_PLASTIC_OR_INTERIOR_ZONES_RE.test(desc)) {
+    return expectedTags;
+  }
+  if (descriptionEnumeratesMultipleSurfaces(desc)) {
+    return expectedTags;
+  }
+
+  const tags = { ...expectedTags };
+  const scan = desc.toLowerCase();
+
+  tags.surface = ["rubber"];
+  tags.product_type = "rubber_protectant";
+  tags.purpose = "protection";
+
+  if (/garnituri|weatherstrip|usi\b|door seal|exterior|parbriz/.test(scan)) {
+    tags.location = "exterior";
+  } else if (/interior|covorase|bord|cockpit|pardoseli/.test(scan)) {
+    tags.location = "interior";
+  }
+
+  return tags;
+}
+
+/** Acidic concentrates marketed as extreme/aggressive → uncoated_only (founder rule 2026-05-22). */
+function applyAggressiveAcidicCoatingSafety(expectedTags, product) {
+  const tags = { ...expectedTags };
+  if (tags.ph !== "acidic" || tags.coating_safety) {
+    return tags;
+  }
+  const text = catalogText(product).toLowerCase();
+  const isConcentrate =
+    tags.concentration === "concentrate" || /concentrat/.test(text);
+  const isAggressive = /extrem|puternic|agresiv/.test(text);
+  if (isConcentrate && /acid/.test(text) && isAggressive) {
+    tags.coating_safety = "uncoated_only";
+  }
+  return tags;
+}
+
+function buildEntry(byId, knowledgeById, spec) {
+  const p = byId.get(spec.id);
+  if (!p) {
+    throw new Error(`Missing catalog product id=${spec.id}`);
+  }
+  const manufacturer =
+    p.brand || BRAND_BY_MFR[String(p.manufacturerId)] || spec.manufacturerFallback || "Unknown";
+
+  let expected_tags = applyConcentrationHeuristic(
+    spec.expected_tags,
+    p,
+    spec.knowledgeId,
+    knowledgeById
+  );
+  expected_tags = applyAggressiveAcidicCoatingSafety(expected_tags, p);
+  expected_tags = applyIronIndicatorRetag(expected_tags, p);
+  expected_tags = applyRubberProductNameBias(expected_tags, p);
+  expected_tags = applyLeatherConditionerSurfaceDefault(expected_tags, p);
+  expected_tags = applyGlassCoatingSafety(expected_tags, p);
+
+  const normalizedName = normalizeProductNameForDedup(p.name);
+  const dedupKey =
+    spec.dedupGroup || `${String(p.manufacturerId)}:${normalizedName}`;
+
+  return {
+    _source_knowledge_id: spec.knowledgeId,
+    magento_id: String(p.id),
+    sku: String(p.sku || p.id),
+    manufacturer,
+    manufacturerId: String(p.manufacturerId),
+    name: p.name,
+    rationale: spec.rationale,
+    expected_tags,
+    _dedupKey: dedupKey,
+    _dedupGroup: spec.dedupGroup || null,
+    _normalizedName: normalizedName,
+    _volumeMl: parseVolumeMl(p.name)
+  };
+}
+
+function applyFinishConflictGuardrail(winner, groupEntries, byId) {
+  const allSignals = new Set();
+  for (const entry of groupEntries) {
+    const product = byId.get(entry.magento_id);
+    for (const signal of collectFinishSignals(entry, product)) {
+      allSignals.add(signal);
+    }
+  }
+  if (allSignals.size <= 1) {
+    return winner;
+  }
+  const tags = { ...winner.expected_tags };
+  delete tags.finish;
+  return { ...winner, expected_tags: tags };
+}
+
+function dedupeGroupedEntries(entries, byId, categoryLabel) {
+  const groups = new Map();
+
+  for (const entry of entries) {
+    const key = entry._dedupKey;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(entry);
+  }
+
+  const merged = [];
+  const mergeLog = [];
+
+  for (const [key, groupEntries] of groups.entries()) {
+    const { winner: picked, candidates } = pickDedupWinner(groupEntries, byId);
+    let winner = picked;
+    if (candidates.length > 0) {
+      winner._match_candidates = candidates;
+      mergeLog.push({
+        category: categoryLabel,
+        dedupKey: key,
+        primary: winner.magento_id,
+        candidates,
+        normalizedName: winner._normalizedName,
+        explicitGroup: Boolean(winner._dedupGroup)
+      });
+    }
+    winner = applyFinishConflictGuardrail(winner, groupEntries, byId);
+    merged.push(stripInternal(winner));
+  }
+
+  return { products: merged, mergeLog };
+}
+
+function stripInternal(entry) {
+  const { _dedupGroup, _dedupKey, _normalizedName, _volumeMl, ...rest } = entry;
+  return rest;
+}
+
+function buildCategory(specs, byId, knowledgeById, categoryLabel) {
+  const built = specs.map((spec) => buildEntry(byId, knowledgeById, spec));
+  return dedupeGroupedEntries(built, byId, categoryLabel);
+}
+
+function main() {
+  const byId = loadProducts();
+  const knowledgeById = loadKnowledge();
+
+  const tireSpecs = [
+    {
+      id: "ADB000141",
+      knowledgeId: "meguiars_endurance_tire_gel",
+      rationale:
+        "ADBL Black Water 1L — high-gloss tire dressing, ready to use. Tier-1 SKU for gloss finish pattern.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["tires"],
+        purpose: "protection",
+        product_type: "tire_dressing",
+        finish: "gloss"
+      }
+    },
+    {
+      id: "T1 0.25",
+      knowledgeId: "meguiars_endurance_tire_gel",
+      rationale:
+        "Gtechniq T1 Durable Tyre Gel 250ml — durable gloss tyre dressing RTU.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["tires"],
+        purpose: "protection",
+        product_type: "tire_dressing",
+        finish: "gloss"
+      }
+    },
+    {
+      id: "T2 0.25",
+      knowledgeId: "meguiars_endurance_tire_gel",
+      rationale:
+        "Gtechniq T2 Tyre Dressing — subtle OEM-style tire finish (mapped to finish:natural).",
+      expected_tags: {
+        location: "exterior",
+        surface: ["tires"],
+        purpose: "protection",
+        product_type: "tire_dressing",
+        finish: "natural"
+      }
+    },
+    {
+      id: "196612",
+      knowledgeId: "meguiars_endurance_tire_gel",
+      rationale:
+        "Koch Chemie Reifenschaum 600ml — foam tire dressing (spuma), maintains and protects with intense shine.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["tires"],
+        purpose: "protection",
+        product_type: "tire_dressing",
+        finish: "wet_look"
+      }
+    },
+    {
+      id: "ADB000026",
+      dedupGroup: "adbl-tire-rubber-cleaner",
+      knowledgeId: "tire_rubber_cleaner_utilizare",
+      rationale:
+        "ADBL Tire and Rubber Cleaner 500ml — degreasing prep before dressing (500ml canonical; 5L is same formula).",
+      expected_tags: {
+        location: "exterior",
+        surface: ["tires", "rubber"],
+        purpose: "cleaning",
+        product_type: "tire_cleaner"
+      }
+    },
+    {
+      id: "ADB000028",
+      dedupGroup: "adbl-tire-rubber-cleaner",
+      knowledgeId: "tire_rubber_cleaner_utilizare",
+      rationale: "ADBL Tire and Rubber Cleaner 5L — larger size of same RTU cleaner (deduped into 500ml).",
+      expected_tags: {
+        location: "exterior",
+        surface: ["tires", "rubber"],
+        purpose: "cleaning",
+        product_type: "tire_cleaner"
+      }
+    }
+  ];
+
+  const wheelSpecs = [
+    {
+      id: "187011",
+      knowledgeId: "solutie_jante_acida",
+      rationale:
+        "Koch Felgenreiniger Extrem 11kg — acidic wheel cleaner concentrate for heavy brake dust.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["wheels"],
+        purpose: "cleaning",
+        product_type: "wheel_cleaner",
+        ph: "acidic"
+      }
+    },
+    {
+      id: "218005",
+      dedupGroup: "koch-felgenblitz-saurefrei",
+      knowledgeId: "curatare_jante_indicator_rosu",
+      rationale:
+        "Koch Felgenblitz Saurefrei 5L — pH-neutral iron-indicator wheel decon (red performance indicator in catalog).",
+      expected_tags: {
+        location: "exterior",
+        surface: ["wheels"],
+        purpose: "cleaning",
+        product_type: "wheel_cleaner",
+        ph: "ph_neutral",
+        coating_safety: "coating_safe"
+      }
+    },
+    {
+      id: "218011",
+      dedupGroup: "koch-felgenblitz-saurefrei",
+      knowledgeId: "curatare_jante_indicator_rosu",
+      rationale:
+        "Koch Felgenblitz Saurefrei 11L — bulk size; iron-indicator chemistry (deduped into 5L).",
+      expected_tags: {
+        location: "exterior",
+        surface: ["wheels"],
+        purpose: "cleaning",
+        product_type: "wheel_cleaner",
+        ph: "ph_neutral",
+        coating_safety: "coating_safe"
+      }
+    },
+    {
+      id: "W6 0.5",
+      knowledgeId: "curatare_jante_indicator_rosu",
+      rationale:
+        "Gtechniq W6 Iron and Fallout Remover — iron decontamination on wheels and paint fallout.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["wheels", "paint"],
+        purpose: "decontamination",
+        product_type: "iron_remover",
+        coating_safety: "coating_safe"
+      }
+    },
+    {
+      id: "ADB000532",
+      knowledgeId: "solutie_jante_acida",
+      rationale:
+        "ADBL Wheel Warrior Gel 500ml — acidic gel wheel cleaner, RTU application.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["wheels"],
+        purpose: "cleaning",
+        product_type: "wheel_cleaner",
+        ph: "acidic",
+        coating_safety: "uncoated_only"
+      }
+    },
+    {
+      id: "77704750",
+      knowledgeId: "curatare_jante_indicator_rosu",
+      rationale:
+        "Koch Reactive Wheel Cleaner 750ml — reactive wheel decontamination before protection.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["wheels"],
+        purpose: "decontamination",
+        product_type: "iron_remover",
+        ph: "ph_neutral",
+        coating_safety: "coating_safe"
+      }
+    }
+  ];
+
+  const interiorPlasticSpecs = [
+    {
+      id: "20001",
+      knowledgeId: "dressing_plastic_interior",
+      rationale:
+        "Koch Cockpit Super Pflege 1L — glossy interior plastic dressing (Csp).",
+      expected_tags: {
+        location: "interior",
+        surface: ["plastic_interior"],
+        purpose: "protection",
+        product_type: "trim_dressing",
+        finish: "gloss"
+      }
+    },
+        {
+          id: "48001",
+          knowledgeId: "dressing_plastic_interior",
+          rationale:
+            "Koch GUF Gummifix 1L — matte trim dressing for interior plastic and rubber (catalog: covorase, pardoseli).",
+          expected_tags: {
+            location: "interior",
+            surface: ["plastic_interior", "rubber"],
+            purpose: "protection",
+            product_type: "trim_dressing",
+            finish: "matte"
+          }
+        },
+    {
+      id: "132001",
+      knowledgeId: "dressing_plastic_interior",
+      rationale:
+        "Koch Top Star 1L — semi-mat interior plastic dressing (satin finish).",
+      expected_tags: {
+        location: "interior",
+        surface: ["plastic_interior"],
+        purpose: "protection",
+        product_type: "trim_dressing",
+        finish: "satin"
+      }
+    },
+    {
+      id: "476001",
+      knowledgeId: "dressing_plastic_interior",
+      rationale:
+        "Koch Hydro Plast Care 1L — concentrate interior plastic dressing for dilution.",
+      expected_tags: {
+        location: "interior",
+        surface: ["plastic_interior"],
+        purpose: "protection",
+        product_type: "trim_dressing",
+        finish: "satin"
+      }
+    },
+    {
+      id: "ADB000065",
+      knowledgeId: "protectie_ceramica_plastic_interior",
+      rationale:
+        "ADBL Interior Wow 1L — RTU interior plastic protectant with satin finish.",
+      expected_tags: {
+        location: "interior",
+        surface: ["plastic_interior"],
+        purpose: "protection",
+        product_type: "trim_dressing",
+        finish: "satin"
+      }
+    }
+  ];
+
+  const leatherSpecs = [
+    {
+      id: "ADB000466",
+      dedupGroup: "adbl-leather-cleaner",
+      knowledgeId: "apc_on_leather",
+      rationale:
+        "ADBL Leather Cleaner 500ml — dedicated leather cleaning before conditioning (dilutable 1:1).",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "cleaning",
+        product_type: "leather_cleaner"
+      }
+    },
+    {
+      id: "ADB000468",
+      dedupGroup: "adbl-leather-cleaner",
+      knowledgeId: "apc_on_leather",
+      rationale: "ADBL Leather Cleaner 5L — bulk size of same dilutable leather cleaner.",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "cleaning",
+        product_type: "leather_cleaner"
+      }
+    },
+    {
+      id: "ADB000313",
+      dedupGroup: "adbl-leather-conditioner",
+      knowledgeId: "apc_on_leather",
+      rationale:
+        "ADBL Leather Conditioner 200ml — RTU leather feed (canonical size; 500ml same line).",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "conditioning",
+        product_type: "leather_conditioner"
+      }
+    },
+    {
+      id: "ADB000327",
+      dedupGroup: "adbl-leather-conditioner",
+      knowledgeId: "apc_on_leather",
+      rationale:
+        "ADBL Leather Conditioner 500ml — larger RTU size (deduped into 200ml canonical).",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "conditioning",
+        product_type: "leather_conditioner"
+      }
+    },
+    {
+      id: "77709500",
+      knowledgeId: "apc_on_leather",
+      rationale:
+        "Koch Protect Leather Care 500ml — leather hydration and protection (any leather type).",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "conditioning",
+        product_type: "leather_conditioner"
+      }
+    },
+    {
+      id: "LC1",
+      dedupGroup: "ewocar-leather-clean",
+      knowledgeId: "apc_on_leather",
+      rationale:
+        "Ewocar Leather Clean 500ml — RTU leather cleaner for maintenance washes.",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "cleaning",
+        product_type: "leather_cleaner"
+      }
+    },
+    {
+      id: "LC5",
+      dedupGroup: "ewocar-leather-clean",
+      knowledgeId: "apc_on_leather",
+      rationale:
+        "Ewocar Leather Clean Concentrate 5L — bulk concentrate (deduped into 500ml RTU).",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "cleaning",
+        product_type: "leather_cleaner"
+      }
+    },
+    {
+      id: "92005",
+      dedupGroup: "koch-pol-star",
+      knowledgeId: "pol_star_utilizare",
+      rationale:
+        "Koch Pol Star 5L — pH-neutral interior cleaner for textile, leather, and alcantara (dilutable 1:5–1:20).",
+      expected_tags: {
+        location: "interior",
+        surface: ["textile", "alcantara", "leather_natural"],
+        purpose: "cleaning",
+        product_type: "interior_cleaner",
+        ph: "ph_neutral"
+      }
+    },
+    {
+      id: "KC-PO",
+      dedupGroup: "koch-pol-star",
+      knowledgeId: "pol_star_utilizare",
+      rationale:
+        "Koch Pol Star placeholder/parent SKU (deduped into 92005; price 0, no volume in name).",
+      expected_tags: {
+        location: "interior",
+        surface: ["textile", "alcantara", "leather_natural"],
+        purpose: "cleaning",
+        product_type: "interior_cleaner",
+        ph: "ph_neutral"
+      }
+    }
+  ];
+
+  const glassSpecs = [
+    {
+      id: "77703750",
+      knowledgeId: "laveta_geam_utilizare",
+      rationale:
+        "Koch Speed Glass Cleaner 750ml — standard RTU interior/exterior glass cleaning.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["glass"],
+        purpose: "cleaning",
+        product_type: "glass_cleaner"
+      }
+    },
+    {
+      id: "302001",
+      dedupGroup: "koch-glass-cleaner-pro",
+      knowledgeId: "laveta_geam_utilizare",
+      rationale:
+        "Koch Glass Cleaner Pro 1L — pro glass cleaner RTU (1L canonical size).",
+      expected_tags: {
+        location: "exterior",
+        surface: ["glass"],
+        purpose: "cleaning",
+        product_type: "glass_cleaner"
+      }
+    },
+    {
+      id: "302010",
+      dedupGroup: "koch-glass-cleaner-pro",
+      knowledgeId: "laveta_geam_utilizare",
+      rationale: "Koch Glass Cleaner Pro 10L — bulk RTU glass cleaner (deduped into 1L).",
+      expected_tags: {
+        location: "exterior",
+        surface: ["glass"],
+        purpose: "cleaning",
+        product_type: "glass_cleaner"
+      }
+    },
+    {
+      id: "ADB000353",
+      knowledgeId: "laveta_geam_utilizare",
+      rationale:
+        "ADBL Hybrid Glass 500ml — glass cleaner with hydrophobic maintenance effect.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["glass"],
+        purpose: "cleaning",
+        product_type: "glass_cleaner"
+      }
+    },
+    {
+      id: "G6 0.5",
+      knowledgeId: "laveta_geam_utilizare",
+      rationale:
+        "Gtechniq G6 Perfect Glass 500ml — coating-safe glass cleaner RTU.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["glass"],
+        purpose: "cleaning",
+        product_type: "glass_cleaner",
+        coating_safety: "coating_safe"
+      }
+    },
+    {
+      id: "GC1000",
+      knowledgeId: "laveta_geam_utilizare",
+      rationale:
+        "Ewocar CleanGlass 1L — RTU glass cleaner; coating residue removal per catalog.",
+      expected_tags: {
+        location: "exterior",
+        surface: ["glass"],
+        purpose: "cleaning",
+        product_type: "glass_cleaner",
+        coating_safety: "coating_safe"
+      }
+    }
+  ];
+
+  const categorySpecs = [
+    ["tires", tireSpecs, "Tier-1 tire dressings + cleaners. Diverse finish and concentration for tagger validation."],
+    [
+      "wheels",
+      wheelSpecs,
+      "Tier-1 wheel cleaners: acidic, pH-neutral, iron fallout, concentrate, reactive decon."
+    ],
+    [
+      "interior_plastic",
+      interiorPlasticSpecs,
+      "Tier-1 interior plastic trim dressings: gloss, matte, satin, concentrate, RTU protection."
+    ],
+    [
+      "leather",
+      leatherSpecs,
+      "Tier-1 leather cleaners and conditioners across ADBL, Koch, Ewocar."
+    ],
+    [
+      "glass",
+      glassSpecs,
+      "Tier-1 glass cleaners: RTU, concentrate, hydrophobic hybrid, pro formulas."
+    ]
+  ];
+
+  const allMergeLogs = [];
+  const categories = {};
+  for (const [name, specs, description] of categorySpecs) {
+    const { products, mergeLog } = buildCategory(specs, byId, knowledgeById, name);
+    categories[name] = { description, products };
+    allMergeLogs.push(...mergeLog);
+  }
+
+  if (allMergeLogs.length > 0) {
+    console.log("Dedup merges (placeholder tiebreak, else smaller volume wins):");
+    for (const row of allMergeLogs) {
+      console.log(
+        `  [${row.category}] ${row.primary} <- ${row.candidates.join(", ")}` +
+          ` (key=${row.dedupKey}${row.explicitGroup ? ", explicit" : ", name-normalized"})`
+      );
+    }
+  } else {
+    console.log("Dedup merges: none");
+  }
+
+  const expectedCounts = {
+    tires: 5,
+    wheels: 5,
+    interior_plastic: 5,
+    leather: 5,
+    glass: 5
+  };
+  for (const [name, cat] of Object.entries(categories)) {
+    const expected = expectedCounts[name];
+    if (cat.products.length !== expected) {
+      throw new Error(
+        `Category ${name} has ${cat.products.length} products after dedup (expected ${expected})`
+      );
+    }
+  }
+
+  const doc = {
+    version: "1.0-2026-05-22",
+    vocabulary_version: "1.1",
+    status: "approved",
+    description:
+      "Tier-1 ground truth (25 SKUs, v1.1 tags) for Step 1.4 tagger validation harness. Built from catalog + knowledge links via buildTierOneGroundTruthProposed.js.",
+    categories
+  };
+
+  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(doc, null, 2) + "\n");
+  console.log(`Wrote ${OUTPUT_PATH}`);
+}
+
+main();
