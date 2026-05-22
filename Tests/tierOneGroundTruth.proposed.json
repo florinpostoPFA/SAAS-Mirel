@@ -126,8 +126,8 @@
             "purpose": "cleaning",
             "product_type": "wheel_cleaner",
             "ph": "acidic",
-            "coating_safety": "coating_caution",
-            "concentration": "concentrate"
+            "concentration": "concentrate",
+            "coating_safety": "uncoated_only"
           }
         },
         {
@@ -146,6 +146,7 @@
             ],
             "purpose": "decontamination",
             "product_type": "iron_remover",
+            "coating_safety": "coating_safe",
             "concentration": "ready_to_use"
           }
         },
@@ -183,8 +184,9 @@
               "wheels"
             ],
             "purpose": "decontamination",
-            "product_type": "wheel_cleaner",
+            "product_type": "iron_remover",
             "ph": "ph_neutral",
+            "coating_safety": "coating_safe",
             "concentration": "ready_to_use"
           }
         },

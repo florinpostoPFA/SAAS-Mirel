@@ -70,6 +70,22 @@ function applyConcentrationHeuristic(expectedTags, product, knowledgeId, knowled
   return tags;
 }
 
+/** Acidic concentrates marketed as extreme/aggressive → uncoated_only (founder rule 2026-05-22). */
+function applyAggressiveAcidicCoatingSafety(expectedTags, product) {
+  const tags = { ...expectedTags };
+  if (tags.ph !== "acidic" || tags.coating_safety) {
+    return tags;
+  }
+  const text = catalogText(product).toLowerCase();
+  const isConcentrate =
+    tags.concentration === "concentrate" || /concentrat/.test(text);
+  const isAggressive = /extrem|puternic|agresiv/.test(text);
+  if (isConcentrate && /acid/.test(text) && isAggressive) {
+    tags.coating_safety = "uncoated_only";
+  }
+  return tags;
+}
+
 function buildEntry(byId, knowledgeById, spec) {
   const p = byId.get(spec.id);
   if (!p) {
@@ -78,12 +94,13 @@ function buildEntry(byId, knowledgeById, spec) {
   const manufacturer =
     p.brand || BRAND_BY_MFR[String(p.manufacturerId)] || spec.manufacturerFallback || "Unknown";
 
-  const expected_tags = applyConcentrationHeuristic(
+  let expected_tags = applyConcentrationHeuristic(
     spec.expected_tags,
     p,
     spec.knowledgeId,
     knowledgeById
   );
+  expected_tags = applyAggressiveAcidicCoatingSafety(expected_tags, p);
 
   return {
     _source_knowledge_id: spec.knowledgeId,
@@ -236,8 +253,7 @@ function main() {
         surface: ["wheels"],
         purpose: "cleaning",
         product_type: "wheel_cleaner",
-        ph: "acidic",
-        coating_safety: "coating_caution"
+        ph: "acidic"
       }
     },
     {
@@ -278,7 +294,8 @@ function main() {
         location: "exterior",
         surface: ["wheels", "paint"],
         purpose: "decontamination",
-        product_type: "iron_remover"
+        product_type: "iron_remover",
+        coating_safety: "coating_safe"
       }
     },
     {
@@ -304,8 +321,9 @@ function main() {
         location: "exterior",
         surface: ["wheels"],
         purpose: "decontamination",
-        product_type: "wheel_cleaner",
-        ph: "ph_neutral"
+        product_type: "iron_remover",
+        ph: "ph_neutral",
+        coating_safety: "coating_safe"
       }
     }
   ];
