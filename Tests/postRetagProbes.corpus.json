@@ -1,0 +1,150 @@
+{
+  "version": "1.0-2026-05-22",
+  "description": "Gate B post-retag chat probes — queries from knowledge.json searchText + brand-named probes (ZviZZer composed; zero knowledge rows).",
+  "tier_one_manufacturer_ids": ["13", "39", "44", "70", "92"],
+  "probes": [
+    {
+      "id": "tires-01",
+      "category": "tires",
+      "brand": null,
+      "source_knowledge_id": "tire_rubber_cleaner_utilizare",
+      "query": "vreau ceva pentru anvelope"
+    },
+    {
+      "id": "tires-02",
+      "category": "tires",
+      "brand": null,
+      "source_knowledge_id": "insect_remover_utilizare",
+      "query": "cum indepartez insecte de pe anvelope inainte de dressing"
+    },
+    {
+      "id": "tires-03",
+      "category": "tires",
+      "brand": "ADBL",
+      "source_knowledge_id": null,
+      "query": "ce produs ADBL aveti pentru dressing anvelope"
+    },
+    {
+      "id": "tires-04",
+      "category": "tires",
+      "brand": "Koch Chemie",
+      "source_knowledge_id": "tire_rubber_cleaner_utilizare",
+      "query": "ce produs Koch Chemie recomandati pentru anvelope si cauciuc"
+    },
+    {
+      "id": "wheels-01",
+      "category": "wheels",
+      "brand": null,
+      "source_knowledge_id": "iron_remover_ce_este",
+      "query": "cum indepartez particule de fier de pe jante"
+    },
+    {
+      "id": "wheels-02",
+      "category": "wheels",
+      "brand": "Koch Chemie",
+      "source_knowledge_id": "curatare_jante_indicator_rosu",
+      "query": "ce produs Koch Chemie aveti pentru jante cu indicator rosu"
+    },
+    {
+      "id": "wheels-04",
+      "category": "wheels",
+      "brand": "Gtechniq",
+      "source_knowledge_id": null,
+      "query": "ce produs Gtechniq aveti pentru decontaminare jante"
+    },
+    {
+      "id": "interior_plastic-01",
+      "category": "interior_plastic",
+      "brand": null,
+      "source_knowledge_id": "dressing_plastic_interior",
+      "query": "cum aleg dressing pentru plastic interior mat sau lucios"
+    },
+    {
+      "id": "interior_plastic-02",
+      "category": "interior_plastic",
+      "brand": null,
+      "source_knowledge_id": "protectie_ceramica_plastic_interior",
+      "query": "cum aplic protectie ceramica pe plastic interior"
+    },
+    {
+      "id": "interior_plastic-03",
+      "category": "interior_plastic",
+      "brand": "ADBL",
+      "source_knowledge_id": null,
+      "query": "ce produs ADBL pentru protectie bord si plastic interior"
+    },
+    {
+      "id": "leather-01",
+      "category": "leather",
+      "brand": null,
+      "source_knowledge_id": "protectie_piele_auto",
+      "query": "cum protejez pielea din interiorul masinii"
+    },
+    {
+      "id": "leather-02",
+      "category": "leather",
+      "brand": null,
+      "source_knowledge_id": "hidratare_piele_mat",
+      "query": "cum hidratez pielea cu efect mat fara luciu"
+    },
+    {
+      "id": "leather-03",
+      "category": "leather",
+      "brand": "Koch Chemie",
+      "source_knowledge_id": "apc_on_leather",
+      "query": "ce balsam Koch Chemie pentru piele auto"
+    },
+    {
+      "id": "leather-04",
+      "category": "leather",
+      "brand": "Ewocar",
+      "source_knowledge_id": null,
+      "query": "Ewocar curatare piele naturala si ecologica"
+    },
+    {
+      "id": "glass-01",
+      "category": "glass",
+      "brand": null,
+      "source_knowledge_id": "laveta_geam_utilizare",
+      "query": "cum curat geamurile masinii fara urme"
+    },
+    {
+      "id": "glass-02",
+      "category": "glass",
+      "brand": null,
+      "source_knowledge_id": "polish_sticla_utilizare",
+      "query": "cand folosesc polish pentru sticla la geamuri"
+    },
+    {
+      "id": "glass-03",
+      "category": "glass",
+      "brand": "Ewocar",
+      "source_knowledge_id": null,
+      "query": "solutie Ewocar pentru curatare geamuri fara dungi"
+    },
+    {
+      "id": "zvizzer-wheels",
+      "category": "wheels",
+      "brand": "ZviZZer",
+      "source_knowledge_id": null,
+      "query": "ce produs ZviZZer aveti pentru curatare jante",
+      "note": "composed — zero knowledge.json ZviZZer rows"
+    },
+    {
+      "id": "zvizzer-plastic",
+      "category": "interior_plastic",
+      "brand": "ZviZZer",
+      "source_knowledge_id": null,
+      "query": "recomandati ZviZZer pentru dressing plastic interior bord",
+      "note": "composed — zero knowledge.json ZviZZer rows"
+    },
+    {
+      "id": "zvizzer-glass",
+      "category": "glass",
+      "brand": "ZviZZer",
+      "source_knowledge_id": null,
+      "query": "ZviZZer solutie curatare geamuri interior si exterior",
+      "note": "composed — zero knowledge.json ZviZZer rows"
+    }
+  ]
+}
