@@ -28,6 +28,25 @@
         },
         {
           "_source_knowledge_id": "meguiars_endurance_tire_gel",
+          "magento_id": "T1 0.25",
+          "sku": "T1 0.25",
+          "manufacturer": "Gtechniq",
+          "manufacturerId": "39",
+          "name": "Dressing anvelope si bandouri T1 Durable Tyre Gel Gtechniq, 250 ml",
+          "rationale": "Gtechniq T1 Durable Tyre Gel 250ml — durable gloss tyre dressing RTU.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "tires"
+            ],
+            "purpose": "protection",
+            "product_type": "tire_dressing",
+            "finish": "gloss",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "meguiars_endurance_tire_gel",
           "magento_id": "T2 0.25",
           "sku": "T2 0.25",
           "manufacturer": "Gtechniq",
@@ -52,7 +71,7 @@
           "manufacturer": "Koch Chemie",
           "manufacturerId": "13",
           "name": "Dressing spuma anvelope Kock Chemie RFS KCU-Reifenschaum, 600ML",
-          "rationale": "Koch Chemie Reifenschaum — foam tire dressing with wet-look shine.",
+          "rationale": "Koch Chemie Reifenschaum 600ml — foam tire dressing (spuma), maintains and protects with intense shine.",
           "expected_tags": {
             "location": "exterior",
             "surface": [
@@ -71,7 +90,7 @@
           "manufacturer": "ADBL",
           "manufacturerId": "92",
           "name": "Solutie curatare anvelope si cauciuc Adbl Tire and Rubber Cleaner 500ml",
-          "rationale": "ADBL Tire and Rubber Cleaner 500ml — degreasing prep before dressing.",
+          "rationale": "ADBL Tire and Rubber Cleaner 500ml — degreasing prep before dressing (500ml canonical; 5L is same formula).",
           "expected_tags": {
             "location": "exterior",
             "surface": [
@@ -81,26 +100,10 @@
             "purpose": "cleaning",
             "product_type": "tire_cleaner",
             "concentration": "ready_to_use"
-          }
-        },
-        {
-          "_source_knowledge_id": "tire_rubber_cleaner_utilizare",
-          "magento_id": "ADB000028",
-          "sku": "ADB000028",
-          "manufacturer": "ADBL",
-          "manufacturerId": "92",
-          "name": "Solutie curatare anvelope si cauciuc Adbl Tire and Rubber Cleaner, 5L",
-          "rationale": "ADBL Tire and Rubber Cleaner 5L — concentrate dilution for tire cleaning.",
-          "expected_tags": {
-            "location": "exterior",
-            "surface": [
-              "tires",
-              "rubber"
-            ],
-            "purpose": "cleaning",
-            "product_type": "tire_cleaner",
-            "concentration": "concentrate"
-          }
+          },
+          "_match_candidates": [
+            "ADB000028"
+          ]
         }
       ]
     },
@@ -114,7 +117,7 @@
           "manufacturer": "Koch Chemie",
           "manufacturerId": "13",
           "name": "Solutie curatare jante acida concentrata Felgenreiniger Extrem Koch Chemie, 11kg",
-          "rationale": "Koch Felgenreiniger Extrem 11L — acidic wheel cleaner concentrate for heavy brake dust.",
+          "rationale": "Koch Felgenreiniger Extrem 11kg — acidic wheel cleaner concentrate for heavy brake dust.",
           "expected_tags": {
             "location": "exterior",
             "surface": [
@@ -123,28 +126,8 @@
             "purpose": "cleaning",
             "product_type": "wheel_cleaner",
             "ph": "acidic",
-            "concentration": "concentrate",
-            "coating_safety": "coating_caution"
-          }
-        },
-        {
-          "_source_knowledge_id": "curatare_jante_indicator_rosu",
-          "magento_id": "218011",
-          "sku": "218011",
-          "manufacturer": "Koch Chemie",
-          "manufacturerId": "13",
-          "name": "Solutie curatare jante Felgenblitz Saurefrei Koch Chemie, Fb, 11L",
-          "rationale": "Koch Felgenblitz Saurefrei 11L — acid-free (pH-neutral) wheel cleaner, coating-safe maintenance.",
-          "expected_tags": {
-            "location": "exterior",
-            "surface": [
-              "wheels"
-            ],
-            "purpose": "cleaning",
-            "product_type": "wheel_cleaner",
-            "ph": "ph_neutral",
-            "concentration": "concentrate",
-            "coating_safety": "coating_safe"
+            "coating_safety": "coating_caution",
+            "concentration": "concentrate"
           }
         },
         {
@@ -182,8 +165,8 @@
             "purpose": "cleaning",
             "product_type": "wheel_cleaner",
             "ph": "acidic",
-            "concentration": "ready_to_use",
-            "coating_safety": "uncoated_only"
+            "coating_safety": "uncoated_only",
+            "concentration": "ready_to_use"
           }
         },
         {
@@ -204,6 +187,29 @@
             "ph": "ph_neutral",
             "concentration": "ready_to_use"
           }
+        },
+        {
+          "_source_knowledge_id": "curatare_jante_indicator_rosu",
+          "magento_id": "218005",
+          "sku": "218005",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare jante Felgenblitz Saurefrei Koch Chemie, Fb, 5L",
+          "rationale": "Koch Felgenblitz Saurefrei 5L — acid-free (pH-neutral) wheel cleaner, coating-safe maintenance.",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "wheels"
+            ],
+            "purpose": "cleaning",
+            "product_type": "wheel_cleaner",
+            "ph": "ph_neutral",
+            "coating_safety": "coating_safe",
+            "concentration": "ready_to_use"
+          },
+          "_match_candidates": [
+            "218011"
+          ]
         }
       ]
     },
@@ -313,44 +319,6 @@
       "products": [
         {
           "_source_knowledge_id": "apc_on_leather",
-          "magento_id": "ADB000466",
-          "sku": "ADB000466",
-          "manufacturer": "ADBL",
-          "manufacturerId": "92",
-          "name": "Solutie Curatare Piele ADBL Leather Cleaner, 500ml",
-          "rationale": "ADBL Leather Cleaner 500ml — dedicated leather cleaning before conditioning.",
-          "expected_tags": {
-            "location": "interior",
-            "surface": [
-              "leather_natural",
-              "leather_synthetic"
-            ],
-            "purpose": "cleaning",
-            "product_type": "leather_cleaner",
-            "concentration": "ready_to_use"
-          }
-        },
-        {
-          "_source_knowledge_id": "apc_on_leather",
-          "magento_id": "ADB000468",
-          "sku": "ADB000468",
-          "manufacturer": "ADBL",
-          "manufacturerId": "92",
-          "name": "Solutie Curatare Piele ADBL Leather Cleaner, 5L",
-          "rationale": "ADBL Leather Cleaner 5L — concentrate leather cleaner for pro dilution.",
-          "expected_tags": {
-            "location": "interior",
-            "surface": [
-              "leather_natural",
-              "leather_synthetic"
-            ],
-            "purpose": "cleaning",
-            "product_type": "leather_cleaner",
-            "concentration": "concentrate"
-          }
-        },
-        {
-          "_source_knowledge_id": "apc_on_leather",
           "magento_id": "ADB000327",
           "sku": "ADB000327",
           "manufacturer": "ADBL",
@@ -387,6 +355,46 @@
         },
         {
           "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "ADB000313",
+          "sku": "ADB000313",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Balsam hidratare si protectie piele ADBL Leather Conditioner, 200 ml",
+          "rationale": "ADBL Leather Conditioner 200ml — compact RTU leather feed.",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural"
+            ],
+            "purpose": "conditioning",
+            "product_type": "leather_conditioner",
+            "concentration": "ready_to_use"
+          }
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "ADB000466",
+          "sku": "ADB000466",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Solutie Curatare Piele ADBL Leather Cleaner, 500ml",
+          "rationale": "ADBL Leather Cleaner 500ml — dedicated leather cleaning before conditioning (dilutable 1:1).",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural",
+              "leather_synthetic"
+            ],
+            "purpose": "cleaning",
+            "product_type": "leather_cleaner",
+            "concentration": "concentrate"
+          },
+          "_match_candidates": [
+            "ADB000468"
+          ]
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
           "magento_id": "LC1",
           "sku": "LC1",
           "manufacturer": "Ewocar",
@@ -402,7 +410,10 @@
             "purpose": "cleaning",
             "product_type": "leather_cleaner",
             "concentration": "ready_to_use"
-          }
+          },
+          "_match_candidates": [
+            "LC5"
+          ]
         }
       ]
     },
@@ -425,24 +436,6 @@
             "purpose": "cleaning",
             "product_type": "glass_cleaner",
             "concentration": "ready_to_use"
-          }
-        },
-        {
-          "_source_knowledge_id": "laveta_geam_utilizare",
-          "magento_id": "302001",
-          "sku": "302001",
-          "manufacturer": "Koch Chemie",
-          "manufacturerId": "13",
-          "name": "Solutie curatare sticla Koch Chemie Gc - Glass Cleaner Pro, 1L",
-          "rationale": "Koch Glass Cleaner Pro 1L — pro glass cleaner concentrate line (Gc).",
-          "expected_tags": {
-            "location": "exterior",
-            "surface": [
-              "glass"
-            ],
-            "purpose": "cleaning",
-            "product_type": "glass_cleaner",
-            "concentration": "concentrate"
           }
         },
         {
@@ -478,8 +471,8 @@
             ],
             "purpose": "cleaning",
             "product_type": "glass_cleaner",
-            "concentration": "ready_to_use",
-            "coating_safety": "coating_safe"
+            "coating_safety": "coating_safe",
+            "concentration": "ready_to_use"
           }
         },
         {
@@ -499,6 +492,27 @@
             "product_type": "glass_cleaner",
             "concentration": "ready_to_use"
           }
+        },
+        {
+          "_source_knowledge_id": "laveta_geam_utilizare",
+          "magento_id": "302001",
+          "sku": "302001",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare sticla Koch Chemie Gc - Glass Cleaner Pro, 1L",
+          "rationale": "Koch Glass Cleaner Pro 1L — pro glass cleaner RTU (1L canonical size).",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "glass"
+            ],
+            "purpose": "cleaning",
+            "product_type": "glass_cleaner",
+            "concentration": "ready_to_use"
+          },
+          "_match_candidates": [
+            "302010"
+          ]
         }
       ]
     }
