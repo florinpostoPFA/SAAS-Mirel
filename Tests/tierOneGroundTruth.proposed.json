@@ -243,14 +243,15 @@
           "manufacturer": "Koch Chemie",
           "manufacturerId": "13",
           "name": "Dressing mat pentru plastic si cauciuc interior GUF Gummifix Koch Chemie, 1L",
-          "rationale": "Koch GUF Gummifix 1L — rubber protectant (Gummifix name bias); interior mats/plastic zones per catalog.",
+          "rationale": "Koch GUF Gummifix 1L — matte trim dressing for interior plastic and rubber (catalog: covorase, pardoseli).",
           "expected_tags": {
             "location": "interior",
             "surface": [
+              "plastic_interior",
               "rubber"
             ],
             "purpose": "protection",
-            "product_type": "rubber_protectant",
+            "product_type": "trim_dressing",
             "finish": "matte",
             "concentration": "ready_to_use"
           }
@@ -328,11 +329,10 @@
           "expected_tags": {
             "location": "interior",
             "surface": [
-              "wheels",
               "leather_natural"
             ],
-            "purpose": "decontamination",
-            "product_type": "iron_remover",
+            "purpose": "conditioning",
+            "product_type": "leather_conditioner",
             "concentration": "ready_to_use"
           }
         },
@@ -365,11 +365,10 @@
           "expected_tags": {
             "location": "interior",
             "surface": [
-              "wheels",
               "leather_natural"
             ],
-            "purpose": "decontamination",
-            "product_type": "iron_remover",
+            "purpose": "conditioning",
+            "product_type": "leather_conditioner",
             "concentration": "ready_to_use"
           }
         },

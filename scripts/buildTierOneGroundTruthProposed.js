@@ -2,6 +2,21 @@
 /**
  * Builds Tests/tierOneGroundTruth.proposed.json from catalog + knowledge links.
  * Run: node scripts/buildTierOneGroundTruthProposed.js
+ *
+ * Heuristic guardrails (re-run safety — do not widen without founder review):
+ *
+ * 1. applyRubberProductNameBias — ONLY when the product name matches Gummifix / Gummi /
+ *    standalone cauciuc|rubber (not "plastic … cauciuc" in the name) AND the catalog
+ *    description does NOT mention plastic, plastic+cauciuc, covorașe/covorase, or pardoseli,
+ *    AND the description does NOT enumerate multiple surface types (e.g. plastic + rubber).
+ *    Otherwise keep base expected_tags (combined surfaces win). Example: 48001 Gummifix keeps
+ *    trim_dressing + ["plastic_interior","rubber"] because the name and description are multi-surface.
+ *
+ * 2. applyIronIndicatorRetag — wheel-context only; uses word-boundary "indicator" so Romanian
+ *    "proprietăți" does not false-trigger. Felgenblitz-style iron chemistry on wheel SKUs.
+ *
+ * 3. applyConcentrationHeuristic — concentrate only when text mentions dilution/concentrate,
+ *    not from bottle size alone.
  */
 const fs = require("fs");
 const path = require("path");
@@ -50,7 +65,10 @@ function catalogIronIndicatorScanText(product) {
 }
 
 const IRON_INDICATOR_RE =
-  /indicator|indicatorului de performanta|rosu|roșu|\bfier\b|reactive|iron(?!\s*and\s*fallout)/i;
+  /\bindicator\b|indicatorului de performanta|rosu|roșu|\bfier\b|reactive|iron(?!\s*and\s*fallout)/i;
+
+const WHEEL_PRODUCT_TYPE_RE = /^(wheel_cleaner|iron_remover|tar_remover)$/;
+const WHEEL_NAME_RE = /jant|felgen|wheel|reifen|rim\b/i;
 
 function impliesIronIndicatorChemistry(product) {
   return IRON_INDICATOR_RE.test(catalogIronIndicatorScanText(product));
@@ -60,9 +78,19 @@ function impliesIronIndicatorChemistry(product) {
  * Felgenblitz-style iron-indicator wheel products: decontamination + iron_remover
  * even when also marketed as wheel cleaners.
  */
+function isWheelProductContext(expectedTags, product) {
+  if (expectedTags.surface?.includes("wheels")) {
+    return true;
+  }
+  if (WHEEL_PRODUCT_TYPE_RE.test(expectedTags.product_type || "")) {
+    return true;
+  }
+  return WHEEL_NAME_RE.test(String(product?.name || ""));
+}
+
 function applyIronIndicatorRetag(expectedTags, product) {
   const tags = { ...expectedTags };
-  if (!impliesIronIndicatorChemistry(product)) {
+  if (!impliesIronIndicatorChemistry(product) || !isWheelProductContext(expectedTags, product)) {
     return tags;
   }
   tags.purpose = "decontamination";
@@ -108,9 +136,32 @@ function applyConcentrationHeuristic(expectedTags, product, knowledgeId, knowled
   return tags;
 }
 
+const RUBBER_BIAS_PLASTIC_OR_INTERIOR_ZONES_RE =
+  /plastic|plastic\s+si\s+cauciuc|plastic\s+și\s+cauciuc|covorase|covora[sșş]e|pardoseli/i;
+
+/** Catalog text lists more than one surface family (plastic + rubber, etc.). */
+function descriptionEnumeratesMultipleSurfaces(descText) {
+  const d = String(descText || "").toLowerCase();
+  if (
+    /plastic.{0,80}(?:cauciuc|rubber|gummi)|(?:cauciuc|rubber|gummi).{0,80}plastic/i.test(
+      d
+    )
+  ) {
+    return true;
+  }
+  if (
+    /(?:cauciuc|rubber).{0,40}(?:si|și|sau|,).{0,40}plastic|plastic.{0,40}(?:si|și|sau|,).{0,40}(?:cauciuc|rubber)/i.test(
+      d
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /**
- * Product name contains Gummi/Gummifix/rubber/cauciuc → rubber protectant (founder 2026-05-22).
- * Gummifix is canonical: catalog lists "interior" but chemistry is rubber-specific.
+ * Narrow rubber-only retag: see file-header rule (1). Combined tags from specs win when
+ * plastic/covorase/pardoseli or multi-surface copy is present (e.g. 48001 Gummifix).
  */
 function applyRubberProductNameBias(expectedTags, product) {
   const name = String(product?.name || "");
@@ -121,15 +172,23 @@ function applyRubberProductNameBias(expectedTags, product) {
     return expectedTags;
   }
 
-  const tags = { ...expectedTags };
-  const scan = [
+  const desc = [
     product?.meta_keyword,
     product?.short_description,
-    String(product?.description || "").slice(0, 500)
+    product?.description
   ]
     .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    .join(" ");
+
+  if (RUBBER_BIAS_PLASTIC_OR_INTERIOR_ZONES_RE.test(desc)) {
+    return expectedTags;
+  }
+  if (descriptionEnumeratesMultipleSurfaces(desc)) {
+    return expectedTags;
+  }
+
+  const tags = { ...expectedTags };
+  const scan = desc.toLowerCase();
 
   tags.surface = ["rubber"];
   tags.product_type = "rubber_protectant";
@@ -423,7 +482,7 @@ function main() {
           id: "48001",
           knowledgeId: "dressing_plastic_interior",
           rationale:
-            "Koch GUF Gummifix 1L — rubber protectant (Gummifix name bias); interior mats/plastic zones per catalog.",
+            "Koch GUF Gummifix 1L — matte trim dressing for interior plastic and rubber (catalog: covorase, pardoseli).",
           expected_tags: {
             location: "interior",
             surface: ["plastic_interior", "rubber"],
