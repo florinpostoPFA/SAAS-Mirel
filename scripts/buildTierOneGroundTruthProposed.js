@@ -37,6 +37,44 @@ function catalogText(product) {
     .join(" ");
 }
 
+/** meta_keyword + short_description + first ~500 chars of description (founder rule 2026-05-22). */
+function catalogIronIndicatorScanText(product) {
+  const desc = String(product?.description || "").slice(0, 500);
+  return [
+    product?.meta_keyword,
+    product?.short_description,
+    desc
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+const IRON_INDICATOR_RE =
+  /indicator|indicatorului de performanta|rosu|roșu|\bfier\b|reactive|iron(?!\s*and\s*fallout)/i;
+
+function impliesIronIndicatorChemistry(product) {
+  return IRON_INDICATOR_RE.test(catalogIronIndicatorScanText(product));
+}
+
+/**
+ * Felgenblitz-style iron-indicator wheel products: decontamination + iron_remover
+ * even when also marketed as wheel cleaners.
+ */
+function applyIronIndicatorRetag(expectedTags, product) {
+  const tags = { ...expectedTags };
+  if (!impliesIronIndicatorChemistry(product)) {
+    return tags;
+  }
+  tags.purpose = "decontamination";
+  tags.product_type = "iron_remover";
+  if (!tags.surface?.includes("wheels")) {
+    tags.surface = ["wheels", ...(tags.surface || [])].filter(
+      (s, i, arr) => arr.indexOf(s) === i
+    );
+  }
+  return tags;
+}
+
 function knowledgeText(knowledgeId, knowledgeById) {
   const row = knowledgeById.get(knowledgeId);
   if (!row) return "";
@@ -101,6 +139,7 @@ function buildEntry(byId, knowledgeById, spec) {
     knowledgeById
   );
   expected_tags = applyAggressiveAcidicCoatingSafety(expected_tags, p);
+  expected_tags = applyIronIndicatorRetag(expected_tags, p);
 
   return {
     _source_knowledge_id: spec.knowledgeId,
@@ -261,7 +300,7 @@ function main() {
       dedupGroup: "koch-felgenblitz-saurefrei",
       knowledgeId: "curatare_jante_indicator_rosu",
       rationale:
-        "Koch Felgenblitz Saurefrei 5L — acid-free (pH-neutral) wheel cleaner, coating-safe maintenance.",
+        "Koch Felgenblitz Saurefrei 5L — pH-neutral iron-indicator wheel decon (red performance indicator in catalog).",
       expected_tags: {
         location: "exterior",
         surface: ["wheels"],
@@ -275,7 +314,8 @@ function main() {
       id: "218011",
       dedupGroup: "koch-felgenblitz-saurefrei",
       knowledgeId: "curatare_jante_indicator_rosu",
-      rationale: "Koch Felgenblitz Saurefrei 11L — bulk size of same pH-neutral wheel cleaner.",
+      rationale:
+        "Koch Felgenblitz Saurefrei 11L — bulk size; iron-indicator chemistry (deduped into 5L).",
       expected_tags: {
         location: "exterior",
         surface: ["wheels"],

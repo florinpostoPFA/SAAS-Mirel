@@ -163,8 +163,8 @@
             "surface": [
               "wheels"
             ],
-            "purpose": "cleaning",
-            "product_type": "wheel_cleaner",
+            "purpose": "decontamination",
+            "product_type": "iron_remover",
             "ph": "acidic",
             "coating_safety": "uncoated_only",
             "concentration": "ready_to_use"
@@ -197,14 +197,14 @@
           "manufacturer": "Koch Chemie",
           "manufacturerId": "13",
           "name": "Solutie curatare jante Felgenblitz Saurefrei Koch Chemie, Fb, 5L",
-          "rationale": "Koch Felgenblitz Saurefrei 5L — acid-free (pH-neutral) wheel cleaner, coating-safe maintenance.",
+          "rationale": "Koch Felgenblitz Saurefrei 5L — pH-neutral iron-indicator wheel decon (red performance indicator in catalog).",
           "expected_tags": {
             "location": "exterior",
             "surface": [
               "wheels"
             ],
-            "purpose": "cleaning",
-            "product_type": "wheel_cleaner",
+            "purpose": "decontamination",
+            "product_type": "iron_remover",
             "ph": "ph_neutral",
             "coating_safety": "coating_safe",
             "concentration": "ready_to_use"
@@ -330,10 +330,11 @@
           "expected_tags": {
             "location": "interior",
             "surface": [
+              "wheels",
               "leather_natural"
             ],
-            "purpose": "conditioning",
-            "product_type": "leather_conditioner",
+            "purpose": "decontamination",
+            "product_type": "iron_remover",
             "concentration": "ready_to_use"
           }
         },
@@ -366,10 +367,11 @@
           "expected_tags": {
             "location": "interior",
             "surface": [
+              "wheels",
               "leather_natural"
             ],
-            "purpose": "conditioning",
-            "product_type": "leather_conditioner",
+            "purpose": "decontamination",
+            "product_type": "iron_remover",
             "concentration": "ready_to_use"
           }
         },
