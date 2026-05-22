@@ -39,7 +39,7 @@ describe("tierOneGroundTruth.proposed.json", () => {
       tires: 5,
       wheels: 5,
       interior_plastic: 5,
-      leather: 4,
+      leather: 5,
       glass: 5
     };
     expect(Object.keys(doc.categories)).toHaveLength(5);
@@ -78,6 +78,6 @@ describe("tierOneGroundTruth.proposed.json", () => {
         }
       }
     }
-    expect(count).toBe(24);
+    expect(count).toBe(25);
   });
 });

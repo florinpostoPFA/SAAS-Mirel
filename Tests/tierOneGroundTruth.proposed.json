@@ -394,6 +394,30 @@
           "_match_candidates": [
             "LC5"
           ]
+        },
+        {
+          "_source_knowledge_id": "pol_star_utilizare",
+          "magento_id": "92005",
+          "sku": "92005",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare textil, piele si alcantara Po Koch Chemie Pol Star, 5L",
+          "rationale": "Koch Pol Star 5L — pH-neutral interior cleaner for textile, leather, and alcantara (dilutable 1:5–1:20).",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "textile",
+              "alcantara",
+              "leather_natural"
+            ],
+            "purpose": "cleaning",
+            "product_type": "interior_cleaner",
+            "ph": "ph_neutral",
+            "concentration": "concentrate"
+          },
+          "_match_candidates": [
+            "KC-PO"
+          ]
         }
       ]
     },

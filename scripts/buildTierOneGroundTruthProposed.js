@@ -35,6 +35,10 @@
  *    Positive: safe on coatings / coating residue removal / Gtechniq glass prep (G1/G5).
  *    Negative: ammonia / amoniac → uncoated_only. Absence of ammonia alone does NOT
  *    imply coating_safe; leave the field omitted when no explicit signal.
+ *
+ * 8. Dedup tiebreak — in a dedup group, if one SKU has price: 0 OR no volume token in the
+ *    product name (\d+(\.\d+)?\s*(ml|l|kg|g)\b), the other SKU wins as primary regardless
+ *    of volume (e.g. Koch Pol Star 92005 over placeholder KC-PO). Else smaller volume wins.
  */
 const fs = require("fs");
 const path = require("path");
@@ -133,6 +137,32 @@ function impliesConcentrate(product, knowledgeId, knowledgeById) {
 }
 
 const VOLUME_STRIP_RE = /,?\s*\d+(\.\d+)?\s*(ml|l|kg|g)\b/gi;
+const VOLUME_IN_NAME_RE = /\d+(\.\d+)?\s*(ml|l|kg|g)\b/i;
+
+/** Placeholder / parent SKU: price 0 or no volume in name — loses dedup primary (rule 8). */
+function isDedupPlaceholderProduct(product) {
+  if (Number(product?.price) === 0) {
+    return true;
+  }
+  return !VOLUME_IN_NAME_RE.test(String(product?.name || ""));
+}
+
+function compareDedupPrimary(a, b, byId) {
+  const aPlaceholder = isDedupPlaceholderProduct(byId.get(a.magento_id));
+  const bPlaceholder = isDedupPlaceholderProduct(byId.get(b.magento_id));
+  if (aPlaceholder !== bPlaceholder) {
+    return aPlaceholder ? 1 : -1;
+  }
+  return a._volumeMl - b._volumeMl;
+}
+
+function pickDedupWinner(groupEntries, byId) {
+  const sorted = [...groupEntries].sort((a, b) => compareDedupPrimary(a, b, byId));
+  return {
+    winner: { ...sorted[0] },
+    candidates: sorted.slice(1).map((e) => e.magento_id)
+  };
+}
 
 function normalizeProductNameForDedup(name) {
   return String(name || "")
@@ -390,9 +420,8 @@ function dedupeGroupedEntries(entries, byId, categoryLabel) {
   const mergeLog = [];
 
   for (const [key, groupEntries] of groups.entries()) {
-    const sorted = [...groupEntries].sort((a, b) => a._volumeMl - b._volumeMl);
-    let winner = { ...sorted[0] };
-    const candidates = sorted.slice(1).map((e) => e.magento_id);
+    const { winner: picked, candidates } = pickDedupWinner(groupEntries, byId);
+    let winner = picked;
     if (candidates.length > 0) {
       winner._match_candidates = candidates;
       mergeLog.push({
@@ -404,7 +433,7 @@ function dedupeGroupedEntries(entries, byId, categoryLabel) {
         explicitGroup: Boolean(winner._dedupGroup)
       });
     }
-    winner = applyFinishConflictGuardrail(winner, sorted, byId);
+    winner = applyFinishConflictGuardrail(winner, groupEntries, byId);
     merged.push(stripInternal(winner));
   }
 
@@ -750,6 +779,34 @@ function main() {
         product_type: "leather_cleaner"
       }
     },
+    {
+      id: "92005",
+      dedupGroup: "koch-pol-star",
+      knowledgeId: "pol_star_utilizare",
+      rationale:
+        "Koch Pol Star 5L — pH-neutral interior cleaner for textile, leather, and alcantara (dilutable 1:5–1:20).",
+      expected_tags: {
+        location: "interior",
+        surface: ["textile", "alcantara", "leather_natural"],
+        purpose: "cleaning",
+        product_type: "interior_cleaner",
+        ph: "ph_neutral"
+      }
+    },
+    {
+      id: "KC-PO",
+      dedupGroup: "koch-pol-star",
+      knowledgeId: "pol_star_utilizare",
+      rationale:
+        "Koch Pol Star placeholder/parent SKU (deduped into 92005; price 0, no volume in name).",
+      expected_tags: {
+        location: "interior",
+        surface: ["textile", "alcantara", "leather_natural"],
+        purpose: "cleaning",
+        product_type: "interior_cleaner",
+        ph: "ph_neutral"
+      }
+    }
   ];
 
   const glassSpecs = [
@@ -863,7 +920,7 @@ function main() {
   }
 
   if (allMergeLogs.length > 0) {
-    console.log("Dedup merges (smaller volume wins):");
+    console.log("Dedup merges (placeholder tiebreak, else smaller volume wins):");
     for (const row of allMergeLogs) {
       console.log(
         `  [${row.category}] ${row.primary} <- ${row.candidates.join(", ")}` +
@@ -878,7 +935,7 @@ function main() {
     tires: 5,
     wheels: 5,
     interior_plastic: 5,
-    leather: 4,
+    leather: 5,
     glass: 5
   };
   for (const [name, cat] of Object.entries(categories)) {
