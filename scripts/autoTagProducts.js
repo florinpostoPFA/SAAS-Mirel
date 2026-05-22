@@ -7,27 +7,58 @@ const { normalizeTagList, applyProductTagOverrides } = require("../services/tagN
 dotenv.config();
 
 const PRODUCTS_PATH = path.join(__dirname, "../data/products.json");
-const ALLOWED_TAGS = new Set([
-  // Location
-  "interior", "exterior",
-  // Surface (material)
-  "plastic", "leather", "textile", "alcantara", "glass", "paint", "metal", "rubber", "wheels", "tires",
-  // Purpose (action)
-  "cleaning", "protection", "polish", "coating",
-  // Product type
-  "dressing", "cleaner", "detailer", "wax", "sealant", "apc",
-  // Finish (result)
-  "mat", "gloss", "satin", "natural"
-]);
+const VOCABULARY_PATH = path.join(__dirname, "../Tests/tagVocabulary.json");
+const VOCABULARY_CATEGORIES = [
+  "location",
+  "surface",
+  "purpose",
+  "product_type",
+  "finish",
+  "ph",
+  "coating_safety",
+  "concentration"
+];
+
+const COST_PER_PRODUCT_USD = 0.00015;
+
+/** @type {ReturnType<typeof loadTagVocabulary>} */
+let vocabularyBundle = loadTagVocabulary();
+let ALLOWED_TAGS = vocabularyBundle.allowedTags;
+let CATEGORY_META = vocabularyBundle.categoryMeta;
+
+/**
+ * @returns {{ allowedTags: Set<string>, categoryMeta: Record<string, { required?: boolean, max_tags?: number, note?: string, tags: Array<{ name: string, note?: string }> }>, raw: object }}
+ */
+function loadTagVocabulary() {
+  const raw = JSON.parse(fs.readFileSync(VOCABULARY_PATH, "utf-8"));
+  const allowedTags = new Set();
+  const categoryMeta = {};
+
+  for (const category of VOCABULARY_CATEGORIES) {
+    const block = raw.vocabulary?.[category];
+    if (!block || !Array.isArray(block.tags)) continue;
+    categoryMeta[category] = {
+      required: block.required,
+      max_tags: block.max_tags,
+      note: block.note,
+      tags: block.tags
+    };
+    for (const tag of block.tags) {
+      if (tag?.name) allowedTags.add(tag.name);
+    }
+  }
+
+  return { allowedTags, categoryMeta, raw };
+}
 
 /** Deterministic substring hints. Keys must match ALLOWED_TAGS when emitted. */
 const KEYWORD_TAG_MAPPING = {
   interior: ["interior", "cockpit", "bord", "cotiera", "scaun"],
   exterior: ["exterior", "caroserie", "vopsea"],
-  leather: ["leather", "piele"],
+  leather_natural: ["leather", "piele"],
   textile: ["textil", "material textil", "stofa", "stoffa", "fabric", "upholstery"],
   alcantara: ["alcantara"],
-  plastic: ["plastic", "trim", "bord", "console"],
+  plastic_interior: ["plastic", "trim", "bord", "console"],
   glass: ["glass", "geam", "geamuri", "sticla", "windshield", "parbriz", "luneta"],
   paint: ["vopsea", "caroserie", "lac", "paint", "clearcoat"],
   wheels: ["janta", "jante", "rim", "rims", "wheel", "wheels"],
@@ -76,11 +107,6 @@ function inferDeterministicTags(product) {
   }
   return out;
 }
-function normalizeTag(tag) {
-  return tag
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-}
 
 function normalizeTags(tags) {
   return normalizeTagList(tags);
@@ -92,39 +118,38 @@ function loadProducts() {
   return Array.isArray(parsed) ? parsed : [];
 }
 
-function buildPrompt(product) {
+function formatCategoryPromptLines(categoryMeta) {
+  return VOCABULARY_CATEGORIES.map((category) => {
+    const block = categoryMeta[category];
+    if (!block) return "";
+    const reqLabel = block.required ? "required" : "optional";
+    const tagList = block.tags
+      .map((tag) => `${tag.name} (${tag.note || ""})`)
+      .join(", ");
+    return `${category} (${reqLabel}, max ${block.max_tags}): ${tagList}`;
+  })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildPrompt(product, categoryMeta = CATEGORY_META) {
+  const groupedVocabulary = formatCategoryPromptLines(categoryMeta);
   return `You are an expert in auto detailing.
 
 Extract structured tags for this product.
 
 Rules:
-- Include EXACTLY:
-  - 1 location (interior or exterior, if applicable)
-  - 1-2 surfaces (material types like plastic, leather, glass, rubber, paint, metal, wheels, tires, textile, alcantara)
-  - 1 product type (dressing, cleaner, detailer, wax, sealant, apc)
-  - EXACTLY 1 purpose from: cleaning, protection, polish, coating
+- Pick at most 5 tags total across all categories.
+- Respect max_tags per category (see list below).
+- Use ONLY tag names from the allowed list (not the parenthetical notes).
 
-STRICT PURPOSE RULES:
-- "cleaning" → ONLY for products that remove dirt (APC, glass cleaner, interior cleaner)
-- "polish" → for compounds, swirl removers, scratch removers, abrasive products
-- If a product corrects paint defects → ALWAYS use "polish"
-- "protection" → for waxes, sealants, dressings
-- NEVER return both "cleaning" and "polish"
-- NEVER return more than one purpose
-
-Finish:
-- Include finish ONLY if explicitly mentioned (mat, gloss, satin, natural)
-
-Allowed tags:
-interior, exterior, plastic, leather, textile, alcantara, glass, paint, metal, rubber, wheels, tires,
-cleaning, protection, polish, coating, dressing, cleaner, detailer, wax, sealant, apc,
-mat, gloss, satin, natural
+Allowed tags grouped by category. Pick at most max_tags per category.
+${groupedVocabulary}
 
 Constraints:
 - Use ONLY tags from the allowed list
 - Do NOT invent new tags
-
-Return ONLY a JSON array of tags.
+- Return ONLY a JSON array of tag name strings
 
 Product:
 Name: ${product.name || ""}
@@ -168,28 +193,56 @@ function parseTagsFromResponse(text, cleaned = extractJSON(text)) {
   return [];
 }
 
-function sanitizeTags(tags) {
-  const PURPOSE_TAGS = ["cleaning", "protection", "polish", "coating"];
+/**
+ * @param {string[]} tags
+ * @param {Set<string>} [allowedTags]
+ * @returns {{ tags: string[], droppedUnknownTags: string[] }}
+ */
+function sanitizeTags(tags, allowedTags = ALLOWED_TAGS) {
+  const PURPOSE_TAGS = [
+    "cleaning",
+    "decontamination",
+    "polish",
+    "protection",
+    "coating",
+    "conditioning",
+    "restoration",
+    "neutralization"
+  ];
 
-let purposes = tags.filter(t => PURPOSE_TAGS.includes(t));
+  let working = Array.isArray(tags) ? [...tags] : [];
+  const purposes = working.filter((t) => PURPOSE_TAGS.includes(t));
 
-// Rule: if polish exists → remove cleaning
-if (purposes.includes("polish")) {
-  tags = tags.filter(t => t !== "cleaning");
-}
-
-// Ensure max 1 purpose
-let found = null;
-tags = tags.filter(tag => {
-  if (PURPOSE_TAGS.includes(tag)) {
-    if (found) return false;
-    found = tag;
+  if (purposes.includes("polish")) {
+    working = working.filter((t) => t !== "cleaning");
   }
-  return true;
-});
 
-  const result = normalizeTagList(tags).filter((tag) => ALLOWED_TAGS.has(tag));
-  return result;
+  let foundPurpose = null;
+  working = working.filter((tag) => {
+    if (PURPOSE_TAGS.includes(tag)) {
+      if (foundPurpose) return false;
+      foundPurpose = tag;
+    }
+    return true;
+  });
+
+  const normalized = normalizeTagList(working);
+  const kept = [];
+  const droppedUnknownTags = [];
+
+  for (const tag of normalized) {
+    if (allowedTags.has(tag)) {
+      kept.push(tag);
+    } else if (tag) {
+      droppedUnknownTags.push(tag);
+    }
+  }
+
+  if (droppedUnknownTags.length > 0) {
+    console.error(`Dropped unknown tags: ${droppedUnknownTags.join(", ")}`);
+  }
+
+  return { tags: kept, droppedUnknownTags };
 }
 
 async function generateTagsForProduct(product) {
@@ -199,22 +252,20 @@ async function generateTagsForProduct(product) {
   const raw = await askLLM(prompt);
   const cleaned = extractJSON(raw);
 
-  let tags = [];
+  let parsed = [];
 
   try {
-    tags = JSON.parse(cleaned);
+    parsed = JSON.parse(cleaned);
   } catch (err) {
-    tags = parseTagsFromResponse(raw, cleaned);
+    parsed = parseTagsFromResponse(raw, cleaned);
   }
 
-  if (!Array.isArray(tags)) {
-    tags = [];
+  if (!Array.isArray(parsed)) {
+    parsed = [];
   }
 
-  tags = tags.map(tag => String(tag).toLowerCase().trim());
-  console.log("RAW TAGS:", tags);
-  tags = sanitizeTags([...fromKeywords, ...tags]);
-  console.log("FINAL TAGS:", tags);
+  parsed = parsed.map((tag) => String(tag).toLowerCase().trim());
+  const { tags, droppedUnknownTags } = sanitizeTags([...fromKeywords, ...parsed]);
 
   console.log("PRODUCT:", product.name);
   console.log("RAW:", raw);
@@ -222,20 +273,71 @@ async function generateTagsForProduct(product) {
   console.log("TAGS:", tags);
   console.log("----------------");
 
-  return tags;
+  return { tags, llmRawResponse: raw, droppedUnknownTags };
 }
 
 function mergeDeterministicTags(product) {
   const fromKeywords = inferDeterministicTags(product);
   const existing = Array.isArray(product?.tags) ? product.tags : [];
-  return applyProductTagOverrides(sanitizeTags([...existing, ...fromKeywords]), product);
+  const { tags, droppedUnknownTags } = sanitizeTags([...existing, ...fromKeywords]);
+  return {
+    tags: applyProductTagOverrides(tags, product),
+    droppedUnknownTags
+  };
 }
 
-const delay = (ms) => new Promise(res => setTimeout(res, ms));
+function parseCliArgs(argv = process.argv) {
+  return {
+    forceAll: argv.includes("--force-all")
+  };
+}
 
-async function main() {
+function buildDiffLogPath(now = new Date()) {
+  const stamp = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0")
+  ].join("");
+  const time = [
+    String(now.getHours()).padStart(2, "0"),
+    String(now.getMinutes()).padStart(2, "0")
+  ].join("");
+  return path.join(__dirname, "../logs", `retag-${stamp}-${time}.jsonl`);
+}
+
+function ensureLogsDir() {
+  const logsDir = path.join(__dirname, "../logs");
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+/**
+ * @param {import("fs").WriteStream} stream
+ * @param {object} entry
+ */
+function writeDiffLogEntry(stream, entry) {
+  stream.write(`${JSON.stringify(entry)}\n`);
+}
+
+/**
+ * @param {object[]} products
+ * @param {{ forceAll?: boolean, persistPath?: string, diffLogPath?: string, llmFn?: typeof generateTagsForProduct }} [options]
+ */
+async function runTaggingPipeline(products, options = {}) {
+  const { forceAll = false, persistPath = PRODUCTS_PATH, diffLogPath, llmFn = generateTagsForProduct } = options;
   const BATCH_SIZE = 20;
-  const products = loadProducts();
+  let diffLogStream = null;
+  let diffLogEntries = 0;
+
+  if (forceAll) {
+    const estimatedCost = (products.length * COST_PER_PRODUCT_USD).toFixed(2);
+    console.log(
+      `Running --force-all on ${products.length} products, estimated cost $${estimatedCost}`
+    );
+  }
+
+  ensureLogsDir();
+  const logPath = diffLogPath || buildDiffLogPath();
+  diffLogStream = fs.createWriteStream(logPath, { flags: "a" });
 
   for (let i = 0; i < products.length; i += BATCH_SIZE) {
     const batch = products.slice(i, i + BATCH_SIZE);
@@ -243,40 +345,87 @@ async function main() {
     console.log(`Processing batch ${batchNumber}...`);
 
     for (const product of batch) {
-      const hasExistingTags = Array.isArray(product.tags) && product.tags.length > 0;
+      const tagsBefore = Array.isArray(product.tags) ? [...product.tags] : [];
+      const startedAt = Date.now();
+      let llmRawResponse = "";
+      let droppedUnknownTags = [];
 
       try {
+        if (forceAll) {
+          product.tags = [];
+          if (Object.prototype.hasOwnProperty.call(product, "aiTags")) {
+            product.aiTags = [];
+          }
+        }
+
+        const hasExistingTags = !forceAll && Array.isArray(product.tags) && product.tags.length > 0;
+
         if (hasExistingTags) {
-          product.tags = normalizeTags(mergeDeterministicTags(product));
+          const merged = mergeDeterministicTags(product);
+          product.tags = normalizeTags(merged.tags);
+          droppedUnknownTags = merged.droppedUnknownTags;
           console.log(`Merged deterministic tags: ${product.name}`);
         } else {
-          const parsedTags = await generateTagsForProduct(product);
-          product.tags = normalizeTags(applyProductTagOverrides(parsedTags, product));
+          const result = await llmFn(product);
+          llmRawResponse = result.llmRawResponse || "";
+          droppedUnknownTags = result.droppedUnknownTags || [];
+          product.tags = normalizeTags(applyProductTagOverrides(result.tags, product));
           console.log(`Tagged: ${product.name}`);
         }
       } catch (err) {
         console.error(`Failed to tag: ${product.name}`, err.message);
       }
 
+      const tagsAfter = Array.isArray(product.tags) ? [...product.tags] : [];
+      writeDiffLogEntry(diffLogStream, {
+        id: product.id,
+        name: product.name,
+        tagsBefore,
+        tagsAfter,
+        llmRawResponse,
+        droppedUnknownTags,
+        durationMs: Date.now() - startedAt
+      });
+      diffLogEntries += 1;
+
       await delay(500);
     }
 
-    fs.writeFileSync(PRODUCTS_PATH, JSON.stringify(products, null, 2));
-    console.log(`Batch ${batchNumber} saved`);
+    if (persistPath) {
+      fs.writeFileSync(persistPath, JSON.stringify(products, null, 2));
+      console.log(`Batch ${batchNumber} saved`);
+    }
   }
 
-  const tagged = products.filter(p => Array.isArray(p.tags) && p.tags.length > 0).length;
+  await new Promise((resolve) => diffLogStream.end(resolve));
+  console.log(`Diff log: ${logPath} (${diffLogEntries} entries)`);
+
+  const tagged = products.filter((p) => Array.isArray(p.tags) && p.tags.length > 0).length;
   console.log(`Done. Tagged ${tagged} / ${products.length} products.`);
+
+  return { diffLogPath: logPath, diffLogEntries, tagged };
+}
+
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
+async function main() {
+  const { forceAll } = parseCliArgs();
+  const products = loadProducts();
+  await runTaggingPipeline(products, { forceAll });
 }
 
 if (require.main === module) {
-  main().catch(error => {
+  main().catch((error) => {
     console.error("Failed to auto-tag products:", error.message);
     process.exit(1);
   });
 }
 
 module.exports = {
+  VOCABULARY_PATH,
+  VOCABULARY_CATEGORIES,
+  loadTagVocabulary,
+  buildPrompt,
   extractJSON,
   parseTagsFromResponse,
   sanitizeTags,
@@ -284,5 +433,14 @@ module.exports = {
   mergeDeterministicTags,
   collectProductText,
   inferDeterministicTags,
-  KEYWORD_TAG_MAPPING
+  parseCliArgs,
+  runTaggingPipeline,
+  KEYWORD_TAG_MAPPING,
+  getAllowedTags: () => ALLOWED_TAGS,
+  reloadVocabulary: () => {
+    vocabularyBundle = loadTagVocabulary();
+    ALLOWED_TAGS = vocabularyBundle.allowedTags;
+    CATEGORY_META = vocabularyBundle.categoryMeta;
+    return vocabularyBundle;
+  }
 };

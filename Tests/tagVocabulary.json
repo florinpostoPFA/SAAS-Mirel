@@ -1,0 +1,134 @@
+{
+    "version": "1.0-draft-2026-05-22",
+    "vocabulary": {
+      "location": {
+        "required": true,
+        "max_tags": 1,
+        "tags": [
+          { "name": "interior", "note": "Inside the cabin" },
+          { "name": "exterior", "note": "Outside surfaces (paint, wheels, tires, glass, trim)" },
+          { "name": "engine_bay", "note": "Under the hood" }
+        ]
+      },
+      "surface": {
+        "required": true,
+        "max_tags": 3,
+        "tags": [
+          { "name": "paint", "note": "Vehicle bodywork / clearcoat" },
+          { "name": "plastic_interior", "note": "Dashboard, cockpit, door cards, console" },
+          { "name": "plastic_exterior", "note": "Bumpers, trim, mirror housings, unpainted plastic" },
+          { "name": "leather_natural", "note": "Natural / genuine leather seats and trim" },
+          { "name": "leather_synthetic", "note": "Synthetic / faux / PU leather seats and trim" },
+          { "name": "alcantara", "note": "Suede-like microfiber upholstery" },
+          { "name": "textile", "note": "Fabric seats and upholstery" },
+          { "name": "carpet", "note": "Floor carpets and mats" },
+          { "name": "headliner", "note": "Cabin ceiling fabric" },
+          { "name": "glass", "note": "Windows, windshield, mirrors" },
+          { "name": "chrome", "note": "Chromed metal trim" },
+          { "name": "metal", "note": "Bare or brushed metal (exhaust tips, badges)" },
+          { "name": "rubber", "note": "Door seals, weatherstripping" },
+          { "name": "wheels", "note": "Wheel rims / barrels" },
+          { "name": "tires", "note": "Tire sidewalls (rubber compound)" }
+        ]
+      },
+      "purpose": {
+        "required": true,
+        "max_tags": 1,
+        "tags": [
+          { "name": "cleaning", "note": "General dirt / grime removal" },
+          { "name": "decontamination", "note": "Bonded contamination removal (iron, tar, bugs, sap)" },
+          { "name": "polish", "note": "Paint correction / abrasive removal of swirls and scratches" },
+          { "name": "protection", "note": "Adds a non-permanent protective layer (wax, sealant)" },
+          { "name": "coating", "note": "Adds a durable / semi-permanent coating (ceramic, graphene)" },
+          { "name": "conditioning", "note": "Restores material softness / moisture (leather, rubber)" },
+          { "name": "restoration", "note": "Restores degraded surface (trim restorer, headlight clarity)" },
+          { "name": "neutralization", "note": "Neutralizes pH after acid wash, removes residue" }
+        ]
+      },
+      "product_type": {
+        "required": true,
+        "max_tags": 1,
+        "tags": [
+          { "name": "shampoo", "note": "Car wash soap, dilute in bucket" },
+          { "name": "snow_foam", "note": "Pre-wash foam through foam cannon" },
+          { "name": "apc", "note": "All-purpose cleaner, multi-surface" },
+          { "name": "wheel_cleaner", "note": "Dedicated wheel cleaner" },
+          { "name": "tire_cleaner", "note": "Tire-specific cleaner" },
+          { "name": "tire_dressing", "note": "Tire shine / protectant" },
+          { "name": "trim_dressing", "note": "Plastic trim restorer / protectant" },
+          { "name": "leather_cleaner", "note": "Leather-specific cleaner" },
+          { "name": "leather_conditioner", "note": "Leather feed / conditioner" },
+          { "name": "glass_cleaner", "note": "Window / glass cleaner" },
+          { "name": "interior_cleaner", "note": "Interior multi-surface or fabric cleaner" },
+          { "name": "iron_remover", "note": "Dissolves bonded iron particles (fallout)" },
+          { "name": "tar_remover", "note": "Dissolves tar / road grime" },
+          { "name": "bug_remover", "note": "Dissolves bug splatter / protein contamination" },
+          { "name": "clay_bar", "note": "Clay or clay-substitute for mechanical decontamination" },
+          { "name": "polish_compound", "note": "Abrasive polish / compound for correction" },
+          { "name": "wax", "note": "Carnauba or synthetic wax" },
+          { "name": "sealant", "note": "Synthetic paint sealant" },
+          { "name": "ceramic_coating", "note": "SiO2 / SiC ceramic coating" },
+          { "name": "quick_detailer", "note": "Spray-and-wipe maintenance product" },
+          { "name": "fabric_protectant", "note": "Hydrophobic spray for textile" },
+          { "name": "rubber_protectant", "note": "Rubber seal conditioner" },
+          { "name": "air_freshener", "note": "Cabin scent product" }
+        ]
+      },
+      "finish": {
+        "required": false,
+        "max_tags": 1,
+        "note": "Visual finish for protection / dressing / polish products only. Optional.",
+        "tags": [
+          { "name": "matte", "note": "No shine, dry / OEM look" },
+          { "name": "satin", "note": "Low shine, between matte and gloss" },
+          { "name": "gloss", "note": "High shine, glassy" },
+          { "name": "wet_look", "note": "Maximum shine, looks wet (typically tire dressings)" },
+          { "name": "natural", "note": "Restores OEM appearance without altering finish" }
+        ]
+      },
+      "ph": {
+        "required": false,
+        "max_tags": 1,
+        "note": "Chemistry. Critical for wheel cleaners (coating safety) and degreasers. Optional but strongly recommended where known.",
+        "tags": [
+          { "name": "acidic", "note": "pH < 5. Aggressive on brake dust. NOT safe on ceramic coatings or polished metals." },
+          { "name": "ph_neutral", "note": "pH 6-8. Safe on all surfaces including coatings. Default for maintenance." },
+          { "name": "alkaline", "note": "pH > 9. Strong degreaser. Caution on coatings and bare metal." }
+        ]
+      },
+      "coating_safety": {
+        "required": false,
+        "max_tags": 1,
+        "note": "Whether safe to use on ceramic-coated surfaces. Optional but strongly recommended.",
+        "tags": [
+          { "name": "coating_safe", "note": "Tested compatible with ceramic coatings" },
+          { "name": "coating_caution", "note": "Use sparingly, may degrade coating over time" },
+          { "name": "uncoated_only", "note": "Will strip / damage ceramic coatings" }
+        ]
+      },
+      "concentration": {
+        "required": false,
+        "max_tags": 1,
+        "tags": [
+          { "name": "concentrate", "note": "Requires dilution before use" },
+          { "name": "ready_to_use", "note": "Use straight from bottle" }
+        ]
+      }
+    },
+    "validator_behavior": {
+      "drop_unknown_tags_silently": false,
+      "log_unknown_tags": true,
+      "required_categories_must_be_present": true,
+      "on_validation_failure": "log_warning_and_skip_product"
+    },
+    "migration_notes": {
+      "removed_from_v0": {
+        "shine": "→ finish:gloss or finish:wet_look",
+        "tire": "→ surface:tires (canonical plural)",
+        "mat": "→ finish:matte (canonical spelling)"
+      },
+      "moved_from_purpose_to_product_type": [
+        "dressing", "cleaner", "detailer", "wax", "sealant", "apc"
+      ]
+    }
+  }
