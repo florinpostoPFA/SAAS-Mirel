@@ -60,16 +60,78 @@ const TRUNC_SUFFIX = "...[TRUNCATED]";
 const DEFAULT_CONCURRENCY = 4;
 const QUERY_PAGE_SIZE = 100;
 
+const USAGE_LINES = [
+  "Usage: node scripts/ingestDailyLogsToNotion.js [options]",
+  "",
+  "Ingest interaction logs (logs/<YYYY-MM-DD>.jsonl) into Notion 2.0 Logs DB.",
+  "",
+  "Options:",
+  "  --date YYYY-MM-DD   Target log day (default: yesterday UTC)",
+  "  --file PATH         Override JSONL file path",
+  "  --concurrency N     Parallel Notion uploads (default: 4)",
+  "  --max-rows N        Cap rows ingested (for testing)",
+  "  --dry-run           Parse and dedupe without posting to Notion",
+  "  --allow-missing     Exit 0 if log file is missing (no ingest)",
+  "  -h, --help          Show this help and exit",
+  "",
+  "Examples:",
+  "  node scripts/ingestDailyLogsToNotion.js",
+  "  node scripts/ingestDailyLogsToNotion.js --date 2026-05-22",
+  "  npm run logs:ingest -- --date 2026-05-22"
+];
+
+function printUsage(stream = process.stdout) {
+  stream.write(`${USAGE_LINES.join("\n")}\n`);
+}
+
+function isValidIsoDate(value) {
+  const s = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const parsed = new Date(`${s}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === s;
+}
+
 function parseArgs(argv) {
   const out = {};
-  for (let i = 0; i < argv.length; i += 1) {
-    const tok = argv[i];
-    if (tok === "--date") out.date = argv[i + 1];
-    else if (tok === "--file") out.file = argv[i + 1];
-    else if (tok === "--concurrency") out.concurrency = Number(argv[i + 1]);
-    else if (tok === "--max-rows") out.maxRows = Number(argv[i + 1]);
-    else if (tok === "--dry-run") out.dryRun = true;
-    else if (tok === "--allow-missing") out.allowMissing = true;
+  const args = Array.isArray(argv) ? argv : [];
+  for (let i = 0; i < args.length; i += 1) {
+    const tok = args[i];
+    if (tok === "--help" || tok === "-h") {
+      out.help = true;
+      continue;
+    }
+    if (tok === "--date") {
+      out.date = args[i + 1];
+      i += 1;
+      continue;
+    }
+    if (tok === "--file") {
+      out.file = args[i + 1];
+      i += 1;
+      continue;
+    }
+    if (tok === "--concurrency") {
+      out.concurrency = Number(args[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (tok === "--max-rows") {
+      out.maxRows = Number(args[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (tok === "--dry-run") {
+      out.dryRun = true;
+      continue;
+    }
+    if (tok === "--allow-missing") {
+      out.allowMissing = true;
+      continue;
+    }
+    throw new Error(`Unknown argument: ${tok} (use --help)`);
+  }
+  if (out.date != null && !isValidIsoDate(out.date)) {
+    throw new Error(`Invalid --date "${out.date}" (expected YYYY-MM-DD)`);
   }
   return out;
 }
@@ -424,7 +486,18 @@ async function ingestDailyLogs(options = {}) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    console.error(err.message);
+    printUsage(process.stderr);
+    process.exit(1);
+  }
+  if (args.help) {
+    printUsage();
+    return;
+  }
   let lastTick = 0;
   const result = await ingestDailyLogs({
     date: args.date,
@@ -470,6 +543,9 @@ if (require.main === module) {
 }
 
 module.exports = {
+  USAGE_LINES,
+  printUsage,
+  isValidIsoDate,
   parseArgs,
   yesterdayUtc,
   resolveLogFile,
