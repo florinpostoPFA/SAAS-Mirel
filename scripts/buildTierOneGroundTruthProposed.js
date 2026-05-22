@@ -17,6 +17,19 @@
  *
  * 3. applyConcentrationHeuristic — concentrate only when text mentions dilution/concentrate,
  *    not from bottle size alone.
+ *
+ * 4. Same-product-line dedup — normalize catalog names by stripping
+ *    ,?\s*\d+(\.\d+)?\s*(ml|l|kg|g)\b (case-insensitive); same manufacturer + normalized
+ *    name → one entry, smaller parseVolumeMl wins, larger SKUs → _match_candidates.
+ *    Explicit spec.dedupGroup still works; auto key is mfrId + normalized name.
+ *
+ * 5. Finish-inference guardrail — within a dedup group, if expected_tags.finish or catalog
+ *    finish hints disagree across sizes, OMIT finish on the winner (e.g. ADBL Leather
+ *    Conditioner 200ml satin vs 500ml matte/none).
+ *
+ * 6. Leather conditioner surfaces — product_type leather_conditioner + catalog mentions
+ *    orice tip / vinil / piele ecologica / eco-leather / synthetic / vinyl → both
+ *    leather_natural and leather_synthetic.
  */
 const fs = require("fs");
 const path = require("path");
@@ -114,6 +127,16 @@ function impliesConcentrate(product, knowledgeId, knowledgeById) {
   return CONCENTRATE_RE.test(text);
 }
 
+const VOLUME_STRIP_RE = /,?\s*\d+(\.\d+)?\s*(ml|l|kg|g)\b/gi;
+
+function normalizeProductNameForDedup(name) {
+  return String(name || "")
+    .replace(VOLUME_STRIP_RE, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 function parseVolumeMl(name) {
   const n = String(name || "").toLowerCase();
   const ml = n.match(/(\d+(?:[.,]\d+)?)\s*ml\b/);
@@ -122,7 +145,48 @@ function parseVolumeMl(name) {
   if (l) return parseFloat(l[1].replace(",", ".")) * 1000;
   const kg = n.match(/(\d+(?:[.,]\d+)?)\s*kg\b/);
   if (kg) return parseFloat(kg[1].replace(",", ".")) * 1000;
+  const g = n.match(/(\d+(?:[.,]\d+)?)\s*g\b/);
+  if (g) return parseFloat(g[1].replace(",", "."));
   return Number.POSITIVE_INFINITY;
+}
+
+const LEATHER_SYNTHETIC_CATALOG_RE =
+  /orice\s+tip|vinil|piele\s+ecologic|eco[- ]?leather|synthetic|vinyl/i;
+
+const FINISH_CATALOG_HINTS = [
+  [/semi[- ]?mat|aspect\s+satin|\bsatinat\b|\bsatin\b/i, "satin"],
+  [/fara\s+efect\s+de\s+stralucire|fară\s+efect|natural,\s*mat|aspect\s+mat\b|\bmatte\b|\bmat\b/i, "matte"],
+  [/luciu|lucios|gloss|stralucire|strălucire|wet\s*look/i, "gloss"],
+  [/finish:\s*natural|\bnatural\b/i, "natural"]
+];
+
+function collectFinishSignals(entry, product) {
+  const signals = new Set();
+  if (entry.expected_tags?.finish) {
+    signals.add(entry.expected_tags.finish);
+  }
+  const text = catalogText(product).toLowerCase();
+  for (const [re, finish] of FINISH_CATALOG_HINTS) {
+    if (re.test(text)) {
+      signals.add(finish);
+    }
+  }
+  return signals;
+}
+
+function applyLeatherConditionerSurfaceDefault(expectedTags, product) {
+  if (expectedTags.product_type !== "leather_conditioner") {
+    return expectedTags;
+  }
+  if (!LEATHER_SYNTHETIC_CATALOG_RE.test(catalogText(product))) {
+    return expectedTags;
+  }
+  const tags = { ...expectedTags };
+  const surfaces = new Set(tags.surface || []);
+  surfaces.add("leather_natural");
+  surfaces.add("leather_synthetic");
+  tags.surface = [...surfaces];
+  return tags;
 }
 
 function applyConcentrationHeuristic(expectedTags, product, knowledgeId, knowledgeById) {
@@ -236,6 +300,11 @@ function buildEntry(byId, knowledgeById, spec) {
   expected_tags = applyAggressiveAcidicCoatingSafety(expected_tags, p);
   expected_tags = applyIronIndicatorRetag(expected_tags, p);
   expected_tags = applyRubberProductNameBias(expected_tags, p);
+  expected_tags = applyLeatherConditionerSurfaceDefault(expected_tags, p);
+
+  const normalizedName = normalizeProductNameForDedup(p.name);
+  const dedupKey =
+    spec.dedupGroup || `${String(p.manufacturerId)}:${normalizedName}`;
 
   return {
     _source_knowledge_id: spec.knowledgeId,
@@ -246,51 +315,73 @@ function buildEntry(byId, knowledgeById, spec) {
     name: p.name,
     rationale: spec.rationale,
     expected_tags,
+    _dedupKey: dedupKey,
     _dedupGroup: spec.dedupGroup || null,
+    _normalizedName: normalizedName,
     _volumeMl: parseVolumeMl(p.name)
   };
 }
 
-function dedupeGroupedEntries(entries) {
+function applyFinishConflictGuardrail(winner, groupEntries, byId) {
+  const allSignals = new Set();
+  for (const entry of groupEntries) {
+    const product = byId.get(entry.magento_id);
+    for (const signal of collectFinishSignals(entry, product)) {
+      allSignals.add(signal);
+    }
+  }
+  if (allSignals.size <= 1) {
+    return winner;
+  }
+  const tags = { ...winner.expected_tags };
+  delete tags.finish;
+  return { ...winner, expected_tags: tags };
+}
+
+function dedupeGroupedEntries(entries, byId, categoryLabel) {
   const groups = new Map();
-  const singles = [];
 
   for (const entry of entries) {
-    if (!entry._dedupGroup) {
-      singles.push(stripInternal(entry));
-      continue;
+    const key = entry._dedupKey;
+    if (!groups.has(key)) {
+      groups.set(key, []);
     }
-    if (!groups.has(entry._dedupGroup)) {
-      groups.set(entry._dedupGroup, []);
-    }
-    groups.get(entry._dedupGroup).push(entry);
+    groups.get(key).push(entry);
   }
 
-  const merged = [...singles];
-  for (const groupEntries of groups.values()) {
+  const merged = [];
+  const mergeLog = [];
+
+  for (const [key, groupEntries] of groups.entries()) {
     const sorted = [...groupEntries].sort((a, b) => a._volumeMl - b._volumeMl);
-    const winner = { ...sorted[0] };
+    let winner = { ...sorted[0] };
     const candidates = sorted.slice(1).map((e) => e.magento_id);
     if (candidates.length > 0) {
       winner._match_candidates = candidates;
+      mergeLog.push({
+        category: categoryLabel,
+        dedupKey: key,
+        primary: winner.magento_id,
+        candidates,
+        normalizedName: winner._normalizedName,
+        explicitGroup: Boolean(winner._dedupGroup)
+      });
     }
+    winner = applyFinishConflictGuardrail(winner, sorted, byId);
     merged.push(stripInternal(winner));
   }
 
-  return merged;
+  return { products: merged, mergeLog };
 }
 
 function stripInternal(entry) {
-  const { _dedupGroup, _volumeMl, ...rest } = entry;
-  if (rest._match_candidates) {
-    return rest;
-  }
+  const { _dedupGroup, _dedupKey, _normalizedName, _volumeMl, ...rest } = entry;
   return rest;
 }
 
-function buildCategory(specs, byId, knowledgeById) {
+function buildCategory(specs, byId, knowledgeById, categoryLabel) {
   const built = specs.map((spec) => buildEntry(byId, knowledgeById, spec));
-  return dedupeGroupedEntries(built);
+  return dedupeGroupedEntries(built, byId, categoryLabel);
 }
 
 function main() {
@@ -559,13 +650,27 @@ function main() {
       }
     },
     {
-      id: "ADB000327",
+      id: "ADB000313",
+      dedupGroup: "adbl-leather-conditioner",
       knowledgeId: "apc_on_leather",
       rationale:
-        "ADBL Leather Conditioner 500ml — feed and protect natural/synthetic leather.",
+        "ADBL Leather Conditioner 200ml — RTU leather feed (canonical size; 500ml same line).",
       expected_tags: {
         location: "interior",
-        surface: ["leather_natural"],
+        surface: ["leather_natural", "leather_synthetic"],
+        purpose: "conditioning",
+        product_type: "leather_conditioner"
+      }
+    },
+    {
+      id: "ADB000327",
+      dedupGroup: "adbl-leather-conditioner",
+      knowledgeId: "apc_on_leather",
+      rationale:
+        "ADBL Leather Conditioner 500ml — larger RTU size (deduped into 200ml canonical).",
+      expected_tags: {
+        location: "interior",
+        surface: ["leather_natural", "leather_synthetic"],
         purpose: "conditioning",
         product_type: "leather_conditioner"
       }
@@ -574,10 +679,10 @@ function main() {
       id: "77709500",
       knowledgeId: "apc_on_leather",
       rationale:
-        "Koch Protect Leather Care 500ml — leather hydration and protection.",
+        "Koch Protect Leather Care 500ml — leather hydration and protection (any leather type).",
       expected_tags: {
         location: "interior",
-        surface: ["leather_natural"],
+        surface: ["leather_natural", "leather_synthetic"],
         purpose: "conditioning",
         product_type: "leather_conditioner"
       }
@@ -608,18 +713,6 @@ function main() {
         product_type: "leather_cleaner"
       }
     },
-    {
-      id: "ADB000313",
-      knowledgeId: "apc_on_leather",
-      rationale:
-        "ADBL Leather Conditioner 200ml — compact RTU leather feed.",
-      expected_tags: {
-        location: "interior",
-        surface: ["leather_natural"],
-        purpose: "conditioning",
-        product_type: "leather_conditioner"
-      }
-    }
   ];
 
   const glassSpecs = [
@@ -699,37 +792,63 @@ function main() {
     }
   ];
 
-  const categories = {
-    tires: {
-      description:
-        "Tier-1 tire dressings + cleaners. Diverse finish and concentration for tagger validation.",
-      products: buildCategory(tireSpecs, byId, knowledgeById)
-    },
-    wheels: {
-      description:
-        "Tier-1 wheel cleaners: acidic, pH-neutral, iron fallout, concentrate, reactive decon.",
-      products: buildCategory(wheelSpecs, byId, knowledgeById)
-    },
-    interior_plastic: {
-      description:
-        "Tier-1 interior plastic trim dressings: gloss, matte, satin, concentrate, RTU protection.",
-      products: buildCategory(interiorPlasticSpecs, byId, knowledgeById)
-    },
-    leather: {
-      description:
-        "Tier-1 leather cleaners and conditioners across ADBL, Koch, Ewocar.",
-      products: buildCategory(leatherSpecs, byId, knowledgeById)
-    },
-    glass: {
-      description:
-        "Tier-1 glass cleaners: RTU, concentrate, hydrophobic hybrid, pro formulas.",
-      products: buildCategory(glassSpecs, byId, knowledgeById)
-    }
-  };
+  const categorySpecs = [
+    ["tires", tireSpecs, "Tier-1 tire dressings + cleaners. Diverse finish and concentration for tagger validation."],
+    [
+      "wheels",
+      wheelSpecs,
+      "Tier-1 wheel cleaners: acidic, pH-neutral, iron fallout, concentrate, reactive decon."
+    ],
+    [
+      "interior_plastic",
+      interiorPlasticSpecs,
+      "Tier-1 interior plastic trim dressings: gloss, matte, satin, concentrate, RTU protection."
+    ],
+    [
+      "leather",
+      leatherSpecs,
+      "Tier-1 leather cleaners and conditioners across ADBL, Koch, Ewocar."
+    ],
+    [
+      "glass",
+      glassSpecs,
+      "Tier-1 glass cleaners: RTU, concentrate, hydrophobic hybrid, pro formulas."
+    ]
+  ];
 
+  const allMergeLogs = [];
+  const categories = {};
+  for (const [name, specs, description] of categorySpecs) {
+    const { products, mergeLog } = buildCategory(specs, byId, knowledgeById, name);
+    categories[name] = { description, products };
+    allMergeLogs.push(...mergeLog);
+  }
+
+  if (allMergeLogs.length > 0) {
+    console.log("Dedup merges (smaller volume wins):");
+    for (const row of allMergeLogs) {
+      console.log(
+        `  [${row.category}] ${row.primary} <- ${row.candidates.join(", ")}` +
+          ` (key=${row.dedupKey}${row.explicitGroup ? ", explicit" : ", name-normalized"})`
+      );
+    }
+  } else {
+    console.log("Dedup merges: none");
+  }
+
+  const expectedCounts = {
+    tires: 5,
+    wheels: 5,
+    interior_plastic: 5,
+    leather: 4,
+    glass: 5
+  };
   for (const [name, cat] of Object.entries(categories)) {
-    if (cat.products.length !== 5) {
-      throw new Error(`Category ${name} has ${cat.products.length} products after dedup (expected 5)`);
+    const expected = expectedCounts[name];
+    if (cat.products.length !== expected) {
+      throw new Error(
+        `Category ${name} has ${cat.products.length} products after dedup (expected ${expected})`
+      );
     }
   }
 

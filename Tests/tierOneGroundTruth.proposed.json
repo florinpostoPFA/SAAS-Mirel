@@ -22,7 +22,6 @@
             ],
             "purpose": "protection",
             "product_type": "tire_dressing",
-            "finish": "gloss",
             "concentration": "ready_to_use"
           }
         },
@@ -41,7 +40,6 @@
             ],
             "purpose": "protection",
             "product_type": "tire_dressing",
-            "finish": "gloss",
             "concentration": "ready_to_use"
           }
         },
@@ -60,7 +58,6 @@
             ],
             "purpose": "protection",
             "product_type": "tire_dressing",
-            "finish": "natural",
             "concentration": "ready_to_use"
           }
         },
@@ -79,7 +76,6 @@
             ],
             "purpose": "protection",
             "product_type": "tire_dressing",
-            "finish": "wet_look",
             "concentration": "ready_to_use"
           }
         },
@@ -128,6 +124,29 @@
             "concentration": "concentrate",
             "coating_safety": "uncoated_only"
           }
+        },
+        {
+          "_source_knowledge_id": "curatare_jante_indicator_rosu",
+          "magento_id": "218005",
+          "sku": "218005",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare jante Felgenblitz Saurefrei Koch Chemie, Fb, 5L",
+          "rationale": "Koch Felgenblitz Saurefrei 5L — pH-neutral iron-indicator wheel decon (red performance indicator in catalog).",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "wheels"
+            ],
+            "purpose": "decontamination",
+            "product_type": "iron_remover",
+            "ph": "ph_neutral",
+            "coating_safety": "coating_safe",
+            "concentration": "ready_to_use"
+          },
+          "_match_candidates": [
+            "218011"
+          ]
         },
         {
           "_source_knowledge_id": "curatare_jante_indicator_rosu",
@@ -188,29 +207,6 @@
             "coating_safety": "coating_safe",
             "concentration": "ready_to_use"
           }
-        },
-        {
-          "_source_knowledge_id": "curatare_jante_indicator_rosu",
-          "magento_id": "218005",
-          "sku": "218005",
-          "manufacturer": "Koch Chemie",
-          "manufacturerId": "13",
-          "name": "Solutie curatare jante Felgenblitz Saurefrei Koch Chemie, Fb, 5L",
-          "rationale": "Koch Felgenblitz Saurefrei 5L — pH-neutral iron-indicator wheel decon (red performance indicator in catalog).",
-          "expected_tags": {
-            "location": "exterior",
-            "surface": [
-              "wheels"
-            ],
-            "purpose": "decontamination",
-            "product_type": "iron_remover",
-            "ph": "ph_neutral",
-            "coating_safety": "coating_safe",
-            "concentration": "ready_to_use"
-          },
-          "_match_candidates": [
-            "218011"
-          ]
         }
       ]
     },
@@ -232,7 +228,6 @@
             ],
             "purpose": "protection",
             "product_type": "trim_dressing",
-            "finish": "gloss",
             "concentration": "ready_to_use"
           }
         },
@@ -252,7 +247,6 @@
             ],
             "purpose": "protection",
             "product_type": "trim_dressing",
-            "finish": "matte",
             "concentration": "ready_to_use"
           }
         },
@@ -271,7 +265,6 @@
             ],
             "purpose": "protection",
             "product_type": "trim_dressing",
-            "finish": "satin",
             "concentration": "ready_to_use"
           }
         },
@@ -290,7 +283,6 @@
             ],
             "purpose": "protection",
             "product_type": "trim_dressing",
-            "finish": "satin",
             "concentration": "concentrate"
           }
         },
@@ -320,60 +312,6 @@
       "products": [
         {
           "_source_knowledge_id": "apc_on_leather",
-          "magento_id": "ADB000327",
-          "sku": "ADB000327",
-          "manufacturer": "ADBL",
-          "manufacturerId": "92",
-          "name": "Balsam hidratare si protectie piele ADBL Leather Conditioner, 500ml",
-          "rationale": "ADBL Leather Conditioner 500ml — feed and protect natural/synthetic leather.",
-          "expected_tags": {
-            "location": "interior",
-            "surface": [
-              "leather_natural"
-            ],
-            "purpose": "conditioning",
-            "product_type": "leather_conditioner",
-            "concentration": "ready_to_use"
-          }
-        },
-        {
-          "_source_knowledge_id": "apc_on_leather",
-          "magento_id": "77709500",
-          "sku": "77709500",
-          "manufacturer": "Koch Chemie",
-          "manufacturerId": "13",
-          "name": "Solutie hidratare piele Protect Leather Care Koch Chemie, 500ml",
-          "rationale": "Koch Protect Leather Care 500ml — leather hydration and protection.",
-          "expected_tags": {
-            "location": "interior",
-            "surface": [
-              "leather_natural"
-            ],
-            "purpose": "conditioning",
-            "product_type": "leather_conditioner",
-            "concentration": "ready_to_use"
-          }
-        },
-        {
-          "_source_knowledge_id": "apc_on_leather",
-          "magento_id": "ADB000313",
-          "sku": "ADB000313",
-          "manufacturer": "ADBL",
-          "manufacturerId": "92",
-          "name": "Balsam hidratare si protectie piele ADBL Leather Conditioner, 200 ml",
-          "rationale": "ADBL Leather Conditioner 200ml — compact RTU leather feed.",
-          "expected_tags": {
-            "location": "interior",
-            "surface": [
-              "leather_natural"
-            ],
-            "purpose": "conditioning",
-            "product_type": "leather_conditioner",
-            "concentration": "ready_to_use"
-          }
-        },
-        {
-          "_source_knowledge_id": "apc_on_leather",
           "magento_id": "ADB000466",
           "sku": "ADB000466",
           "manufacturer": "ADBL",
@@ -393,6 +331,47 @@
           "_match_candidates": [
             "ADB000468"
           ]
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "ADB000313",
+          "sku": "ADB000313",
+          "manufacturer": "ADBL",
+          "manufacturerId": "92",
+          "name": "Balsam hidratare si protectie piele ADBL Leather Conditioner, 200 ml",
+          "rationale": "ADBL Leather Conditioner 200ml — RTU leather feed (canonical size; 500ml same line).",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural",
+              "leather_synthetic"
+            ],
+            "purpose": "conditioning",
+            "product_type": "leather_conditioner",
+            "concentration": "ready_to_use"
+          },
+          "_match_candidates": [
+            "ADB000327"
+          ]
+        },
+        {
+          "_source_knowledge_id": "apc_on_leather",
+          "magento_id": "77709500",
+          "sku": "77709500",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie hidratare piele Protect Leather Care Koch Chemie, 500ml",
+          "rationale": "Koch Protect Leather Care 500ml — leather hydration and protection (any leather type).",
+          "expected_tags": {
+            "location": "interior",
+            "surface": [
+              "leather_natural",
+              "leather_synthetic"
+            ],
+            "purpose": "conditioning",
+            "product_type": "leather_conditioner",
+            "concentration": "ready_to_use"
+          }
         },
         {
           "_source_knowledge_id": "apc_on_leather",
@@ -438,6 +417,27 @@
             "product_type": "glass_cleaner",
             "concentration": "ready_to_use"
           }
+        },
+        {
+          "_source_knowledge_id": "laveta_geam_utilizare",
+          "magento_id": "302001",
+          "sku": "302001",
+          "manufacturer": "Koch Chemie",
+          "manufacturerId": "13",
+          "name": "Solutie curatare sticla Koch Chemie Gc - Glass Cleaner Pro, 1L",
+          "rationale": "Koch Glass Cleaner Pro 1L — pro glass cleaner RTU (1L canonical size).",
+          "expected_tags": {
+            "location": "exterior",
+            "surface": [
+              "glass"
+            ],
+            "purpose": "cleaning",
+            "product_type": "glass_cleaner",
+            "concentration": "ready_to_use"
+          },
+          "_match_candidates": [
+            "302010"
+          ]
         },
         {
           "_source_knowledge_id": "laveta_geam_utilizare",
@@ -493,27 +493,6 @@
             "product_type": "glass_cleaner",
             "concentration": "ready_to_use"
           }
-        },
-        {
-          "_source_knowledge_id": "laveta_geam_utilizare",
-          "magento_id": "302001",
-          "sku": "302001",
-          "manufacturer": "Koch Chemie",
-          "manufacturerId": "13",
-          "name": "Solutie curatare sticla Koch Chemie Gc - Glass Cleaner Pro, 1L",
-          "rationale": "Koch Glass Cleaner Pro 1L — pro glass cleaner RTU (1L canonical size).",
-          "expected_tags": {
-            "location": "exterior",
-            "surface": [
-              "glass"
-            ],
-            "purpose": "cleaning",
-            "product_type": "glass_cleaner",
-            "concentration": "ready_to_use"
-          },
-          "_match_candidates": [
-            "302010"
-          ]
         }
       ]
     }

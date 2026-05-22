@@ -34,10 +34,17 @@ describe("tierOneGroundTruth.proposed.json", () => {
     allowedTags = loadTagVocabulary().allowedTags;
   });
 
-  it("has 5 categories with 5 products each", () => {
+  it("has 5 categories with expected product counts after dedup", () => {
+    const expectedCounts = {
+      tires: 5,
+      wheels: 5,
+      interior_plastic: 5,
+      leather: 4,
+      glass: 5
+    };
     expect(Object.keys(doc.categories)).toHaveLength(5);
-    for (const cat of Object.values(doc.categories)) {
-      expect(cat.products).toHaveLength(5);
+    for (const [name, cat] of Object.entries(doc.categories)) {
+      expect(cat.products).toHaveLength(expectedCounts[name]);
     }
   });
 
@@ -71,6 +78,6 @@ describe("tierOneGroundTruth.proposed.json", () => {
         }
       }
     }
-    expect(count).toBe(25);
+    expect(count).toBe(24);
   });
 });
