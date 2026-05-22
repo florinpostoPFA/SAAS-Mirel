@@ -3490,6 +3490,26 @@ function isTireOnlyNamedProduct(product) {
   return tireLike && !wheelLike;
 }
 
+function isTireSelectionSlots(slots) {
+  const safe = slots && typeof slots === "object" ? slots : {};
+  const obj = canonicalizeObjectValue(safe.object);
+  return String(safe.surface || "").toLowerCase() === "tires" || obj === "anvelope";
+}
+
+function matchesTireHardFilterAllow(product) {
+  if (isTireOnlyNamedProduct(product)) {
+    return true;
+  }
+  const tags = normalizeProductTags(product);
+  return (
+    tags.includes("tires") ||
+    tags.includes("tire") ||
+    tags.includes("tire_dressing") ||
+    (tags.includes("rubber") &&
+      (tags.includes("dressing") || tags.includes("cleaner") || tags.includes("protection")))
+  );
+}
+
 function matchesWheelHardFilterAllow(product, allow = []) {
   const text = productNameDescriptionText(product);
   if (isTireOnlyNamedProduct(product)) {
@@ -3633,7 +3653,7 @@ function applyHardFilter(candidates, slots) {
   };
 }
 
-function isGenericProduct(product) {
+function isGenericProduct(product, slots = null) {
   const tags = normalizeProductTags(product);
   const description = String(product?.short_description || product?.description || "").trim();
   const name = String(product?.name || "").trim().toLowerCase();
@@ -3643,6 +3663,17 @@ function isGenericProduct(product) {
   }
 
   if (tags.length < 2) {
+    if (isTireSelectionSlots(slots) && matchesTireHardFilterAllow(product)) {
+      return false;
+    }
+    if (
+      slots &&
+      (String(slots.surface || "").toLowerCase() === "wheels" ||
+        canonicalizeObjectValue(slots.object) === "jante") &&
+      matchesWheelHardFilterAllow(product, ["wheels", "wheel_cleaner", "brush", "microfiber"])
+    ) {
+      return false;
+    }
     return true;
   }
 
@@ -4238,10 +4269,16 @@ function findProductsByRoleConfig(roleConfig, products) {
   const normalizeTags = (product) => Array.isArray(product?.tags)
     ? product.tags.map(tag => String(tag).toLowerCase())
     : [];
-  const passesTagRules = (product) => {
+  const passesTagRules = (product, { allowUntaggedStrongMatch = false } = {}) => {
     const tags = normalizeTags(product);
-    if (requiredTags.length > 0 && !requiredTags.every(tag => tags.includes(tag))) {
-      return false;
+    if (requiredTags.length > 0) {
+      if (tags.length === 0) {
+        if (!allowUntaggedStrongMatch) {
+          return false;
+        }
+      } else if (!requiredTags.every((tag) => tags.includes(tag))) {
+        return false;
+      }
     }
     if (excludeTags.length > 0 && excludeTags.some(tag => tags.includes(tag))) {
       return false;
@@ -4250,7 +4287,7 @@ function findProductsByRoleConfig(roleConfig, products) {
   };
 
   const strongMatches = safeProducts.filter((product) => {
-    if (!passesTagRules(product)) return false;
+    if (!passesTagRules(product, { allowUntaggedStrongMatch: true })) return false;
     const productName = String(product?.name || "").toLowerCase();
     const productCategory = String(product?.category || "").toLowerCase();
     const searchText = String(product?.searchText || "").toLowerCase();
@@ -10202,6 +10239,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       const wheelHardFilterKey = hardFilterResult.meta.key === "exterior|wheels";
+      const tireSelectionActive = isTireSelectionSlots(selectionSlots);
       let qualityCandidates = hardFilterResult.products.filter((product) => {
         if (
           wheelHardFilterKey &&
@@ -10209,16 +10247,47 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         ) {
           return true;
         }
-        return !isGenericProduct(product);
+        if (tireSelectionActive && matchesTireHardFilterAllow(product)) {
+          return true;
+        }
+        return !isGenericProduct(product, selectionSlots);
       });
       if (qualityCandidates.length === 0) {
-        const bestSolution = hardFilterResult.products.find(product => !isAccessoryProduct(product));
+        const bestSolution = hardFilterResult.products.find((product) => {
+          if (isAccessoryProduct(product)) {
+            return false;
+          }
+          if (tireSelectionActive && matchesTireHardFilterAllow(product)) {
+            return true;
+          }
+          return !isGenericProduct(product, selectionSlots);
+        });
         if (bestSolution) {
           qualityCandidates = [bestSolution];
         }
       }
 
       qualityCandidates = applyTierOneManufacturerGate(qualityCandidates);
+
+      if (qualityCandidates.length === 0 && tireSelectionActive) {
+        const tireCatalogFiltered = filterProducts(products, selectionSlots);
+        logInfo("TIRE_PRODUCT_FILTER", {
+          slots: selectionSlots,
+          stage: "catalog_filter",
+          before: products.length,
+          after: tireCatalogFiltered.length
+        });
+        const tireTierOne = applyTierOneManufacturerGate(tireCatalogFiltered);
+        logInfo("TIRE_PRODUCT_FILTER", {
+          slots: selectionSlots,
+          stage: "tier_one",
+          before: tireCatalogFiltered.length,
+          after: tireTierOne.length
+        });
+        if (tireTierOne.length > 0) {
+          qualityCandidates = tireTierOne.slice(0, MAX_SELECTION_PRODUCTS);
+        }
+      }
 
       if (qualityCandidates.length === 0) {
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
@@ -12123,6 +12192,8 @@ module.exports = {
     validateCombination,
     inferWheelsSurfaceFromObject,
     filterProducts,
+    matchesTireHardFilterAllow,
+    isTireSelectionSlots,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
