@@ -35,6 +35,7 @@ const {
   normalizeReplyText: normalizeKnowledgeReplyText
 } = require("./knowledgeDeadEndService");
 const { executeFlow } = require("./flowExecutor");
+const normalizeTextForMatch = require("../utils/normalize");
 const { normalizeDecision } = require("./decisionNormalizer");
 const { detectQueryType } = require("./queryTypeService");
 const {
@@ -4238,9 +4239,42 @@ function findProductsByRoleConfig(roleConfig, products) {
   const normalizeTags = (product) => Array.isArray(product?.tags)
     ? product.tags.map(tag => String(tag).toLowerCase())
     : [];
+  const roleId = safeRoleConfig.id != null ? String(safeRoleConfig.id) : null;
+  const hasEmptyTags = (product) => normalizeTags(product).length === 0;
+  const findMatchTextPhraseHit = (product) => {
+    if (matchText.length === 0) return null;
+    const productName = normalizeTextForMatch(String(product?.name || ""));
+    const productCategory = normalizeTextForMatch(String(product?.category || ""));
+    const searchText = normalizeTextForMatch(String(product?.searchText || ""));
+    const words = searchText.split(/\s+/).filter(Boolean);
+    for (const text of matchText) {
+      const needle = normalizeTextForMatch(text);
+      if (!needle) continue;
+      if (
+        productName.includes(needle) ||
+        productCategory.includes(needle) ||
+        searchText.includes(needle) ||
+        words.includes(needle)
+      ) {
+        return text;
+      }
+    }
+    return null;
+  };
   const passesTagRules = (product) => {
     const tags = normalizeTags(product);
     if (requiredTags.length > 0 && !requiredTags.every(tag => tags.includes(tag))) {
+      if (hasEmptyTags(product)) {
+        const matchedPhrase = findMatchTextPhraseHit(product);
+        if (matchedPhrase) {
+          info(SOURCE, "ROLE_CONFIG_TEXT_FALLBACK", {
+            roleId,
+            productId: product?.id ?? null,
+            matchTextPhrase: matchedPhrase
+          });
+          return true;
+        }
+      }
       return false;
     }
     if (excludeTags.length > 0 && excludeTags.some(tag => tags.includes(tag))) {
