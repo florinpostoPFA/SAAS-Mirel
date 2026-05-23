@@ -16,6 +16,8 @@ describe("autoTagProducts per-axis prompt (Step 5b)", () => {
     expect(prompt).not.toContain("max 5 tags total");
     expect(prompt).not.toContain("JSON array of tag name strings");
     expect(prompt).toContain("ALWAYS include `tires`");
+    expect(prompt).toContain("Short description:");
+    expect(prompt).toContain("iron_remover");
     expect(prompt).toContain("Few-shot examples");
   });
 
