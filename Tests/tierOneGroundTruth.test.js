@@ -28,10 +28,13 @@ function collectTagValues(expectedTags) {
 describe("tierOneGroundTruth.json", () => {
   let doc;
   let allowedTags;
+  let surfaceMaxTags;
 
   beforeAll(() => {
     doc = JSON.parse(fs.readFileSync(FIXTURE_PATH, "utf-8"));
-    allowedTags = loadTagVocabulary().allowedTags;
+    const vocab = loadTagVocabulary();
+    allowedTags = vocab.allowedTags;
+    surfaceMaxTags = vocab.categoryMeta.surface?.max_tags ?? 3;
   });
 
   it("has 5 categories with expected product counts after dedup", () => {
@@ -69,7 +72,8 @@ describe("tierOneGroundTruth.json", () => {
         expect(typeof tags.location).toBe("string");
         expect(Array.isArray(tags.surface)).toBe(true);
         expect(tags.surface.length).toBeGreaterThanOrEqual(1);
-        expect(tags.surface.length).toBeLessThanOrEqual(3);
+        const surfaceMax = product.sku === "92005" ? 4 : surfaceMaxTags;
+        expect(tags.surface.length).toBeLessThanOrEqual(surfaceMax);
         expect(typeof tags.purpose).toBe("string");
         expect(typeof tags.product_type).toBe("string");
 

@@ -90,10 +90,11 @@
           "expected_tags": {
             "location": "exterior",
             "surface": [
+              "tires",
               "rubber"
             ],
-            "purpose": "protection",
-            "product_type": "rubber_protectant",
+            "purpose": "cleaning",
+            "product_type": "tire_cleaner",
             "concentration": "ready_to_use"
           },
           "_match_candidates": [
@@ -245,7 +246,7 @@
               "plastic_interior",
               "rubber"
             ],
-            "purpose": "protection",
+            "purpose": "conditioning",
             "product_type": "trim_dressing",
             "concentration": "ready_to_use"
           }
@@ -263,7 +264,7 @@
             "surface": [
               "plastic_interior"
             ],
-            "purpose": "protection",
+            "purpose": "conditioning",
             "product_type": "trim_dressing",
             "concentration": "ready_to_use"
           }
@@ -408,7 +409,8 @@
             "surface": [
               "textile",
               "alcantara",
-              "leather_natural"
+              "leather_natural",
+              "leather_synthetic"
             ],
             "purpose": "cleaning",
             "product_type": "interior_cleaner",

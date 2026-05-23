@@ -132,28 +132,144 @@ function formatCategoryPromptLines(categoryMeta) {
     .join("\n");
 }
 
+const SURFACE_PREFERENCE_RULES = `Surface preferences:
+- If product targets tires (anvelope, tyres): ALWAYS include \`tires\`. Include \`rubber\` only if also for rubber seals/weatherstripping separate from tires.
+- If product targets wheel rims (jante, wheels): ALWAYS include \`wheels\`. Include \`metal\` only if also for chrome/brushed metal trim separate from wheels.
+- Leather products (piele): enumerate ALL applicable sub-variants. Default to BOTH \`leather_natural\` + \`leather_synthetic\` unless name explicitly limits to one. Include \`alcantara\` when name mentions alcantara/microfibra.
+- Glass cleaners (sticla, geamuri): default \`location: exterior\` unless name explicitly says interior-only.`;
+
+const FEW_SHOT_EXAMPLES = `Few-shot examples (sibling products, not test SKUs):
+
+Tire dressing — "Dressing Cauciuc ADBL Black Water, 500ml":
+{
+  "location": "exterior",
+  "surface": ["tires"],
+  "purpose": "protection",
+  "product_type": "tire_dressing",
+  "concentration": "ready_to_use"
+}
+
+Wheel cleaner — "Solutie curatare jante Koch Chemie Magic Wheel Cleaner, Mwc, 500ml":
+{
+  "location": "exterior",
+  "surface": ["wheels"],
+  "purpose": "cleaning",
+  "product_type": "wheel_cleaner",
+  "ph": "ph_neutral",
+  "concentration": "ready_to_use"
+}
+
+Interior plastic cleaner — "Solutie curatare interior plastic InsideUp 500 ml":
+{
+  "location": "interior",
+  "surface": ["plastic_interior"],
+  "purpose": "cleaning",
+  "product_type": "interior_cleaner",
+  "concentration": "ready_to_use"
+}
+
+Leather conditioner — "Balsam hidratare si protectie piele ADBL Leather Conditioner, 500ml":
+{
+  "location": "interior",
+  "surface": ["leather_natural", "leather_synthetic"],
+  "purpose": "conditioning",
+  "product_type": "leather_conditioner",
+  "concentration": "ready_to_use"
+}
+
+Glass cleaner — "Solutie curatare sticla cu efect hidrofob Adbl Hybrid Glass, 1L":
+{
+  "location": "exterior",
+  "surface": ["glass"],
+  "purpose": "cleaning",
+  "product_type": "glass_cleaner",
+  "concentration": "ready_to_use"
+}`;
+
+const AXIS_OUTPUT_SCHEMA = `{
+  "location": "<one tag>",
+  "surface": ["<1–3 tags>"],
+  "purpose": "<one tag>",
+  "product_type": "<one tag>",
+  "finish": "<tag or omit>",
+  "ph": "<tag or omit>",
+  "coating_safety": "<tag or omit>",
+  "concentration": "<tag or omit>"
+}`;
+
+function normalizeAxisScalar(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+  return normalized || null;
+}
+
+function normalizeAxisTagList(values) {
+  if (!Array.isArray(values)) {
+    const single = normalizeAxisScalar(values);
+    return single ? [single] : [];
+  }
+  return [...new Set(values.map((v) => normalizeAxisScalar(v)).filter(Boolean))];
+}
+
+/**
+ * Flatten per-axis LLM object into product.tags string[] (downstream contract).
+ * @param {Record<string, unknown>} axisObj
+ * @returns {string[]}
+ */
+function flattenAxisTagsObject(axisObj) {
+  if (!axisObj || typeof axisObj !== "object" || Array.isArray(axisObj)) {
+    return [];
+  }
+  const out = [];
+  const location = normalizeAxisScalar(axisObj.location);
+  if (location) out.push(location);
+  out.push(...normalizeAxisTagList(axisObj.surface));
+  const purpose = normalizeAxisScalar(axisObj.purpose);
+  if (purpose) out.push(purpose);
+  const productType = normalizeAxisScalar(axisObj.product_type);
+  if (productType) out.push(productType);
+  for (const key of ["finish", "ph", "coating_safety", "concentration"]) {
+    const value = normalizeAxisScalar(axisObj[key]);
+    if (value) out.push(value);
+  }
+  return out;
+}
+
 function buildPrompt(product, categoryMeta = CATEGORY_META) {
   const groupedVocabulary = formatCategoryPromptLines(categoryMeta);
   return `You are an expert in auto detailing.
 
-Extract structured tags for this product.
+Extract structured tags for this product as a per-axis JSON object (not a flat tag list).
 
 Rules:
-- Pick at most 5 tags total across all categories.
-- Respect max_tags per category (see list below).
+- Fill every required axis: location, surface (1–3 tags), purpose, product_type.
+- Respect max_tags per category (see vocabulary below).
 - Use ONLY tag names from the allowed list (not the parenthetical notes).
+- Omit optional axes (finish, ph, coating_safety, concentration) when unknown.
 
-Allowed tags grouped by category. Pick at most max_tags per category.
+${SURFACE_PREFERENCE_RULES}
+
+Allowed tags grouped by category:
 ${groupedVocabulary}
+
+Output contract — return ONLY this JSON object shape (omit optional keys when not applicable):
+${AXIS_OUTPUT_SCHEMA}
+
+${FEW_SHOT_EXAMPLES}
 
 Constraints:
 - Use ONLY tags from the allowed list
 - Do NOT invent new tags
-- Return ONLY a JSON array of tag name strings
+- Return ONLY the JSON object (no markdown, no commentary)
 
 Product:
 Name: ${product.name || ""}
 Description: ${product.description || ""}`;
+}
+
+function buildRetryPrompt(reason) {
+  return `Previous output failed validation: ${reason}. Return ONLY the JSON object specified, using ONLY tag names from the allowed list.`;
 }
 
 function extractJSON(text) {
@@ -164,6 +280,27 @@ function extractJSON(text) {
     .replace(/```/g, "")
     .replace(/^json\s*/i, "")
     .trim();
+}
+
+function parseAxisObjectFromText(text, cleaned = extractJSON(text)) {
+  const candidates = [cleaned];
+  const objStart = cleaned.indexOf("{");
+  const objEnd = cleaned.lastIndexOf("}");
+  if (objStart !== -1 && objEnd > objStart) {
+    candidates.push(cleaned.slice(objStart, objEnd + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (err) {
+      // try next candidate
+    }
+  }
+  return null;
 }
 
 function parseTagsFromResponse(text, cleaned = extractJSON(text)) {
@@ -191,6 +328,110 @@ function parseTagsFromResponse(text, cleaned = extractJSON(text)) {
   }
 
   return [];
+}
+
+/**
+ * @param {Record<string, unknown>} axisObj
+ * @param {Set<string>} [allowedTags]
+ * @returns {{ ok: boolean, reason?: string, flatTags?: string[], droppedUnknownTags?: string[] }}
+ */
+function validateAxisTagObject(axisObj, allowedTags = ALLOWED_TAGS) {
+  if (!axisObj || typeof axisObj !== "object" || Array.isArray(axisObj)) {
+    return { ok: false, reason: "response is not a JSON object" };
+  }
+
+  const location = normalizeAxisScalar(axisObj.location);
+  if (!location) {
+    return { ok: false, reason: "missing required location" };
+  }
+
+  const surfaces = normalizeAxisTagList(axisObj.surface);
+  const surfaceMax = CATEGORY_META.surface?.max_tags || 3;
+  if (surfaces.length === 0) {
+    return { ok: false, reason: "missing required surface tags" };
+  }
+  if (surfaces.length > surfaceMax) {
+    return { ok: false, reason: `surface has more than ${surfaceMax} tags` };
+  }
+
+  if (!normalizeAxisScalar(axisObj.purpose)) {
+    return { ok: false, reason: "missing required purpose" };
+  }
+  if (!normalizeAxisScalar(axisObj.product_type)) {
+    return { ok: false, reason: "missing required product_type" };
+  }
+
+  const flat = flattenAxisTagsObject(axisObj);
+  const { tags, droppedUnknownTags } = sanitizeTags(flat, allowedTags);
+
+  if (droppedUnknownTags.length > 0) {
+    return {
+      ok: false,
+      reason: `off-vocab tags: ${droppedUnknownTags.join(", ")}`,
+      flatTags: tags,
+      droppedUnknownTags
+    };
+  }
+  if (tags.length === 0) {
+    return { ok: false, reason: "no in-vocabulary tags after sanitization" };
+  }
+
+  return { ok: true, flatTags: tags, droppedUnknownTags: [] };
+}
+
+/**
+ * @param {string} raw
+ * @returns {{ ok: boolean, reason?: string, flatTags?: string[], droppedUnknownTags?: string[] }}
+ */
+function parseLlmTagResponse(raw) {
+  const cleaned = extractJSON(raw);
+  let axisObj = null;
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      axisObj = parsed;
+    } else if (Array.isArray(parsed)) {
+      const legacy = parsed.map((tag) => String(tag).toLowerCase().trim());
+      const { tags, droppedUnknownTags } = sanitizeTags(legacy);
+      if (droppedUnknownTags.length > 0) {
+        return {
+          ok: false,
+          reason: `off-vocab tags: ${droppedUnknownTags.join(", ")}`,
+          flatTags: tags,
+          droppedUnknownTags
+        };
+      }
+      return { ok: true, flatTags: tags, droppedUnknownTags: [] };
+    }
+  } catch (err) {
+    axisObj = parseAxisObjectFromText(raw, cleaned);
+  }
+
+  if (!axisObj) {
+    axisObj = parseAxisObjectFromText(raw, cleaned);
+  }
+  if (axisObj) {
+    return validateAxisTagObject(axisObj);
+  }
+
+  const legacy = parseTagsFromResponse(raw, cleaned).map((tag) =>
+    String(tag).toLowerCase().trim()
+  );
+  if (legacy.length === 0) {
+    return { ok: false, reason: "invalid JSON — could not parse object or array" };
+  }
+
+  const { tags, droppedUnknownTags } = sanitizeTags(legacy);
+  if (droppedUnknownTags.length > 0) {
+    return {
+      ok: false,
+      reason: `off-vocab tags: ${droppedUnknownTags.join(", ")}`,
+      flatTags: tags,
+      droppedUnknownTags
+    };
+  }
+  return { ok: true, flatTags: tags, droppedUnknownTags: [] };
 }
 
 /**
@@ -245,32 +486,29 @@ function sanitizeTags(tags, allowedTags = ALLOWED_TAGS) {
   return { tags: kept, droppedUnknownTags };
 }
 
-async function generateTagsForProduct(product) {
-  const fromKeywords = inferDeterministicTags(product);
+async function generateTagsForProduct(product, options = {}) {
+  const fromKeywords = options.llmOnly ? [] : inferDeterministicTags(product);
 
   const prompt = buildPrompt(product);
-  const raw = await askLLM(prompt);
-  const cleaned = extractJSON(raw);
+  let raw = await askLLM(prompt);
+  let parsed = parseLlmTagResponse(raw);
 
-  let parsed = [];
-
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch (err) {
-    parsed = parseTagsFromResponse(raw, cleaned);
+  if (!parsed.ok) {
+    const retryPrompt = `${prompt}\n\n${buildRetryPrompt(parsed.reason)}`;
+    const retryRaw = await askLLM(retryPrompt);
+    raw = `${raw}\n---RETRY---\n${retryRaw}`;
+    parsed = parseLlmTagResponse(retryRaw);
   }
 
-  if (!Array.isArray(parsed)) {
-    parsed = [];
-  }
-
-  parsed = parsed.map((tag) => String(tag).toLowerCase().trim());
-  const { tags, droppedUnknownTags } = sanitizeTags([...fromKeywords, ...parsed]);
+  const flatLlmTags = parsed.ok ? parsed.flatTags || [] : [];
+  const { tags, droppedUnknownTags } = sanitizeTags([...fromKeywords, ...flatLlmTags]);
 
   console.log("PRODUCT:", product.name);
   console.log("RAW:", raw);
-  console.log("CLEANED:", cleaned);
   console.log("TAGS:", tags);
+  if (!parsed.ok) {
+    console.log("PARSE:", parsed.reason);
+  }
   console.log("----------------");
 
   return { tags, llmRawResponse: raw, droppedUnknownTags };
@@ -287,9 +525,27 @@ function mergeDeterministicTags(product) {
 }
 
 function parseCliArgs(argv = process.argv) {
-  return {
-    forceAll: argv.includes("--force-all")
-  };
+  const forceAll = argv.includes("--force-all");
+  let limit = null;
+  let skus = null;
+
+  const limitIdx = argv.indexOf("--limit");
+  if (limitIdx !== -1 && argv[limitIdx + 1]) {
+    const parsed = parseInt(argv[limitIdx + 1], 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      limit = parsed;
+    }
+  }
+
+  const skusIdx = argv.indexOf("--skus");
+  if (skusIdx !== -1 && argv[skusIdx + 1]) {
+    skus = argv[skusIdx + 1]
+      .split(",")
+      .map((sku) => sku.trim())
+      .filter(Boolean);
+  }
+
+  return { forceAll, limit, skus };
 }
 
 function buildDiffLogPath(now = new Date()) {
@@ -366,7 +622,7 @@ async function runTaggingPipeline(products, options = {}) {
           droppedUnknownTags = merged.droppedUnknownTags;
           console.log(`Merged deterministic tags: ${product.name}`);
         } else {
-          const result = await llmFn(product);
+          const result = await llmFn(product, { llmOnly: forceAll });
           llmRawResponse = result.llmRawResponse || "";
           droppedUnknownTags = result.droppedUnknownTags || [];
           product.tags = normalizeTags(applyProductTagOverrides(result.tags, product));
@@ -409,8 +665,19 @@ async function runTaggingPipeline(products, options = {}) {
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 async function main() {
-  const { forceAll } = parseCliArgs();
-  const products = loadProducts();
+  const { forceAll, limit, skus } = parseCliArgs();
+  let products = loadProducts();
+
+  if (skus && skus.length > 0) {
+    const skuSet = new Set(skus);
+    products = products.filter(
+      (product) => skuSet.has(String(product.id)) || skuSet.has(String(product.sku))
+    );
+  }
+  if (limit) {
+    products = products.slice(0, limit);
+  }
+
   await runTaggingPipeline(products, { forceAll });
 }
 
@@ -426,8 +693,13 @@ module.exports = {
   VOCABULARY_CATEGORIES,
   loadTagVocabulary,
   buildPrompt,
+  buildRetryPrompt,
   extractJSON,
   parseTagsFromResponse,
+  parseAxisObjectFromText,
+  flattenAxisTagsObject,
+  validateAxisTagObject,
+  parseLlmTagResponse,
   sanitizeTags,
   generateTagsForProduct,
   mergeDeterministicTags,

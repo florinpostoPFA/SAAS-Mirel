@@ -22,7 +22,13 @@ describe("autoTagProducts --force-all", () => {
     diffLogPath = path.join(tmpDir, "retag-test.jsonl");
     askLLM.mockReset();
     askLLM.mockResolvedValue(
-      '["exterior","tires","tire_dressing","protection","wet_look"]'
+      JSON.stringify({
+        location: "exterior",
+        surface: ["tires"],
+        purpose: "protection",
+        product_type: "tire_dressing",
+        finish: "wet_look"
+      })
     );
   });
 
