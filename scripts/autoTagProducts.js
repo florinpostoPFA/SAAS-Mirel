@@ -3,6 +3,7 @@ const path = require("path");
 const dotenv = require("dotenv");
 const { askLLM } = require("../services/llm");
 const { normalizeTagList, applyProductTagOverrides } = require("../services/tagNormalization");
+const { enrichTagsFromCatalogSignals } = require("../services/catalogTagEnrichment");
 
 dotenv.config();
 
@@ -138,6 +139,14 @@ const SURFACE_PREFERENCE_RULES = `Surface preferences:
 - Leather products (piele): enumerate ALL applicable sub-variants. Default to BOTH \`leather_natural\` + \`leather_synthetic\` unless name explicitly limits to one. Include \`alcantara\` when name mentions alcantara/microfibra.
 - Glass cleaners (sticla, geamuri): default \`location: exterior\` unless name explicitly says interior-only.`;
 
+const CATALOG_SIGNAL_RULES = `Catalog signal rules (use Short description and Meta keywords when present):
+- Wheel iron/fallout decontamination (decontaminare jante, iron, fallout, Felgenblitz, Reactive, indicator rosu): \`purpose: decontamination\`, \`product_type: iron_remover\` — NOT wheel_cleaner.
+- Acid wheel gel (gel acid pentru jante): \`purpose: decontamination\`, \`product_type: iron_remover\`, \`ph: acidic\`, \`coating_safety: uncoated_only\`.
+- Interior trim dressings with protectie/protection in the name (not cleaners): \`purpose: protection\`, \`product_type: trim_dressing\`.
+- Concentrate / dilutable products: \`concentration: concentrate\`. Ready-to-use / gata de folosire: \`concentration: ready_to_use\`.
+- Coating-safe wheel cleaners: include \`coating_safety: coating_safe\` when the catalog mentions ceramic/coating-safe use.
+- Pol Star / textile+piele+alcantara cleaners: \`location: interior\`, surfaces \`textile\`, \`alcantara\`, \`leather_natural\`, \`leather_synthetic\`, \`purpose: cleaning\`, \`product_type: interior_cleaner\`.`;
+
 const FEW_SHOT_EXAMPLES = `Few-shot examples (sibling products, not test SKUs):
 
 Tire dressing — "Dressing Cauciuc ADBL Black Water, 500ml":
@@ -156,6 +165,17 @@ Wheel cleaner — "Solutie curatare jante Koch Chemie Magic Wheel Cleaner, Mwc, 
   "purpose": "cleaning",
   "product_type": "wheel_cleaner",
   "ph": "ph_neutral",
+  "concentration": "ready_to_use"
+}
+
+Iron fallout wheel remover — "Solutie decontaminare jante Reactive Wheel Cleaner Koch Chemie, 750ml":
+{
+  "location": "exterior",
+  "surface": ["wheels"],
+  "purpose": "decontamination",
+  "product_type": "iron_remover",
+  "ph": "ph_neutral",
+  "coating_safety": "coating_safe",
   "concentration": "ready_to_use"
 }
 
@@ -250,6 +270,8 @@ Rules:
 
 ${SURFACE_PREFERENCE_RULES}
 
+${CATALOG_SIGNAL_RULES}
+
 Allowed tags grouped by category:
 ${groupedVocabulary}
 
@@ -265,7 +287,9 @@ Constraints:
 
 Product:
 Name: ${product.name || ""}
-Description: ${product.description || ""}`;
+Description: ${product.description || ""}
+Short description: ${product.short_description || ""}
+Meta keywords: ${product.meta_keyword || ""}`;
 }
 
 function buildRetryPrompt(reason) {
@@ -501,7 +525,8 @@ async function generateTagsForProduct(product, options = {}) {
   }
 
   const flatLlmTags = parsed.ok ? parsed.flatTags || [] : [];
-  const { tags, droppedUnknownTags } = sanitizeTags([...fromKeywords, ...flatLlmTags]);
+  const enriched = enrichTagsFromCatalogSignals(product, [...fromKeywords, ...flatLlmTags]);
+  const { tags, droppedUnknownTags } = sanitizeTags(enriched);
 
   console.log("PRODUCT:", product.name);
   console.log("RAW:", raw);
@@ -701,6 +726,7 @@ module.exports = {
   validateAxisTagObject,
   parseLlmTagResponse,
   sanitizeTags,
+  enrichTagsFromCatalogSignals,
   generateTagsForProduct,
   mergeDeterministicTags,
   collectProductText,
