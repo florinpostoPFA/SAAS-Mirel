@@ -1,6 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
+const {
+  fetchCategoryTree,
+  flattenCategoryTree,
+  resolveCategoryPath
+} = require("./lib/magentoCategories");
 
 dotenv.config();
 
@@ -8,6 +13,7 @@ const JSON_PATH = path.join(__dirname, "..", "data", "products.json");
 const BRAND_WHITELIST_PATH = path.join(__dirname, "..", "data", "brand-whitelist.json");
 
 let brandWhitelistCache = null;
+let categoryIdSourceWarningLogged = false;
 
 function loadBrandWhitelist() {
   if (brandWhitelistCache) {
@@ -94,12 +100,54 @@ function cleanText(text) {
     .trim();
 }
 
+/**
+ * @param {object} product Raw Magento product
+ * @returns {number[]}
+ */
+function getProductCategoryIds(product) {
+  const links = product?.extension_attributes?.category_links;
+  if (Array.isArray(links) && links.length > 0) {
+    return links
+      .map((link) => Number(link.category_id))
+      .filter((id) => !Number.isNaN(id));
+  }
+
+  const raw = getAttr(product, "category_ids");
+  if (raw) {
+    return String(raw)
+      .split(",")
+      .map((part) => Number(String(part).trim()))
+      .filter((id) => !Number.isNaN(id));
+  }
+
+  return [];
+}
+
+function warnIfCategoryIdsMissing(magentoProducts) {
+  if (categoryIdSourceWarningLogged || magentoProducts.length === 0) {
+    return;
+  }
+
+  const sample = magentoProducts[0];
+  const hasLinks = Array.isArray(sample?.extension_attributes?.category_links);
+  const hasAttr = sample?.custom_attributes?.some(
+    (attr) => attr.attribute_code === "category_ids"
+  );
+
+  if (!hasLinks && !hasAttr) {
+    console.warn(
+      "[importProducts] No category_links or category_ids found on Magento products; categoryPath will be empty."
+    );
+    categoryIdSourceWarningLogged = true;
+  }
+}
+
 function toProduct(row) {
   const sku = pick(row, ["sku", "SKU", "id", "ID"]);
   const name = cleanText(pick(row, ["name", "Name", "title", "Title", "product_name"]));
   const description = cleanText(row.description || pick(row, ["Description"]));
   const short_description = cleanText(row.short_description || row.shortDescription || pick(row, ["Short Description"]));
-  const category = cleanText(pick(row, ["category", "Category", "categories", "Categories"]));
+  const categoryPath = cleanText(row.categoryPath || pick(row, ["categoryPath", "CategoryPath"]));
   const meta_keyword = cleanText(pick(row, ["meta_keyword", "meta_keywords", "Meta Keyword", "Meta Keywords", "keywords", "Keywords"]));
   const rawPrice = pick(row, ["price", "Price", "regular_price", "Regular Price"]);
   const numericPrice = parseFloat(String(rawPrice).replace(/[^0-9.,-]/g, "").replace(",", ".")) || 0;
@@ -110,16 +158,16 @@ function toProduct(row) {
     description,
     short_description,
     price: numericPrice,
-    category,
+    categoryPath,
     meta_keyword,
     manufacturerId: row.manufacturerId ?? null,
     brand: row.brand ?? null,
     searchText: normalizeText(
       (name || "") + " " +
       (description || "") + " " +
-      (category || "")
+      (categoryPath || "")
     ),
-    tags: []
+    tags: Array.isArray(row.tags) ? row.tags : []
   };
 }
 
@@ -127,9 +175,14 @@ function getAttr(product, code) {
   return product.custom_attributes?.find(a => a.attribute_code === code)?.value || "";
 }
 
-function mapMagentoToRow(product) {
+/**
+ * @param {object} product
+ * @param {Map<number, string>} treeMap
+ */
+function mapMagentoToRow(product, treeMap = new Map()) {
   const whitelist = loadBrandWhitelist();
   const name = product.name;
+  const categoryIds = getProductCategoryIds(product);
 
   return {
     sku: product.sku,
@@ -138,13 +191,96 @@ function mapMagentoToRow(product) {
     description: getAttr(product, "description"),
     short_description: getAttr(product, "short_description"),
     meta_keyword: getAttr(product, "meta_keyword"),
-    category: "",
+    categoryPath: resolveCategoryPath(categoryIds, treeMap),
     manufacturerId: getManufacturerId(product),
     brand: resolveBrandFromName(name, whitelist)
   };
 }
 
-async function readProductsFromMagento() {
+/**
+ * @param {object[]} existingProducts
+ * @param {object[]} freshProducts
+ * @param {{ resetTags?: boolean }} options
+ */
+function mergeImportedProducts(existingProducts, freshProducts, options = {}) {
+  const resetTags = Boolean(options.resetTags);
+
+  if (resetTags) {
+    const products = freshProducts.map((product) => ({
+      ...product,
+      tags: [],
+      removedFromCatalog: false
+    }));
+    return {
+      products,
+      stats: {
+        total: products.length,
+        merged: 0,
+        added: products.length,
+        dropped: 0
+      }
+    };
+  }
+
+  const existingMap = new Map(existingProducts.map((product) => [product.id, product]));
+  const magentoIds = new Set(freshProducts.map((product) => product.id));
+
+  let merged = 0;
+  let added = 0;
+  const products = [];
+
+  for (const fresh of freshProducts) {
+    const existing = existingMap.get(fresh.id);
+    if (existing) {
+      merged += 1;
+      const mergedProduct = {
+        ...fresh,
+        tags: Array.isArray(existing.tags) ? existing.tags : [],
+        removedFromCatalog: false
+      };
+      if (Object.prototype.hasOwnProperty.call(existing, "aiTags")) {
+        mergedProduct.aiTags = existing.aiTags;
+      }
+      products.push(mergedProduct);
+    } else {
+      added += 1;
+      products.push({ ...fresh, tags: [], removedFromCatalog: false });
+    }
+  }
+
+  let dropped = 0;
+  for (const existing of existingProducts) {
+    if (!magentoIds.has(existing.id)) {
+      dropped += 1;
+      products.push({ ...existing, removedFromCatalog: true });
+    }
+  }
+
+  return {
+    products,
+    stats: {
+      total: products.length,
+      merged,
+      added,
+      dropped
+    }
+  };
+}
+
+function parseCliArgs(argv = process.argv.slice(2)) {
+  return {
+    resetTags: argv.includes("--reset-tags")
+  };
+}
+
+function readExistingProducts() {
+  if (!fs.existsSync(JSON_PATH)) {
+    return [];
+  }
+  return JSON.parse(fs.readFileSync(JSON_PATH, "utf8"));
+}
+
+async function readProductsFromMagento(fetchImpl = fetch) {
   const baseUrl = process.env.MAGENTO_BASE_URL;
   const token = process.env.MAGENTO_TOKEN;
   const pageSize = Number(process.env.PAGE_SIZE) || 50;
@@ -157,7 +293,7 @@ async function readProductsFromMagento() {
 
     console.log(`Fetching page ${currentPage}...`);
 
-    const response = await fetch(url, {
+    const response = await fetchImpl(url, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
@@ -183,19 +319,36 @@ async function readProductsFromMagento() {
   return allProducts;
 }
 
-async function importProducts() {
-  const magentoProducts = await readProductsFromMagento();
-  const rows = magentoProducts.map(mapMagentoToRow);
-  const products = rows.map(toProduct);
+async function importProducts(options = {}) {
+  const resetTags = Boolean(options.resetTags);
+  const fetchImpl = options.fetchImpl || fetch;
+  const baseUrl = process.env.MAGENTO_BASE_URL;
+  const token = process.env.MAGENTO_TOKEN;
+
+  const magentoProducts = await readProductsFromMagento(fetchImpl);
+  warnIfCategoryIdsMissing(magentoProducts);
+
+  const categoryTree = await fetchCategoryTree({ baseUrl, token, fetchImpl });
+  const treeMap = flattenCategoryTree(categoryTree);
+
+  const rows = magentoProducts.map((product) => mapMagentoToRow(product, treeMap));
+  const freshProducts = rows.map((row) => toProduct({ ...row, tags: [] }));
+
+  const existingProducts = resetTags ? [] : readExistingProducts();
+  const { products, stats } = mergeImportedProducts(existingProducts, freshProducts, { resetTags });
 
   fs.writeFileSync(JSON_PATH, JSON.stringify(products, null, 2));
-  console.log("Imported products:", products.length);
+
+  console.log(
+    `Import done: ${stats.total} total, ${stats.merged} merged (tags preserved), ${stats.added} added, ${stats.dropped} marked removedFromCatalog.`
+  );
 
   return products;
 }
 
 if (require.main === module) {
-  importProducts().catch((err) => {
+  const cli = parseCliArgs();
+  importProducts({ resetTags: cli.resetTags }).catch((err) => {
     console.error("Failed to import products:", err);
     process.exitCode = 1;
   });
@@ -206,13 +359,13 @@ module.exports = {
   mapMagentoToRow,
   getAttr,
   getManufacturerId,
+  getProductCategoryIds,
   resolveBrandFromName,
   loadBrandWhitelist,
   readProductsFromMagento,
+  mergeImportedProducts,
   toProduct,
   cleanText,
-  normalizeText
+  normalizeText,
+  parseCliArgs
 };
-
-
-
