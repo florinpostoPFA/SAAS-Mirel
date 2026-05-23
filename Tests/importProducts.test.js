@@ -54,7 +54,7 @@ describe("mapMagentoToRow()", () => {
     expect(row.description).toBe("Premium car wash shampoo");
     expect(row.short_description).toBe("Car shampoo");
     expect(row.meta_keyword).toBe("shampoo,wash,exterior");
-    expect(row.category).toBe("");
+    expect(row.categoryPath).toBe("");
   });
 
   it("has no undefined fields", () => {
@@ -142,11 +142,26 @@ describe("importProducts()", () => {
   beforeEach(() => {
     process.env.MAGENTO_BASE_URL = "https://shop.example.com";
     process.env.MAGENTO_TOKEN = "test-token";
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ items: fakeItems })
-    });
+    jest.spyOn(fs, "existsSync").mockReturnValue(false);
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: fakeItems })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 1,
+          name: "Root Catalog",
+          is_active: false,
+          children_data: []
+        })
+      });
     fs.writeFileSync.mockClear();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it("writes products to JSON file", async () => {
@@ -157,7 +172,7 @@ describe("importProducts()", () => {
     expect(written[0].name).toBe("Iron Remover");
   });
 
-  it("products have empty tags after import (tagging is not done here)", async () => {
+  it("products have empty tags after import when no existing catalog", async () => {
     await importProducts();
     const written = JSON.parse(fs.writeFileSync.mock.calls[0][1]);
     written.forEach(p => {
@@ -175,5 +190,6 @@ describe("importProducts()", () => {
     expect(p).toHaveProperty("price");
     expect(p).toHaveProperty("tags");
     expect(p).toHaveProperty("searchText");
+    expect(p).toHaveProperty("categoryPath");
   });
 });
