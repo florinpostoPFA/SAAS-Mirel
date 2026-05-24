@@ -318,6 +318,43 @@
         "missingSlotNot": "intent_level",
         "forbidActionAnyOf": ["knowledge"]
       }
+    },
+    {
+      "id": "M31-01",
+      "source": "May 31 hero SKU",
+      "title": "Koch MZR 86001 howToUse quote",
+      "steps": ["cum aplic Koch Chemie MZR?"],
+      "expect": {
+        "actionAnyOf": ["knowledge"]
+      }
+    },
+    {
+      "id": "M31-02",
+      "source": "May 31 hero SKU",
+      "title": "ADBL Typhoon whereToUse quote",
+      "steps": ["unde pot folosi ADBL Typhoon?"],
+      "expect": {
+        "actionAnyOf": ["knowledge"]
+      }
+    },
+    {
+      "id": "M31-03",
+      "source": "May 31 hero SKU",
+      "title": "ADBL Typhoon anti-rec on piele via knowledge",
+      "steps": ["pot folosi ADBL Typhoon pe piele naturala?"],
+      "expect": {
+        "actionAnyOf": ["knowledge"],
+        "forbidActionAnyOf": ["safety"]
+      }
+    },
+    {
+      "id": "M31-04",
+      "source": "May 31 hero SKU",
+      "title": "Koch MZR 86001 howToUse (regression alias)",
+      "steps": ["cum aplic MZR Koch Chemie?"],
+      "expect": {
+        "actionAnyOf": ["knowledge"]
+      }
     }
   ]
 }

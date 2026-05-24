@@ -56,6 +56,13 @@ const {
 } = require("./cleaningObjectCanonical");
 const { getMissingSlot, CTO_SURFACE_ENUM, CTO_SURFACE_SET } = require("./slotCompleteness");
 const { findRelevantKnowledge } = require("./knowledgeService");
+const {
+  tryProductSectionAntiRecKnowledge,
+  tryProductSectionQuoteKnowledge,
+  tryNonTierOneSectionDecline,
+  findCatalogProductByMessage
+} = require("./productSectionsKnowledge");
+const { tryInformationalSectionFallbackFromRoleEmpty } = require("./findProductsByRoleConfig");
 const fallbackProductsCatalog = require("../data/products.json");
 const productRoles = require("../data/product_roles.json");
 const knowledgeBase = require("../data/knowledge.json");
@@ -2377,7 +2384,10 @@ function endInteraction(interactionRef, result, patch = {}) {
       reasonCode: interactionRef.decision.reasonCode ?? null,
       needsDisambiguation: Boolean(interactionRef.decision.needsDisambiguation),
       productsReason: interactionRef.decision.productsReason ?? null,
-      hardGuardFallback: interactionRef.decision.hardGuardFallback || false
+      hardGuardFallback: interactionRef.decision.hardGuardFallback || false,
+      selection: {
+        empty: interactionRef.decision.selection?.empty === true
+      }
     },
     output: {
       type: finalOutputType,
@@ -4260,7 +4270,7 @@ function buildFinalTags(coreTags, workingTags, slots = {}) {
   ].filter(Boolean))];
 }
 
-function findProductsByRoleConfig(roleConfig, products, roleId = null) {
+function findProductsByRoleConfig(roleConfig, products, roleId = null, informationalContext = null) {
   const safeRoleConfig = roleConfig && typeof roleConfig === "object" ? roleConfig : {};
   const matchTags = Array.isArray(safeRoleConfig.matchTags)
     ? safeRoleConfig.matchTags.map(tag => String(tag).toLowerCase())
@@ -4359,6 +4369,22 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null) {
     if (optionalTags.length > 0) return optionalTags.some(tag => productTags.includes(tag));
     return false;
   });
+
+  if (
+    weakMatches.length === 0 &&
+    informationalContext &&
+    String(informationalContext.queryType || "").toLowerCase() === "informational" &&
+    informationalContext.message
+  ) {
+    const sectionKnowledge = tryInformationalSectionFallbackFromRoleEmpty(
+      weakMatches,
+      informationalContext.message,
+      informationalContext.queryType
+    );
+    if (sectionKnowledge) {
+      informationalContext.sectionKnowledge = sectionKnowledge;
+    }
+  }
 
   return weakMatches;
 }
@@ -7511,6 +7537,8 @@ function buildDecision(partial = {}) {
       : null;
   const reasonCode =
     reasonFromPartial || (action ? defaultReasonCodeForAction(action, partial) : "routing.unspecified");
+  const selectionPartial =
+    partial.selection && typeof partial.selection === "object" ? partial.selection : {};
   return {
     ...partial,
     action,
@@ -7521,7 +7549,11 @@ function buildDecision(partial = {}) {
     productsReason:
       partial.productsReason != null && String(partial.productsReason).trim() !== ""
         ? String(partial.productsReason)
-        : null
+        : null,
+    selection: {
+      ...selectionPartial,
+      empty: selectionPartial.empty === true
+    }
   };
 }
 
@@ -8350,6 +8382,65 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     let selectionEscalation = false;
     let selectionEscalationTrigger = null;
 
+    logChatPipelineStage("product_section_anti_rec");
+    const productSectionAntiRecPreSafety = tryProductSectionAntiRecKnowledge(userMessage);
+    if (productSectionAntiRecPreSafety) {
+      const antiRecDecision = buildDecision({
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        reasonCode: productSectionAntiRecPreSafety.reasonCode,
+        selection: { empty: productSectionAntiRecPreSafety.selectionEmpty === true }
+      });
+      updateSessionWithProducts(sessionId, [], "guidance");
+      logInfo("DECISION", { type: "knowledge", source: "product_sections_whatItIsNot" });
+      emit("ai_response", { response: productSectionAntiRecPreSafety.reply });
+      logResponseSummary("knowledge", { products: 0 });
+      interactionRef.queryType = "informational";
+      interactionRef.slots = {};
+      return endInteraction(
+        interactionRef,
+        { reply: productSectionAntiRecPreSafety.reply, products: [] },
+        {
+          decision: antiRecDecision,
+          outputType: "reply"
+        }
+      );
+    }
+
+    logChatPipelineStage("product_section_quote");
+    const productSectionQuotePreSafety = tryProductSectionQuoteKnowledge(userMessage, null, {
+      skipQueryTypeCheck: true
+    });
+    if (productSectionQuotePreSafety && !productSectionQuotePreSafety.decline) {
+      const quoteDecision = buildDecision({
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        reasonCode: productSectionQuotePreSafety.reasonCode,
+        selection: { empty: productSectionQuotePreSafety.selectionEmpty === true }
+      });
+      updateSessionWithProducts(sessionId, [], "guidance");
+      logInfo("DECISION", {
+        type: "knowledge",
+        source: "product_sections_early",
+        sku: productSectionQuotePreSafety.sku,
+        sectionKey: productSectionQuotePreSafety.sectionKey
+      });
+      emit("ai_response", { response: productSectionQuotePreSafety.reply });
+      logResponseSummary("knowledge", { products: 0 });
+      interactionRef.queryType = "informational";
+      interactionRef.slots = {};
+      return endInteraction(
+        interactionRef,
+        { reply: productSectionQuotePreSafety.reply, products: [] },
+        {
+          decision: quoteDecision,
+          outputType: "reply"
+        }
+      );
+    }
+
     logChatPipelineStage("safety_gate");
     const precomputedSafetyGate = runSafetyGate({ routingMessage, sessionContext });
     interactionRef._precomputedSafetyGate = precomputedSafetyGate;
@@ -8376,6 +8467,66 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (safetyTurnEarly) {
         return endInteraction(interactionRef, safetyTurnEarly.result, safetyTurnEarly.patch);
       }
+    }
+
+    logChatPipelineStage("product_section_quote_decline");
+    if (productSectionQuotePreSafety?.decline === true) {
+      const productSectionQuoteDecline = productSectionQuotePreSafety;
+      const quoteDeclineDecision = buildDecision({
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        reasonCode: productSectionQuoteDecline.reasonCode,
+        selection: { empty: productSectionQuoteDecline.selectionEmpty === true }
+      });
+      updateSessionWithProducts(sessionId, [], "guidance");
+      logInfo("DECISION", {
+        type: "knowledge",
+        source: "product_sections_decline_early",
+        sku: productSectionQuoteDecline.sku,
+        sectionKey: productSectionQuoteDecline.sectionKey
+      });
+      emit("ai_response", { response: productSectionQuoteDecline.reply });
+      logResponseSummary("knowledge", { products: 0 });
+      interactionRef.queryType = "informational";
+      interactionRef.slots = {};
+      return endInteraction(
+        interactionRef,
+        { reply: productSectionQuoteDecline.reply, products: [] },
+        {
+          decision: quoteDeclineDecision,
+          outputType: "reply"
+        }
+      );
+    }
+
+    const catalogProductEarly = findCatalogProductByMessage(userMessage, products);
+    const nonTierDeclineEarly = tryNonTierOneSectionDecline(
+      userMessage,
+      "informational",
+      catalogProductEarly
+    );
+    if (nonTierDeclineEarly) {
+      const declineDecision = buildDecision({
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        reasonCode: nonTierDeclineEarly.reasonCode,
+        selection: { empty: true }
+      });
+      updateSessionWithProducts(sessionId, [], "guidance");
+      emit("ai_response", { response: nonTierDeclineEarly.reply });
+      logResponseSummary("knowledge", { products: 0 });
+      interactionRef.queryType = "informational";
+      interactionRef.slots = {};
+      return endInteraction(
+        interactionRef,
+        { reply: nonTierDeclineEarly.reply, products: [] },
+        {
+          decision: declineDecision,
+          outputType: "reply"
+        }
+      );
     }
 
     logChatPipelineStage("early_intent_level_recovery");
@@ -9980,6 +10131,61 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     // INFORMATIONAL
     if (queryType === "informational" && previewAction === "knowledge") {
       sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
+
+      const sectionQuote = tryProductSectionQuoteKnowledge(userMessage, queryType);
+      if (sectionQuote) {
+        const sectionDecision = buildDecision({
+          action: "knowledge",
+          flowId: null,
+          missingSlot: null,
+          reasonCode: sectionQuote.reasonCode,
+          selection: { empty: sectionQuote.selectionEmpty === true }
+        });
+        updateSessionWithProducts(sessionId, [], "guidance");
+        logInfo("DECISION", {
+          type: "knowledge",
+          source: "product_sections",
+          sku: sectionQuote.sku,
+          sectionKey: sectionQuote.sectionKey,
+          decline: Boolean(sectionQuote.decline)
+        });
+        emit("ai_response", { response: sectionQuote.reply });
+        logResponseSummary("knowledge", { products: 0 });
+        interactionRef.slots = sessionContext.slots || null;
+        return endInteraction(
+          interactionRef,
+          { reply: sectionQuote.reply, products: [] },
+          {
+            decision: sectionDecision,
+            outputType: "reply"
+          }
+        );
+      }
+
+      const catalogProduct = findCatalogProductByMessage(userMessage, products);
+      const nonTierDecline = tryNonTierOneSectionDecline(userMessage, queryType, catalogProduct);
+      if (nonTierDecline) {
+        const declineDecision = buildDecision({
+          action: "knowledge",
+          flowId: null,
+          missingSlot: null,
+          reasonCode: nonTierDecline.reasonCode,
+          selection: { empty: true }
+        });
+        updateSessionWithProducts(sessionId, [], "guidance");
+        emit("ai_response", { response: nonTierDecline.reply });
+        logResponseSummary("knowledge", { products: 0 });
+        interactionRef.slots = sessionContext.slots || null;
+        return endInteraction(
+          interactionRef,
+          { reply: nonTierDecline.reply, products: [] },
+          {
+            decision: declineDecision,
+            outputType: "reply"
+          }
+        );
+      }
+
       const informationalTags = [...new Set(workingTags.filter(Boolean))];
       const knowledgeResults = loggingV2.withSearchPhaseSync(
         () => findRelevantKnowledge(userMessage, knowledgeBase),
