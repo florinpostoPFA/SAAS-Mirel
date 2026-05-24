@@ -81,7 +81,7 @@ function passesSlotObjectRole(product, slots) {
   if (obj === "jante") {
     if (tags.includes("interior") && !tags.includes("exterior")) return false;
     if (
-      tags.includes("tire") &&
+      (tags.includes("tires") || tags.includes("tire")) &&
       !tags.some((t) => ["wheels", "wheel_cleaner", "metal"].includes(t))
     ) {
       return false;

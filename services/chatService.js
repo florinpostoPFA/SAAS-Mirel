@@ -55,6 +55,7 @@ const {
   PAINT_OBJECT_ALIASES
 } = require("./cleaningObjectCanonical");
 const { getMissingSlot, CTO_SURFACE_ENUM, CTO_SURFACE_SET } = require("./slotCompleteness");
+const { productTagsSatisfyTag } = require("./tagDictionary");
 const { findRelevantKnowledge } = require("./knowledgeService");
 const {
   tryProductSectionAntiRecKnowledge,
@@ -3977,21 +3978,32 @@ function filterProducts(products, slots) {
     if (
       safeSlots.surface === "textile" &&
       !(
+        tags.includes("textile") ||
+        tags.includes("carpet") ||
+        tags.includes("headliner") ||
         (tags.includes("textile") && tags.includes("cleaner")) ||
         tags.includes("textile_cleaner") ||
         tags.includes("upholstery_cleaner") ||
+        tags.includes("interior_cleaner") ||
         tags.includes("stain_remover")
       )
-    ) return false;
+    ) {
+      return false;
+    }
     if (
       (safeSlots.surface === "leather" || safeSlots.surface === "piele") &&
       !(
+        tags.includes("leather_natural") ||
+        tags.includes("leather_synthetic") ||
+        tags.includes("alcantara") ||
         (tags.includes("leather") && tags.includes("cleaner")) ||
         tags.includes("leather") ||
         tags.includes("leather_cleaner") ||
         tags.includes("leather_conditioner")
       )
-    ) return false;
+    ) {
+      return false;
+    }
     if (
       safeSlots.surface === "paint" &&
       !(
@@ -4336,7 +4348,7 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null, informati
   };
   const passesTagRules = (product) => {
     const tags = normalizeTags(product);
-    if (requiredTags.length > 0 && !requiredTags.every(tag => tags.includes(tag))) {
+    if (requiredTags.length > 0 && !requiredTags.every((tag) => productTagsSatisfyTag(tags, tag))) {
       if (hasEmptyTags(product)) {
         const matchedPhrase = findMatchTextPhraseHit(product);
         if (matchedPhrase) {
@@ -4380,9 +4392,13 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null, informati
   const weakMatches = safeProducts.filter((product) => {
     if (!passesTagRules(product)) return false;
     const productTags = normalizeTags(product);
-    if (matchTags.some(tag => productTags.includes(tag))) return true;
-    if (requiredTags.length > 0) return requiredTags.every(tag => productTags.includes(tag));
-    if (optionalTags.length > 0) return optionalTags.some(tag => productTags.includes(tag));
+    if (matchTags.some((tag) => productTagsSatisfyTag(productTags, tag))) return true;
+    if (requiredTags.length > 0) {
+      return requiredTags.every((tag) => productTagsSatisfyTag(productTags, tag));
+    }
+    if (optionalTags.length > 0) {
+      return optionalTags.some((tag) => productTagsSatisfyTag(productTags, tag));
+    }
     return false;
   });
 

@@ -11,6 +11,7 @@
 const { askLLM } = require("./llm");
 const { debug } = require("./logger");
 const tagDictionary = require("./tagDictionary");
+const { getEmittedTagsForSlot } = tagDictionary;
 const normalize = require("../utils/normalize");
 const { normalizeTagList: canonicalizeTags } = require("./tagNormalization");
 
@@ -46,8 +47,15 @@ function detectTagsByRules(message, tagRules) {
   }
 
   Object.entries(tagDictionary).forEach(([tag, keywords]) => {
-    if (Array.isArray(keywords) && keywords.some(keyword => normalizedMessage.includes(normalize(keyword)))) {
-      detectedTags.add(tag);
+    if (
+      tag === "SURFACE_SLOT_TO_VOCAB" ||
+      typeof keywords === "function" ||
+      !Array.isArray(keywords)
+    ) {
+      return;
+    }
+    if (keywords.some((keyword) => normalizedMessage.includes(normalize(keyword)))) {
+      getEmittedTagsForSlot(tag).forEach((t) => detectedTags.add(t));
     }
   });
 
