@@ -57,9 +57,12 @@ describe("May 31 knowledge path — productSections", () => {
     const sessionId = `may31-86001-${Date.now()}`;
     const res = await handleChat("cum aplic Koch Chemie MZR?", "C1", products, sessionId);
     const log = lastLog();
+    const reply = String(res.reply || res.message || "");
 
     expect(log.decision.action).toBe("knowledge");
-    expect(String(res.reply || res.message || "")).toContain(snippet.slice(0, 30));
+    expect(reply).toContain("Cum se folosește (Koch Chemie MZR):");
+    expect(reply).not.toContain("(86001):");
+    expect(reply).toContain(snippet.slice(0, 30));
   });
 
   it("description_quote_hero_sku: 86011 Koch MZR 11L howToUse", async () => {
@@ -102,10 +105,13 @@ describe("May 31 knowledge path — productSections", () => {
       sessionId
     );
     const log = lastLog();
+    const reply = String(res.reply || res.message || "");
 
     expect(log.decision.action).toBe("knowledge");
     expect(log.decision.action).not.toBe("safety");
-    expect(String(res.reply || res.message || "")).toContain(snippet.slice(0, 20));
+    expect(reply).toContain("Pentru ADBL Typhoon, conform descrierii producatorului:");
+    expect(reply).not.toContain("ADB-TYP");
+    expect(reply).toContain(snippet.slice(0, 20));
   });
 
   it("anti_rec_warning via knowledge: Koch MZR on piele (not safety)", async () => {
@@ -128,6 +134,10 @@ describe("May 31 knowledge path — productSections", () => {
     expect(log.decision.action).toBe("knowledge");
     expect(log.decision.selection?.empty).toBe(true);
     expect(reply).toMatch(/Nu am un extras structurat/i);
+    expect(reply).toMatch(
+      /reformula intrebarea sau alege un produs din gama noastra principala \(Koch Chemie, Gtechniq, ADBL, ZviZZer, Ewocar\)/i
+    );
+    expect(reply).not.toMatch(/tier-1/i);
     expect(reply).not.toMatch(/Pasul 1:/i);
   });
 
@@ -142,6 +152,7 @@ describe("May 31 knowledge path — productSections", () => {
     expect(log.decision.action).toBe("knowledge");
     expect(log.decision.selection?.empty).toBe(true);
     expect(reply).toMatch(/Nu am un extras structurat/i);
+    expect(reply).not.toMatch(/tier-1/i);
     expect(reply).not.toContain("Ce urmează după");
   });
 });

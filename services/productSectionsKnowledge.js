@@ -6,6 +6,34 @@ const { norm } = require("./sectionExtractor");
 
 const TIER1_BRANDS = new Set(["Koch Chemie", "Gtechniq", "ZviZZer", "Ewocar", "ADBL"]);
 
+/** Customer-facing short names (catalog `name` fields are long Magento titles). */
+const HERO_DISPLAY_NAMES = {
+  "86001": "Koch Chemie MZR",
+  "86011": "Koch Chemie MZR 11L",
+  "ADB-TYP": "ADBL Typhoon",
+  "ADB-B": "ADBL Bonnet"
+};
+
+let catalogById = null;
+
+function getCatalogById() {
+  if (catalogById) return catalogById;
+  catalogById = new Map();
+  const products = require("../data/products.json");
+  for (const p of products) {
+    if (p?.id) catalogById.set(String(p.id), p);
+  }
+  return catalogById;
+}
+
+function resolveProductDisplayName(sku) {
+  const key = String(sku);
+  if (HERO_DISPLAY_NAMES[key]) return HERO_DISPLAY_NAMES[key];
+  const product = getCatalogById().get(key);
+  if (!product) return key;
+  return product.name || product.title || key;
+}
+
 const SKU_MATCHERS = [
   { sku: "86011", patterns: [/\b86011\b/i, /\b11\s*l\b/i, /mehrzweckreiniger.*11/i] },
   { sku: "86001", patterns: [/\b86001\b/i, /\bmzr\b/i, /mehrzweckreiniger/i, /koch\s+chemie\s+mzr/i] },
@@ -114,6 +142,7 @@ function pickAntiRecBullets(entry, message) {
 }
 
 function formatSectionQuote(sku, sectionKey, sectionText) {
+  const displayName = resolveProductDisplayName(sku);
   const label =
     sectionKey === "whereToUse"
       ? "Unde se poate folosi"
@@ -124,16 +153,17 @@ function formatSectionQuote(sku, sectionKey, sectionText) {
           : "Din descrierea produsului";
   const excerpt =
     sectionText.length > 520 ? `${sectionText.slice(0, 517).trim()}…` : sectionText;
-  return `${label} (${sku}): ${excerpt}`;
+  return `${label} (${displayName}): ${excerpt}`;
 }
 
 function formatAntiRecReply(sku, bullets) {
+  const displayName = resolveProductDisplayName(sku);
   const lines = bullets.map((b) => (b.endsWith(".") ? b : `${b}.`));
-  return `Pentru ${sku}, din descrierea produsului: ${lines.join(" ")}`;
+  return `Pentru ${displayName}, conform descrierii producatorului: ${lines.join(" ")}`;
 }
 
 const DECLINE_COPY =
-  "Nu am un extras structurat din descrierea acelui produs pentru intrebarea ta. Poti reformula sau alege un produs tier-1 din catalogul nostru principal?";
+  "Nu am un extras structurat din descrierea acelui produs pentru intrebarea ta. Poti reformula intrebarea sau alege un produs din gama noastra principala (Koch Chemie, Gtechniq, ADBL, ZviZZer, Ewocar).";
 
 /**
  * Product-specific anti-rec via whatItIsNot → knowledge (not safety).
@@ -311,6 +341,7 @@ module.exports = {
   loadEntriesBySku,
   getEntry,
   resolveSkuFromMessage,
+  resolveProductDisplayName,
   tryProductSectionAntiRecKnowledge,
   tryProductSectionQuoteKnowledge,
   tryNonTierOneSectionDecline,
