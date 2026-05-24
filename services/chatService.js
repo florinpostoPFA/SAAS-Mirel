@@ -69,7 +69,8 @@ const {
   tryProductSectionAntiRecKnowledge,
   tryProductSectionQuoteKnowledge,
   tryNonTierOneSectionDecline,
-  findCatalogProductByMessage
+  findCatalogProductByMessage,
+  resolveSkuFromMessage
 } = require("./productSectionsKnowledge");
 const { tryInformationalSectionFallbackFromRoleEmpty } = require("./findProductsByRoleConfig");
 const {
@@ -3468,7 +3469,7 @@ const HARD_FILTER_RULES = {
     ]
   },
   "interior|plastic": {
-    allow: ["plastic", "interior_cleaner", "cleaner", "microfiber", "brush"],
+    allow: ["plastic", "plastic_interior", "interior_cleaner", "cleaner", "microfiber", "brush"],
     exclude: ["polish", "wax", "paint", "exterior"]
   },
   "exterior|paint": {
@@ -7205,6 +7206,16 @@ function hasExplicitInteriorIntent(message) {
   return interiorKeywords.some(keyword => text.includes(keyword));
 }
 
+/** Skip fuzzy non-tier-1 section decline when the user asks about a category, not a hero SKU. */
+function shouldSkipEarlyNonTierProductSectionDecline(message) {
+  if (resolveSkuFromMessage(message)) return false;
+  const msg = String(message || "").toLowerCase();
+  if (hasExplicitCommerceProductIntent(message)) return true;
+  if (/\bprotectie\b/.test(msg) && /\b(plastic|bord|interior)\b/.test(msg)) return true;
+  if (/\b(cum\s+aplic|cum\s+folosesc)\b/.test(msg) && /\bplastic\b/.test(msg)) return true;
+  return false;
+}
+
 /**
  * ROUTING PURITY: Detect negations/corrections that should not trigger new flow selection
  * Examples: "nu avem", "nu e", "fara", "n-avem"
@@ -8527,8 +8538,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
-    logChatPipelineStage("product_section_quote_decline");
     if (productSectionQuotePreSafety?.decline === true) {
+      logChatPipelineStage("product_section_quote_decline");
       const productSectionQuoteDecline = productSectionQuotePreSafety;
       const quoteDeclineDecision = buildDecision({
         action: "knowledge",
@@ -8559,12 +8570,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     const catalogProductEarly = findCatalogProductByMessage(userMessage, products);
-    const nonTierDeclineEarly = tryNonTierOneSectionDecline(
-      userMessage,
-      "informational",
-      catalogProductEarly
-    );
+    const nonTierDeclineEarly = shouldSkipEarlyNonTierProductSectionDecline(userMessage)
+      ? null
+      : tryNonTierOneSectionDecline(userMessage, "informational", catalogProductEarly);
     if (nonTierDeclineEarly) {
+      logChatPipelineStage("product_section_non_tier_decline");
       const declineDecision = buildDecision({
         action: "knowledge",
         flowId: null,
@@ -10515,6 +10525,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           selectionSlots.object === "tires")
       ) {
         role = "tire_dressing";
+      }
+      if (!role && selectionSlots.surface === "plastic" && /\bprotectie\b/.test(msg)) {
+        role = "interior_protection";
       }
       const roleConfig = role ? productRoles[role] || null : null;
 
