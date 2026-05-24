@@ -54,7 +54,14 @@ const {
   GLASS_OBJECT_ALIASES,
   PAINT_OBJECT_ALIASES
 } = require("./cleaningObjectCanonical");
-const { getMissingSlot, CTO_SURFACE_ENUM, CTO_SURFACE_SET } = require("./slotCompleteness");
+const {
+  getMissingSlot,
+  CTO_SURFACE_ENUM,
+  CTO_SURFACE_SET,
+  inferContextFromSlots,
+  INHERENT_INTERIOR,
+  INHERENT_EXTERIOR
+} = require("./slotCompleteness");
 const { productTagsSatisfyTag } = require("./tagDictionary");
 const { findRelevantKnowledge } = require("./knowledgeService");
 const {
@@ -2931,12 +2938,8 @@ function seedPendingClarificationAtEmission(sessionContext, missingSlot) {
 }
 
 function hasRequiredSelectionSlots(slots) {
-  return (
-    slots &&
-    slots.context &&
-    slots.object &&
-    slots.surface
-  );
+  const normalized = normalizeSlots(slots && typeof slots === "object" ? { ...slots } : {});
+  return getMissingSlot(normalized) === null;
 }
 
 function shouldForceSurfaceClarification(message, slots) {
@@ -3196,26 +3199,32 @@ function getMissingSlotForRequiredList(slots, requiredList) {
   }
 
   const slotSource = slots && typeof slots === "object" ? slots : {};
-  const hasContext =
-    slotSource.context !== null &&
-    slotSource.context !== undefined &&
-    String(slotSource.context).trim() !== "";
-  const hasObject =
-    slotSource.object !== null &&
-    slotSource.object !== undefined &&
-    String(slotSource.object).trim() !== "";
+  const rawContext = slotSource.context;
   const surfRaw =
     slotSource.surface !== null && slotSource.surface !== undefined
       ? String(slotSource.surface).trim()
       : "";
-  const hasCtoSurface = surfRaw !== "" && CTO_SURFACE_SET.has(surfRaw.toLowerCase());
-  const ctx = String(slotSource.context || "").toLowerCase();
+  const hasRawContext =
+    rawContext !== null && rawContext !== undefined && String(rawContext).trim() !== "";
+  const effectiveContext = hasRawContext
+    ? String(rawContext).trim().toLowerCase()
+    : inferContextFromSlots(surfRaw, slotSource.object);
+  const hasContext = effectiveContext != null && effectiveContext !== "";
+  const hasObject =
+    slotSource.object !== null &&
+    slotSource.object !== undefined &&
+    String(slotSource.object).trim() !== "";
+  const surfLower = surfRaw.toLowerCase();
+  const hasCtoSurface = surfRaw !== "" && CTO_SURFACE_SET.has(surfLower);
+  const hasInherentSurface =
+    surfRaw !== "" && (INHERENT_INTERIOR.has(surfLower) || INHERENT_EXTERIOR.has(surfLower));
+  const ctx = effectiveContext || "";
   const obj = canonicalizeObjectValue(slotSource.object);
 
   if (req.has("context") && !hasContext) {
     return "context";
   }
-  if (req.has("object") && !hasObject) {
+  if (req.has("object") && !hasObject && !hasCtoSurface && !hasInherentSurface) {
     return "object";
   }
   if (req.has("surface")) {
@@ -3303,6 +3312,16 @@ function normalizeSlots(slots) {
     logSurfaceNormalized(String(beforeCoerce), coerced);
   }
   normalized.surface = coerced;
+
+  if (
+    (normalized.context == null || String(normalized.context).trim() === "") &&
+    (normalized.surface || normalized.object)
+  ) {
+    const inferred = inferContextFromSlots(normalized.surface, normalized.object);
+    if (inferred) {
+      normalized.context = inferred;
+    }
+  }
 
   return normalized;
 }
@@ -4458,7 +4477,7 @@ function detectCoverageGapRole(message, slots = {}) {
 
   const leatherCue = /piele|leather/.test(norm) || surface === "piele" || object === "scaun";
   const leatherClean = /curat|spal|murdar|pete/.test(norm);
-  const leatherProtect = /protej|hidrat|intretin|condition/.test(norm);
+  const leatherProtect = /protej|hidrat|intretin|condition|balsam/.test(norm);
   if (leatherCue && leatherClean) return { role: "leather_cleaner", ask: null };
   if (leatherCue && leatherProtect) return { role: "leather_protectant", ask: null };
   if (leatherCue && !leatherClean && !leatherProtect) {

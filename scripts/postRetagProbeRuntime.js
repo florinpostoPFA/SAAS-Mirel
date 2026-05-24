@@ -33,6 +33,7 @@ function clearModuleCache(resolvedPath) {
  * @returns {import("../services/chatService").handleChat}
  */
 function loadHandleChatForGateB() {
+  process.env.GOLDEN_REPLAY = "1";
   const llmPath = resolveService(path.join("llm", "index.js"));
   const logPath = resolveService("interactionLog.js");
   const chatPath = resolveService("chatService.js");

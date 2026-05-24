@@ -28,15 +28,14 @@ describe("Clarification improvement prompts", () => {
     expect(res.body.reply).toContain("Nu esti sigur?");
   });
 
-  it("asks improved object clarification prompt", async () => {
+  it("does not ask interior/exterior when piele surface is explicit", async () => {
     const res = await postChat(
-      "Vreau ceva pentru interior textil",
-      `clarif-object-${Date.now()}`
+      "ce balsam pentru piele auto",
+      `clarif-piele-infer-${Date.now()}`
     );
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.reply).toContain("Ce vrei sa cureti mai exact?");
-    expect(res.body.reply).toContain("(ex: scaune, bord, geamuri)");
+    expect(res.body.reply).not.toContain("Este interior sau exterior?");
   });
 
   it("asks improved context clarification prompt", async () => {
