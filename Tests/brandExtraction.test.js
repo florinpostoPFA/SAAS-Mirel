@@ -46,4 +46,19 @@ describe("brand extraction from user query", () => {
       productMatchesBrand({ name: "Wheel Cleaner Gtechniq", brand: null }, "Koch Chemie")
     ).toBe(false);
   });
+
+  test("productMatchesBrand accepts tier-1 manufacturerId when name omits brand", () => {
+    expect(
+      productMatchesBrand(
+        { name: "Leather Clean 500ml", manufacturerId: "70", brand: null },
+        "Ewocar"
+      )
+    ).toBe(true);
+    expect(
+      productMatchesBrand(
+        { name: "Polish compound", manufacturerId: "44", brand: null },
+        "ZviZZer"
+      )
+    ).toBe(true);
+  });
 });

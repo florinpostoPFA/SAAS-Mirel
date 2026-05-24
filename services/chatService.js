@@ -10564,6 +10564,22 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         return !isGenericProduct(product);
       });
+      if (selectionSlots.brand) {
+        const brandLabel = String(selectionSlots.brand).trim();
+        const brandedCandidates = qualityCandidates.filter(product =>
+          productMatchesBrand(product, brandLabel)
+        );
+        if (brandedCandidates.length > 0) {
+          qualityCandidates = brandedCandidates;
+        } else {
+          const brandedFromHardFilter = hardFilterResult.products.filter(product =>
+            productMatchesBrand(product, brandLabel)
+          );
+          if (brandedFromHardFilter.length > 0) {
+            qualityCandidates = brandedFromHardFilter;
+          }
+        }
+      }
       if (qualityCandidates.length === 0) {
         const bestSolution = hardFilterResult.products.find(product => !isAccessoryProduct(product));
         if (bestSolution) {

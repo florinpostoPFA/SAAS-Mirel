@@ -17,6 +17,15 @@ const BRAND_LEXICON = [
   "Labocosmetica"
 ].sort((a, b) => b.length - a.length);
 
+/** Tier-1 manufacturerId per canonical brand (data/tier-one-manufacturer-ids.json). */
+const BRAND_MANUFACTURER_ID = {
+  "Koch Chemie": 13,
+  Gtechniq: 39,
+  ZviZZer: 44,
+  Ewocar: 70,
+  ADBL: 92
+};
+
 function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -60,6 +69,14 @@ function productMatchesBrand(product, brand) {
     return true;
   }
 
+  const expectedMfgId = BRAND_MANUFACTURER_ID[canonical];
+  if (expectedMfgId != null) {
+    const productMfgId = Number(product?.manufacturerId);
+    if (Number.isFinite(productMfgId) && productMfgId === expectedMfgId) {
+      return true;
+    }
+  }
+
   const pattern = new RegExp(
     `(?:^|[^A-Za-z0-9])${escapeRegExp(canonical)}(?:[^A-Za-z0-9]|$)`,
     "i"
@@ -70,6 +87,7 @@ function productMatchesBrand(product, brand) {
 
 module.exports = {
   BRAND_LEXICON,
+  BRAND_MANUFACTURER_ID,
   extractBrandFromMessage,
   productMatchesBrand
 };

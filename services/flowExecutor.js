@@ -1,7 +1,38 @@
+const fs = require("fs");
+const path = require("path");
 const productRoles = require("../data/product_roles.json");
 const knowledgeFlow = require("../data/knowledge_flow.json");
 const config = require("../config");
 const { logInfo } = require("./logger");
+
+let tierOneAllowedIdsCache = null;
+
+function getTierOneAllowedIds() {
+  if (tierOneAllowedIdsCache) {
+    return tierOneAllowedIdsCache;
+  }
+  try {
+    const configPath = path.join(__dirname, "..", "data", "tier-one-manufacturer-ids.json");
+    const parsed = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    const ids = Array.isArray(parsed?.tierOneManufacturerIds) ? parsed.tierOneManufacturerIds : [];
+    tierOneAllowedIdsCache = new Set(ids.map(id => Number(id)).filter(Number.isFinite));
+  } catch {
+    tierOneAllowedIdsCache = new Set();
+  }
+  return tierOneAllowedIdsCache;
+}
+
+function filterTierOneProducts(products) {
+  const allowed = getTierOneAllowedIds();
+  const list = Array.isArray(products) ? products : [];
+  if (allowed.size === 0) {
+    return list;
+  }
+  return list.filter(product => {
+    const id = Number(product?.manufacturerId);
+    return Number.isFinite(id) && allowed.has(id);
+  });
+}
 
 function normalizeText(value) {
   return String(value || "").toLowerCase().trim();
@@ -88,7 +119,8 @@ function scoreDeterministicFallbackProduct(product, fallbackTags) {
 
 function selectFallbackProductsForFlow(products, flowId, slots = {}) {
   if (flowId === "glass_clean_basic") {
-    const safeProducts = Array.isArray(products) ? products : [];
+    const catalogProducts = Array.isArray(products) ? products : [];
+    const safeProducts = filterTierOneProducts(catalogProducts);
     const ranked = safeProducts
       .map(product => ({
         product,
@@ -566,6 +598,15 @@ function executeFlow(flow, products, slots = {}, options = {}) {
   }
 
   let finalProducts = uniqueProducts(allProducts);
+  const tierOneFinal = filterTierOneProducts(finalProducts);
+  if (tierOneFinal.length > 0) {
+    finalProducts = tierOneFinal;
+  } else if (finalProducts.length > 0 && flowId === "glass_clean_basic") {
+    const tierOneFallback = selectFallbackProductsForFlow(products, flowId, slots);
+    if (tierOneFallback.selected.length > 0) {
+      finalProducts = tierOneFallback.selected;
+    }
+  }
   if (finalProducts.length === 0) {
     const safeFallback = selectGenericSafeFallbackProduct(products, { flowId, slots });
     if (safeFallback) {

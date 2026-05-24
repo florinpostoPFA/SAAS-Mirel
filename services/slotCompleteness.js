@@ -46,7 +46,9 @@ const OBJECT_AS_SURFACE = new Set([
   "bord",
   "tapiterie",
   "parbriz",
-  "geam"
+  "geam",
+  "geamuri",
+  "glass"
 ]);
 
 function inferContextFromSlots(surfRaw, objRaw) {
