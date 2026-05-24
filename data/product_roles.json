@@ -57,11 +57,11 @@
     "matchText": ["jante", "wheel", "iron", "frana"]
   },
   "tire_dressing": {
-    "requiredTags": ["dressing"],
-    "optionalTags": ["tires", "rubber", "protection"],
+    "requiredTags": ["tire_dressing"],
+    "optionalTags": ["tires", "rubber", "protection", "dressing"],
     "excludeTags": ["wheel_cleaner", "metal", "glass"],
-    "matchTags": ["dressing", "tires", "rubber", "protection"],
-    "matchText": ["anvelope", "tire", "luciu", "gel"],
+    "matchTags": ["tire_dressing", "dressing", "tires", "rubber", "protection"],
+    "matchText": ["anvelope", "tire", "luciu", "gel", "cauciuc"],
     "maxProducts": 2
   },
   "rubber_seal_protectant": {

@@ -10508,6 +10508,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         );
       }
       if (!role && coverageRoleDecision.role) role = coverageRoleDecision.role;
+      if (
+        !role &&
+        (selectionSlots.surface === "tires" ||
+          selectionSlots.object === "anvelope" ||
+          selectionSlots.object === "tires")
+      ) {
+        role = "tire_dressing";
+      }
       const roleConfig = role ? productRoles[role] || null : null;
 
       logInfo("SELECTION_DEBUG", {

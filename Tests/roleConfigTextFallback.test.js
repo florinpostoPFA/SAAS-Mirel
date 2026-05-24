@@ -11,7 +11,7 @@ const tireDressingRole = productRoles.tire_dressing;
 describe("findProductsByRoleConfig empty-tag text-fallback", () => {
   test("tagged product satisfying requiredTags still passes (no regression)", () => {
     const products = [
-      { id: "td-tagged", name: "Luciu anvelope X", tags: ["dressing", "tires"] }
+      { id: "td-tagged", name: "Luciu anvelope X", tags: ["tire_dressing", "tires"] }
     ];
     const matches = __test.findProductsByRoleConfig(tireDressingRole, products);
     expect(matches.some((p) => p.id === "td-tagged")).toBe(true);
