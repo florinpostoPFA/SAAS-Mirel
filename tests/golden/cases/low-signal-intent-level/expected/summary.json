@@ -19,7 +19,10 @@
           "missingSlot": "intent_level",
           "needsDisambiguation": false,
           "productsReason": null,
-          "reasonCode": "routing.clarification.intent_level"
+          "reasonCode": "routing.clarification.intent_level",
+          "selection": {
+            "empty": false
+          }
         },
         "intent": {
           "queryType": null,

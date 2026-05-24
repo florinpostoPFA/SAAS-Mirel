@@ -19,7 +19,10 @@
           "missingSlot": null,
           "needsDisambiguation": false,
           "productsReason": null,
-          "reasonCode": "routing.safety"
+          "reasonCode": "routing.safety",
+          "selection": {
+            "empty": false
+          }
         },
         "intent": {
           "queryType": "safety",

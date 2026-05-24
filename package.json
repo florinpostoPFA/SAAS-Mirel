@@ -13,6 +13,7 @@
     "start:frontend": "react-scripts start",
     "import:products": "node scripts/importProducts.js",
     "tag:products": "node scripts/autoTagProducts.js",
+    "build:sections": "node scripts/buildProductSections.js",
     "test:ground-truth-harness": "node scripts/runGroundTruthHarness.js",
     "test:post-retag-probes": "node scripts/runPostRetagProbes.js",
     "catalog:refresh": "npm run import:products && npm run tag:products && npm test",

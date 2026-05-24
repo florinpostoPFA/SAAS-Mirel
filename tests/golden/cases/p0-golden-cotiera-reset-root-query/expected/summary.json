@@ -19,7 +19,10 @@
           "missingSlot": "surface",
           "needsDisambiguation": false,
           "productsReason": null,
-          "reasonCode": "routing.clarification.slot"
+          "reasonCode": "routing.clarification.slot",
+          "selection": {
+            "empty": false
+          }
         },
         "intent": {
           "queryType": "procedural",
@@ -253,7 +256,10 @@
           "missingSlot": null,
           "needsDisambiguation": false,
           "productsReason": null,
-          "reasonCode": "routing.flow"
+          "reasonCode": "routing.flow",
+          "selection": {
+            "empty": false
+          }
         },
         "intent": {
           "queryType": "procedural",
@@ -966,7 +972,10 @@
           "missingSlot": "object",
           "needsDisambiguation": false,
           "productsReason": null,
-          "reasonCode": "routing.clarification.slot"
+          "reasonCode": "routing.clarification.slot",
+          "selection": {
+            "empty": false
+          }
         },
         "intent": {
           "queryType": "procedural",

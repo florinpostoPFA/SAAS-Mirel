@@ -18,6 +18,17 @@ describe("Decision payload (canonical shape)", () => {
     expect(d.reasonCode).toBe("routing.knowledge");
     expect(d.needsDisambiguation).toBe(false);
     expect(d.productsReason).toBeNull();
+    expect(d.selection).toEqual({ empty: false });
+  });
+
+  it("buildDecision preserves selection.empty when set", () => {
+    const d = buildDecision({
+      action: "knowledge",
+      flowId: null,
+      missingSlot: null,
+      selection: { empty: true }
+    });
+    expect(d.selection.empty).toBe(true);
   });
 
   it("buildDecision preserves explicit reasonCode", () => {
