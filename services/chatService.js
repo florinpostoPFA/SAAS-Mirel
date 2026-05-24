@@ -59,6 +59,7 @@ const {
   CTO_SURFACE_ENUM,
   CTO_SURFACE_SET,
   inferContextFromSlots,
+  inferSurfaceFromObject,
   INHERENT_INTERIOR,
   INHERENT_EXTERIOR
 } = require("./slotCompleteness");
@@ -3323,7 +3324,15 @@ function normalizeSlots(slots) {
     }
   }
 
-  return normalized;
+  if (!normalized.surface && normalized.object) {
+    const inferredSurface = inferSurfaceFromObject(normalized.object);
+    if (inferredSurface) {
+      logSurfaceNormalized("(infer object)", inferredSurface);
+      normalized.surface = inferredSurface;
+    }
+  }
+
+  return inferWheelsSurfaceFromObject(normalized);
 }
 
 function getAllowedSurfaces(slots) {
@@ -3396,15 +3405,13 @@ function detectContextHint(message) {
 
 function inferWheelsSurfaceFromObject(slots) {
   const safeSlots = slots && typeof slots === "object" ? slots : {};
-  if (safeSlots.surface) {
-    return safeSlots;
-  }
+  const surface = String(safeSlots.surface || "").toLowerCase();
   const object = String(safeSlots.object || "").toLowerCase();
-  if (object === "wheels" || object === "jante") {
-    return { ...safeSlots, surface: "wheels" };
-  }
-  if (object === "anvelope" || object === "tires") {
+  if (surface === "tires" || surface === "anvelope" || object === "anvelope" || object === "tires") {
     return { ...safeSlots, surface: "tires" };
+  }
+  if (surface === "wheels" || surface === "jante" || object === "wheels" || object === "jante") {
+    return { ...safeSlots, surface: "wheels" };
   }
   return safeSlots;
 }
@@ -10306,11 +10313,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         (currentMessageSlots.object && currentMessageSlots.object !== (sessionContext.slots || {}).object)
       );
       const currentObjectNormalized = String(currentSlots.object || "").toLowerCase();
-      const isWheelsObject = currentObjectNormalized === "wheels" || currentObjectNormalized === "jante";
-      if (introducesNewObjectOrContext && !currentMessageSlots.surface && !isWheelsObject) {
+      const isWheelTireObject =
+        currentObjectNormalized === "wheels" ||
+        currentObjectNormalized === "jante" ||
+        currentObjectNormalized === "anvelope" ||
+        currentObjectNormalized === "tires";
+      if (introducesNewObjectOrContext && !currentMessageSlots.surface && !isWheelTireObject) {
         currentSlots.surface = null;
         slotResult.slots.surface = null;
       }
+      currentSlots = inferWheelsSurfaceFromObject(currentSlots);
+      slotResult.slots = currentSlots;
 
       const problemType = sessionContext.problemType || null;
       const selectionDecision = enforceClarificationContract(resolveActionFinal({
@@ -10378,10 +10391,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         });
       }
 
-      const mergedSlots = {
+      const mergedSlots = inferWheelsSurfaceFromObject({
         ...(sessionContext.slots || {}),
         ...(slotResult.slots || {})
-      };
+      });
       sessionContext.slots = mergedSlots;
       if (!slotResult.missing) {
         sessionContext.state = null;
@@ -10393,7 +10406,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       logInfo("ROUTER_DECISION", selectionDecision);
 
       // All required slots are present, proceed with selection
-      const selectionSlots = sessionContext.slots || slotResult.slots || {};
+      const selectionSlots = inferWheelsSurfaceFromObject(
+        sessionContext.slots || slotResult.slots || {}
+      );
       const selectionTags = sanitizeTagsForMessage(
         userMessage,
         buildFinalTags(coreTags, workingTags, slotResult.slots),

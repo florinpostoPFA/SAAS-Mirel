@@ -35,6 +35,20 @@ const INHERENT_EXTERIOR = new Set([
   "sticla"
 ]);
 
+// Object values that are themselves surfaces. When surface is null but object is one of these,
+// treat the object value as the effective surface so we don't ask a redundant "which surface?" question.
+const OBJECT_AS_SURFACE = new Set([
+  "anvelope",
+  "jante",
+  "wheels",
+  "tires",
+  "mocheta",
+  "bord",
+  "tapiterie",
+  "parbriz",
+  "geam"
+]);
+
 function inferContextFromSlots(surfRaw, objRaw) {
   const s = String(surfRaw || "")
     .trim()
@@ -49,6 +63,13 @@ function inferContextFromSlots(surfRaw, objRaw) {
   return null;
 }
 
+function inferSurfaceFromObject(objRaw) {
+  const o = String(objRaw || "")
+    .trim()
+    .toLowerCase();
+  return OBJECT_AS_SURFACE.has(o) ? o : null;
+}
+
 function getMissingSlot(slots) {
   const slotSource = slots && typeof slots === "object" ? slots : {};
   console.log("GET_MISSING_SLOT_INPUT", slotSource);
@@ -58,6 +79,8 @@ function getMissingSlot(slots) {
     slotSource.surface !== null && slotSource.surface !== undefined
       ? String(slotSource.surface).trim()
       : "";
+  const effectiveSurface =
+    surfRaw !== "" ? surfRaw : inferSurfaceFromObject(slotSource.object) || "";
 
   // Infer context from inherent-context surfaces/objects when caller didn't set it.
   const hasRawContext =
@@ -71,10 +94,12 @@ function getMissingSlot(slots) {
     slotSource.object !== null &&
     slotSource.object !== undefined &&
     String(slotSource.object).trim() !== "";
-  const surfLower = surfRaw.toLowerCase();
-  const hasCtoSurface = surfRaw !== "" && CTO_SURFACE_SET.has(surfLower);
+  const effectiveSurfLower = effectiveSurface.toLowerCase();
+  const hasCtoSurface =
+    effectiveSurface !== "" && CTO_SURFACE_SET.has(effectiveSurfLower);
   const hasInherentSurface =
-    surfRaw !== "" && (INHERENT_INTERIOR.has(surfLower) || INHERENT_EXTERIOR.has(surfLower));
+    effectiveSurface !== "" &&
+    (INHERENT_INTERIOR.has(effectiveSurfLower) || INHERENT_EXTERIOR.has(effectiveSurfLower));
 
   if (!hasContext) return "context";
   if (!hasObject && !hasCtoSurface && !hasInherentSurface) return "object";
@@ -98,14 +123,17 @@ function getMissingSlot(slots) {
     if (glassObjects.has(obj)) {
       return null;
     }
-    if (obj === "caroserie" && !surfRaw) return "surface";
-    if ((obj === "jante" || obj === "roti" || obj === "wheels" || obj === "anvelope") && !surfRaw) {
+    if (obj === "caroserie" && !effectiveSurface) return "surface";
+    if (
+      (obj === "jante" || obj === "roti" || obj === "wheels" || obj === "anvelope") &&
+      !effectiveSurface
+    ) {
       return "surface";
     }
     return null;
   }
 
-  if (!surfRaw) return "surface";
+  if (!effectiveSurface) return "surface";
   return null;
 }
 
@@ -114,6 +142,8 @@ module.exports = {
   CTO_SURFACE_ENUM,
   CTO_SURFACE_SET,
   inferContextFromSlots,
+  inferSurfaceFromObject,
   INHERENT_INTERIOR,
-  INHERENT_EXTERIOR
+  INHERENT_EXTERIOR,
+  OBJECT_AS_SURFACE
 };

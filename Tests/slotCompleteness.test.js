@@ -2,7 +2,8 @@
 
 const {
   getMissingSlot,
-  inferContextFromSlots
+  inferContextFromSlots,
+  inferSurfaceFromObject
 } = require("../services/slotCompleteness");
 
 describe("slotCompleteness.getMissingSlot", () => {
@@ -30,13 +31,24 @@ describe("slotCompleteness.getMissingSlot", () => {
     ).toBeNull();
   });
 
-  it("exterior wheels need surface when absent", () => {
+  it("infers surface from object jante — no surface clarification", () => {
     expect(
       getMissingSlot({
         context: "exterior",
         object: "jante"
       })
-    ).toBe("surface");
+    ).toBeNull();
+    expect(inferSurfaceFromObject("jante")).toBe("jante");
+  });
+
+  it("infers surface from object anvelope — no surface clarification (tires-01)", () => {
+    expect(
+      getMissingSlot({
+        context: "exterior",
+        object: "anvelope"
+      })
+    ).toBeNull();
+    expect(inferSurfaceFromObject("anvelope")).toBe("anvelope");
   });
 
   it("interior scaun needs CTO surface", () => {

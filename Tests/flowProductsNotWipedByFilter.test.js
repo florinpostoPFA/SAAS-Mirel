@@ -75,10 +75,10 @@ describe("inferWheelsSurfaceFromObject", () => {
     );
   });
 
-  it("does not override an existing surface", () => {
+  it("maps surface anvelope to tires even when object differs", () => {
     expect(
       inferWheelsSurfaceFromObject({ object: "anvelope", surface: "wheels" })
-    ).toEqual(expect.objectContaining({ surface: "wheels" }));
+    ).toEqual(expect.objectContaining({ surface: "tires" }));
   });
 });
 
