@@ -1,0 +1,394 @@
+{
+  "caseId": "p0-golden-tire-categorypath",
+  "meta": {
+    "description": "Step 5f — tire intent keeps tire categoryPath SKU, drops interior-path SKU"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "input": {
+        "clientId": "C1",
+        "message": "recomanda-mi un produs pentru luciu anvelope"
+      },
+      "outcome": {
+        "assistantReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml\n\nClarificare:\nUn detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?",
+        "decision": {
+          "action": "recommend",
+          "flowId": null,
+          "hardGuardFallback": false,
+          "missingSlot": null,
+          "needsDisambiguation": false,
+          "productsReason": null,
+          "reasonCode": "routing.recommend",
+          "selection": {
+            "empty": false
+          }
+        },
+        "intent": {
+          "queryType": "selection",
+          "tags": [
+            "exterior",
+            "shine",
+            "tires",
+            "rubber",
+            "dressing"
+          ],
+          "type": "selection"
+        },
+        "lowSignalDetected": false,
+        "output": {
+          "products": [
+            {
+              "brand": "ADBL",
+              "id": "ADB000224",
+              "manufacturerId": 92,
+              "name": "Dressing luciu anvelope ADBL Black Water, 500ml",
+              "sku": null
+            }
+          ],
+          "productsLength": 1,
+          "productsReason": "strict",
+          "type": "recommendation"
+        },
+        "pendingQuestion": null
+      },
+      "sessionMutations": [
+        {
+          "after": {
+            "activeIntent": "selection",
+            "activeProducts": [],
+            "conversationContextMvp": null,
+            "conversationHistory": [],
+            "glassFlowContextLocked": false,
+            "informationalCarryoverEligibleForProductFollowup": true,
+            "intentFlags": {},
+            "language": "ro",
+            "lastFlow": null,
+            "lastIntent": "selection",
+            "lastNonNullSlots": {
+              "context": "exterior",
+              "object": "anvelope",
+              "surface": "tires"
+            },
+            "lastResponse": null,
+            "lastResponseType": null,
+            "messageCount": 0,
+            "meta": {
+              "clientId": null,
+              "createdAtMs": 1700000000000,
+              "sessionId": "golden-tire-categorypath",
+              "updatedAtMs": 1700000000000
+            },
+            "objective": {
+              "needsCompletion": false,
+              "slots": {},
+              "type": "selection"
+            },
+            "originalIntent": null,
+            "pendingQuestion": null,
+            "pendingSlots": null,
+            "questionCount": 0,
+            "questionsAsked": 0,
+            "responseLocale": "ro",
+            "routingTurnIndex": 0,
+            "schemaVersion": 2,
+            "slotMeta": {
+              "context": "unknown",
+              "object": "unknown",
+              "surface": "unknown"
+            },
+            "slots": {
+              "brand": null,
+              "context": "exterior",
+              "object": "anvelope",
+              "surface": "tires",
+              "vehicleMake": null,
+              "vehicleModel": null,
+              "vehicleYear": null
+            },
+            "state": "IDLE",
+            "surfaceAssistPhase": null,
+            "surfaceAssistShortlist": null,
+            "surfaceUnknown": false,
+            "tags": [
+              "shine",
+              "exterior",
+              "tires",
+              "rubber",
+              "dressing"
+            ],
+            "vehicleFieldsRequested": false
+          },
+          "before": {
+            "activeIntent": "selection",
+            "activeProducts": [],
+            "conversationContextMvp": null,
+            "conversationHistory": [],
+            "glassFlowContextLocked": false,
+            "informationalCarryoverEligibleForProductFollowup": true,
+            "intentFlags": {},
+            "language": "ro",
+            "lastFlow": null,
+            "lastIntent": "selection",
+            "lastNonNullSlots": {
+              "context": "exterior",
+              "object": "anvelope",
+              "surface": "tires"
+            },
+            "lastResponse": null,
+            "lastResponseType": null,
+            "messageCount": 0,
+            "meta": {
+              "clientId": null,
+              "createdAtMs": 1700000000000,
+              "sessionId": "golden-tire-categorypath",
+              "updatedAtMs": 1700000000000
+            },
+            "objective": {
+              "needsCompletion": false,
+              "slots": {},
+              "type": "selection"
+            },
+            "originalIntent": null,
+            "pendingQuestion": null,
+            "pendingSlots": null,
+            "questionCount": 0,
+            "questionsAsked": 0,
+            "responseLocale": "ro",
+            "routingTurnIndex": 0,
+            "schemaVersion": 2,
+            "slotMeta": {
+              "context": "unknown",
+              "object": "unknown",
+              "surface": "unknown"
+            },
+            "slots": {
+              "brand": null,
+              "context": "exterior",
+              "object": "anvelope",
+              "surface": "tires",
+              "vehicleMake": null,
+              "vehicleModel": null,
+              "vehicleYear": null
+            },
+            "state": null,
+            "surfaceAssistPhase": null,
+            "surfaceAssistShortlist": null,
+            "surfaceUnknown": false,
+            "tags": [
+              "shine",
+              "exterior",
+              "tires",
+              "rubber",
+              "dressing"
+            ],
+            "vehicleFieldsRequested": false
+          },
+          "sessionId": "golden-tire-categorypath",
+          "type": "sessionStore.save"
+        }
+      ],
+      "sessionServiceAfter": {
+        "activeIntent": "selection",
+        "activeProducts": [
+          {
+            "id": "ADB000224",
+            "name": "Dressing luciu anvelope ADBL Black Water, 500ml",
+            "price": 63.52,
+            "tags": []
+          }
+        ],
+        "clarificationCountIncrement": 0,
+        "conversationContextMvp": null,
+        "conversationHistory": [
+          {
+            "productCount": 1,
+            "products": [
+              {
+                "id": "ADB000224",
+                "name": "Dressing luciu anvelope ADBL Black Water, 500ml",
+                "price": 63.52,
+                "tags": []
+              }
+            ],
+            "type": "recommendation"
+          }
+        ],
+        "glassFlowContextLocked": false,
+        "informationalCarryoverEligibleForProductFollowup": true,
+        "intentFlags": {},
+        "language": "ro",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_search",
+        "lastIntent": "selection",
+        "lastNonNullSlots": {
+          "context": "exterior",
+          "object": "anvelope",
+          "surface": "tires"
+        },
+        "lastResponse": null,
+        "lastResponseType": "recommendation",
+        "lastUserMessage": "recomanda-mi un produs pentru luciu anvelope",
+        "messageCount": 1,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-tire-categorypath",
+          "updatedAtMs": 1700000000000
+        },
+        "objective": {
+          "needsCompletion": true,
+          "slots": {},
+          "type": "selection"
+        },
+        "originalIntent": null,
+        "pendingQuestion": null,
+        "pendingSlots": null,
+        "previousAction": "recommend",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 0,
+        "schemaVersion": 2,
+        "selectionFollowupCarryover": {
+          "slots": {
+            "context": "exterior",
+            "object": "anvelope",
+            "surface": "tires"
+          }
+        },
+        "selectionFollowupCarryoverContext": {
+          "active": true,
+          "source": "selection_or_recommendation"
+        },
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {
+          "brand": null,
+          "context": "exterior",
+          "object": "anvelope",
+          "surface": "tires",
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "state": "IDLE",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "shine",
+          "exterior",
+          "tires",
+          "rubber",
+          "dressing"
+        ],
+        "vehicleFieldsRequested": false
+      },
+      "sessionStoreAfter": {
+        "activeIntent": "selection",
+        "activeProducts": [
+          {
+            "id": "ADB000224",
+            "name": "Dressing luciu anvelope ADBL Black Water, 500ml",
+            "price": 63.52,
+            "tags": []
+          }
+        ],
+        "clarificationCountIncrement": 0,
+        "conversationContextMvp": null,
+        "conversationHistory": [
+          {
+            "productCount": 1,
+            "products": [
+              {
+                "id": "ADB000224",
+                "name": "Dressing luciu anvelope ADBL Black Water, 500ml",
+                "price": 63.52,
+                "tags": []
+              }
+            ],
+            "type": "recommendation"
+          }
+        ],
+        "glassFlowContextLocked": false,
+        "informationalCarryoverEligibleForProductFollowup": true,
+        "intentFlags": {},
+        "language": "ro",
+        "lastFlow": null,
+        "lastHighLevelIntent": "product_search",
+        "lastIntent": "selection",
+        "lastNonNullSlots": {
+          "context": "exterior",
+          "object": "anvelope",
+          "surface": "tires"
+        },
+        "lastResponse": null,
+        "lastResponseType": "recommendation",
+        "lastUserMessage": "recomanda-mi un produs pentru luciu anvelope",
+        "messageCount": 1,
+        "meta": {
+          "clientId": null,
+          "createdAtMs": 1700000000000,
+          "sessionId": "golden-tire-categorypath",
+          "updatedAtMs": 1700000000000
+        },
+        "objective": {
+          "needsCompletion": true,
+          "slots": {},
+          "type": "selection"
+        },
+        "originalIntent": null,
+        "pendingQuestion": null,
+        "pendingSlots": null,
+        "previousAction": "recommend",
+        "questionCount": 0,
+        "questionsAsked": 0,
+        "responseLocale": "ro",
+        "routingTurnIndex": 0,
+        "schemaVersion": 2,
+        "selectionFollowupCarryover": {
+          "slots": {
+            "context": "exterior",
+            "object": "anvelope",
+            "surface": "tires"
+          }
+        },
+        "selectionFollowupCarryoverContext": {
+          "active": true,
+          "source": "selection_or_recommendation"
+        },
+        "slotMeta": {
+          "context": "unknown",
+          "object": "unknown",
+          "surface": "unknown"
+        },
+        "slots": {
+          "brand": null,
+          "context": "exterior",
+          "object": "anvelope",
+          "surface": "tires",
+          "vehicleMake": null,
+          "vehicleModel": null,
+          "vehicleYear": null
+        },
+        "state": "IDLE",
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [
+          "shine",
+          "exterior",
+          "tires",
+          "rubber",
+          "dressing"
+        ],
+        "vehicleFieldsRequested": false
+      }
+    }
+  ],
+  "version": 1
+}

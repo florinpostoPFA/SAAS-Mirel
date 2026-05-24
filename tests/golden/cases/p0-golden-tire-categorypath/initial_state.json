@@ -1,0 +1,15 @@
+{
+  "sessionStore": {
+    "slots": {
+      "context": "exterior",
+      "object": "anvelope",
+      "surface": "tires"
+    },
+    "slotMeta": {
+      "context": "exterior",
+      "object": "anvelope",
+      "surface": "tires"
+    }
+  },
+  "sessionService": {}
+}

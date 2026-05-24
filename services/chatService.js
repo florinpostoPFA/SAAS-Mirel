@@ -63,6 +63,11 @@ const {
   findCatalogProductByMessage
 } = require("./productSectionsKnowledge");
 const { tryInformationalSectionFallbackFromRoleEmpty } = require("./findProductsByRoleConfig");
+const {
+  productPassesTireCategoryPathGuard,
+  applyTireCategoryPathPoolGuard,
+  shouldApplyTireCategoryPathGuard
+} = require("./categoryPathTireGuard");
 const fallbackProductsCatalog = require("../data/products.json");
 const productRoles = require("../data/product_roles.json");
 const knowledgeBase = require("../data/knowledge.json");
@@ -4000,6 +4005,12 @@ function filterProducts(products, slots) {
     if (safeSlots.surface === "glass" && !tags.includes("glass")) return false;
 
     if (safeSlots.surface === "tires") {
+      if (
+        shouldApplyTireCategoryPathGuard({ surface: "tires" }) &&
+        !productPassesTireCategoryPathGuard(product)
+      ) {
+        return false;
+      }
       const productText = `${product.name || ""} ${product.description || ""}`.toLowerCase();
       const tireOk =
         tags.includes("tires") ||
@@ -4287,7 +4298,7 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null, informati
   const excludeTags = Array.isArray(safeRoleConfig.excludeTags)
     ? safeRoleConfig.excludeTags.map(tag => String(tag).toLowerCase())
     : [];
-  const safeProducts = Array.isArray(products) ? products : [];
+  let safeProducts = Array.isArray(products) ? products : [];
   const normalizeTags = (product) => Array.isArray(product?.tags)
     ? product.tags.map(tag => String(tag).toLowerCase())
     : [];
@@ -4297,6 +4308,11 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null, informati
       : safeRoleConfig.id != null
         ? String(safeRoleConfig.id)
         : null;
+  safeProducts = applyTireCategoryPathPoolGuard(
+    safeProducts,
+    { roleId: resolvedRoleId },
+    (event, meta) => logInfo(event, meta)
+  );
   const hasEmptyTags = (product) => normalizeTags(product).length === 0;
   const findMatchTextPhraseHit = (product) => {
     if (matchText.length === 0) return null;

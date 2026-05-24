@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "meta": {
+    "description": "Step 5f — tire intent keeps tire categoryPath SKU, drops interior-path SKU"
+  },
+  "sessionId": "golden-tire-categorypath",
+  "clientId": "C1",
+  "products": [
+    {
+      "id": "ADB000224",
+      "name": "Dressing luciu anvelope ADBL Black Water, 500ml",
+      "description": "Dressing pentru anvelope, luciu rapid.",
+      "short_description": "Dressing cauciuc ADBL",
+      "searchText": "dressing luciu anvelope adbl black water cauciucuri bandouri",
+      "categoryPath": "Categorii produse / Produse Spălare & Întreținere Auto / Cauciucuri & Bandouri / Soluții pentru cauciucuri și bandouri",
+      "manufacturerId": "92",
+      "brand": "ADBL",
+      "tags": [],
+      "price": 63.52
+    },
+    {
+      "id": "G13616",
+      "name": "Solutie detailing interior Quick Interior Detailer Meguiar's, G13616",
+      "description": "Curata rapid plastic, piele, vinil, cauciuc, metal — produs interior, nu roti.",
+      "short_description": "Interior detailer",
+      "categoryPath": "Categorii produse / Produse Interior Auto / Interior / Curățarea interioarelor auto",
+      "manufacturerId": "9",
+      "brand": "Meguiar's",
+      "tags": [],
+      "price": 50
+    }
+  ],
+  "runtime": {
+    "nowMs": 1700000000000
+  },
+  "steps": [
+    {
+      "message": "recomanda-mi un produs pentru luciu anvelope"
+    }
+  ]
+}
