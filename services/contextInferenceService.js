@@ -44,6 +44,16 @@ function hasStrongGlassInteriorSignal(message) {
 function detectExplicitContext(message) {
   const s = normalizeForContextInference(message);
 
+  const bothAffirmative =
+    (s.includes("si interior") && s.includes("si exterior")) ||
+    s.includes("atat interior cat si exterior") ||
+    s.includes("interior si exterior") ||
+    s.includes("exterior si interior") ||
+    /\bambele\b/.test(s) ||
+    /\bboth\b/.test(s);
+
+  if (bothAffirmative) return "both";
+
   const hasInterior =
     s.includes("interior") ||
     s.includes("interioara") ||
