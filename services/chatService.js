@@ -4162,6 +4162,33 @@ function filterByUseCase(products, role) {
   });
 }
 
+const FLOW_IDS = new Set([
+  'exterior_wash_beginner', 'interior_clean_basic', 'glass_clean_basic',
+  'bug_removal_quick', 'wheel_tire_deep_clean', 'tool_care_towel',
+  'decontamination_basics', 'protection_prep_basic', 'interior_quick_maintenance',
+  'textile_cleaning_basic', 'leather_program_basic', 'engine_bay_safety_basic',
+  'spot_correction_escalation', 'leather_ink_removal',
+]);
+
+function filterByFlow(products, activeFlow) {
+  if (!activeFlow) return products;
+  if (!FLOW_IDS.has(activeFlow)) return products;
+
+  return products.filter(product => {
+    const flows = product.applicability?.flow;
+    if (!flows || flows.length === 0) return true;
+    const matches = flows.includes(activeFlow);
+    if (!matches) {
+      info(SOURCE, "APPLICABILITY_FLOW_FILTER", {
+        productId: product.id,
+        activeFlow,
+        productFlows: flows,
+      });
+    }
+    return matches;
+  });
+}
+
 /**
  * Flow path: never drop all executeFlow candidates due to tag/slot mismatch alone.
  */
@@ -10715,9 +10742,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS)
       );
       const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
-      const filteredSelectionProducts = filterByUseCase(
-        filterProducts(enrichedSelectionProducts, selectionSlots),
-        role
+      const filteredSelectionProducts = filterByFlow(
+        filterByUseCase(
+          filterProducts(enrichedSelectionProducts, selectionSlots),
+          role
+        ),
+        sessionContext.lastFlow
       );
       const preTierOneFiltered = filteredSelectionProducts;
       const tierOneSelectionProducts = applyTierOneManufacturerGate(filteredSelectionProducts);
@@ -12160,6 +12190,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           flowId,
           slots: sessionContext.slots || {}
         });
+        sessionContext.lastFlow = flowId;
         if (flowId === "bug_removal_quick") {
           sessionContext.intentFlags = sessionContext.intentFlags || {};
           sessionContext.intentFlags.bug = false;
@@ -12637,6 +12668,7 @@ module.exports = {
     mapSlotSurfaceToCompatEnum,
     mapRoleToUseCase,
     filterByUseCase,
+    filterByFlow,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
