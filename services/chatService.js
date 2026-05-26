@@ -10013,7 +10013,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     if (!shouldPreserveFollowUpState) {
       const prevSlots = { ...(sessionContext.slots || {}) };
-      sessionContext.slots = {};
+      const prevContext = prevSlots.context || null;
+      const msgLen = String(userMessage || "").trim().length;
+      const explicitNewContext = detectExplicitContext(userMessage);
+      const preserveContext =
+        prevContext &&
+        msgLen > 0 &&
+        msgLen < 50 &&
+        (!explicitNewContext || explicitNewContext === prevContext);
+
+      sessionContext.slots = preserveContext ? { context: prevContext } : {};
       sessionContext.pendingQuestion = null;
       sessionContext.pendingSelection = false;
       sessionContext.pendingSelectionMissingSlot = null;
@@ -10023,15 +10032,24 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       clearPendingClarificationSlots(sessionContext);
       clearSurfaceAssistState(sessionContext);
       sessionContext.slotMeta = {
-        context: "unknown",
+        context: preserveContext ? "inferred" : "unknown",
         surface: "unknown",
         object: "unknown"
       };
+      if (preserveContext) {
+        logInfo("SLOT_CONTEXT_STICKY", {
+          sessionId,
+          preservedContext: prevContext,
+          messageLength: msgLen,
+          messagePreview: String(userMessage || "").slice(0, 120)
+        });
+      }
       if (process.env.SESSION_DEBUG_LOG === "1") {
         logInfo("SESSION_SLOT_SCOPE_RESET", {
           sessionId,
           reason: "new_turn_not_continuation",
           clearedSlots: prevSlots,
+          preservedContext: preserveContext ? prevContext : null,
           messagePreview: String(userMessage || "").slice(0, 120)
         });
       }
