@@ -4170,6 +4170,13 @@ const FLOW_IDS = new Set([
   'spot_correction_escalation', 'leather_ink_removal',
 ]);
 
+function resolveApplicabilityDeclineReason(preCount, postMaterial, postUseCase, postFlow) {
+  if (preCount > 0 && postMaterial === 0) return "applicability_material_incompatible";
+  if (postMaterial > 0 && postUseCase === 0) return "applicability_use_case_mismatch";
+  if (postUseCase > 0 && postFlow === 0) return "applicability_flow_mismatch";
+  return null;
+}
+
 const TAG_SURFACE_INCOMPATIBLE = {
   ceramic_coating: new Set(['glass', 'plastic', 'leather', 'textile', 'rubber', 'wheels', 'tires']),
   coating:         new Set(['glass', 'plastic', 'leather', 'textile', 'rubber', 'wheels', 'tires']),
@@ -10806,12 +10813,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS)
       );
       const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
-      const filteredSelectionProducts = filterByFlow(
-        filterByUseCase(
-          filterProducts(enrichedSelectionProducts, selectionSlots),
-          role
-        ),
-        sessionContext.lastFlow
+      const afterMaterialFilter = filterProducts(enrichedSelectionProducts, selectionSlots);
+      const afterUseCaseFilter = filterByUseCase(afterMaterialFilter, role);
+      const filteredSelectionProducts = filterByFlow(afterUseCaseFilter, sessionContext.lastFlow);
+      const applicabilityDeclineReason = resolveApplicabilityDeclineReason(
+        enrichedSelectionProducts.length,
+        afterMaterialFilter.length,
+        afterUseCaseFilter.length,
+        filteredSelectionProducts.length
       );
       const preTierOneFiltered = filteredSelectionProducts;
       const tierOneSelectionProducts = applyTierOneManufacturerGate(filteredSelectionProducts);
@@ -10834,6 +10843,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         });
       }
       if (selectionBundle.length === 0) {
+        if (applicabilityDeclineReason) {
+          logInfo("APPLICABILITY_DECLINE_REASON", {
+            sessionId,
+            reason: applicabilityDeclineReason,
+            preMaterial: enrichedSelectionProducts.length,
+            postMaterial: afterMaterialFilter.length,
+            postUseCase: afterUseCaseFilter.length,
+            postFlow: filteredSelectionProducts.length
+          });
+          return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots, {
+            productsReason: applicabilityDeclineReason
+          });
+        }
         if (isTierOneGateWipe(preTierOneFiltered, tierOneSelectionProducts)) {
           return returnTierOneUnavailableFailSafe(
             interactionRef,
@@ -12735,6 +12757,7 @@ module.exports = {
     filterByFlow,
     invalidateStaleSurfaceFromTags,
     TAG_SURFACE_INCOMPATIBLE,
+    resolveApplicabilityDeclineReason,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
