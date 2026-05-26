@@ -4359,17 +4359,15 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null, informati
     const productCategory = normalizeTextForMatch(String(product?.category || ""));
     const searchText = normalizeTextForMatch(String(product?.searchText || ""));
     const words = searchText.split(/\s+/).filter(Boolean);
+    const customerLang = (product.applicability?.customer_language || [])
+      .map(p => normalizeTextForMatch(p));
     for (const text of matchText) {
       const needle = normalizeTextForMatch(text);
       if (!needle) continue;
-      if (
-        productName.includes(needle) ||
-        productCategory.includes(needle) ||
-        searchText.includes(needle) ||
-        words.includes(needle)
-      ) {
-        return text;
-      }
+      if (productName.includes(needle)) return { phrase: text, via: "name" };
+      if (productCategory.includes(needle)) return { phrase: text, via: "category" };
+      if (searchText.includes(needle) || words.includes(needle)) return { phrase: text, via: "searchText" };
+      if (customerLang.some(cl => cl.includes(needle))) return { phrase: text, via: "customer_language" };
     }
     return null;
   };
@@ -4377,12 +4375,13 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null, informati
     const tags = normalizeTags(product);
     if (requiredTags.length > 0 && !requiredTags.every((tag) => productTagsSatisfyTag(tags, tag))) {
       if (hasEmptyTags(product)) {
-        const matchedPhrase = findMatchTextPhraseHit(product);
-        if (matchedPhrase) {
+        const hit = findMatchTextPhraseHit(product);
+        if (hit) {
           info(SOURCE, "ROLE_CONFIG_TEXT_FALLBACK", {
             roleId: resolvedRoleId,
             productId: product?.id ?? null,
-            matchTextPhrase: matchedPhrase
+            matchTextPhrase: hit.phrase,
+            via: hit.via
           });
           return true;
         }
@@ -4401,12 +4400,15 @@ function findProductsByRoleConfig(roleConfig, products, roleId = null, informati
     const productCategory = String(product?.category || "").toLowerCase();
     const searchText = String(product?.searchText || "").toLowerCase();
     const words = searchText.split(/\s+/).filter(Boolean);
+    const custLang = (product.applicability?.customer_language || [])
+      .map(p => normalizeTextForMatch(p));
 
     return matchText.some((text) => {
       const isStrongMatch =
         productName.includes(text) ||
         productCategory.includes(text) ||
-        words.includes(text);
+        words.includes(text) ||
+        custLang.some(cl => cl.includes(normalizeTextForMatch(text)));
 
       return isStrongMatch;
     });
