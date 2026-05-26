@@ -7,3 +7,5 @@ deploy-version.env
 *.key
 *id_ed25519*
 *id_rsa*
+tmp/
+scripts/applicability-merge-failures.log
