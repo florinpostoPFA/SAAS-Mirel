@@ -162,8 +162,14 @@ function formatAntiRecReply(sku, bullets) {
   return `Pentru ${displayName}, conform descrierii producatorului: ${lines.join(" ")}`;
 }
 
-const DECLINE_COPY =
-  "Nu am un extras structurat din descrierea acelui produs pentru intrebarea ta. Poti reformula intrebarea sau alege un produs din gama noastra principala (Koch Chemie, Gtechniq, ADBL, ZviZZer, Ewocar).";
+function buildDeclineCopy(productName) {
+  const name = productName && productName.trim()
+    ? productName.trim()
+    : "produsul mentionat";
+  return `Nu am un extras structurat din descrierea ${name} pentru intrebarea ta. Poti reformula intrebarea sau alege un produs din gama noastra principala (Koch Chemie, Gtechniq, ADBL, ZviZZer, Ewocar).`;
+}
+
+const DECLINE_COPY = buildDeclineCopy();
 
 /**
  * Product-specific anti-rec via whatItIsNot → knowledge (not safety).
@@ -220,7 +226,7 @@ function tryProductSectionQuoteKnowledge(message, queryType, options = {}) {
 
   if (presence === "missing" || !text || (typeof text === "string" && text.trim().length < 20)) {
     return {
-      reply: DECLINE_COPY,
+      reply: buildDeclineCopy(resolveProductDisplayName(sku)),
       sku,
       sectionKey,
       reasonCode: "routing.knowledge.product_section_decline",
@@ -290,7 +296,7 @@ function tryNonTierOneSectionDecline(message, queryType, catalogProduct) {
   if (!messageReferencesCatalogProduct(message, catalogProduct)) return null;
 
   return {
-    reply: DECLINE_COPY,
+    reply: buildDeclineCopy(catalogProduct.name || resolveProductDisplayName(catalogProduct.id)),
     sku: String(catalogProduct.id || ""),
     reasonCode: "routing.knowledge.product_section_decline",
     decline: true,
@@ -349,5 +355,6 @@ module.exports = {
   findCatalogProductByMessage,
   messageReferencesCatalogProduct,
   isProductSectionIntent,
+  buildDeclineCopy,
   DECLINE_COPY
 };
