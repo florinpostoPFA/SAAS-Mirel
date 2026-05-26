@@ -3984,6 +3984,19 @@ function returnTierOneUnavailableFailSafe(
   });
 }
 
+const SLOT_TO_COMPAT_ENUM = {
+  textile: 'textile', leather: 'leather', plastic: 'plastic',
+  alcantara: 'alcantara', paint: 'paint', glass: 'glass',
+  piele: 'leather',
+  tires: 'rubber',
+  wheels: null,
+};
+
+function mapSlotSurfaceToCompatEnum(slotSurface) {
+  if (!slotSurface) return null;
+  return SLOT_TO_COMPAT_ENUM[slotSurface] ?? null;
+}
+
 function filterProducts(products, slots) {
   if (!products || !Array.isArray(products)) return [];
 
@@ -4078,6 +4091,20 @@ function filterProducts(products, slots) {
 
     if (safeSlots.brand && !productMatchesBrand(product, safeSlots.brand)) {
       return false;
+    }
+
+    const compatTarget = mapSlotSurfaceToCompatEnum(safeSlots.surface);
+    if (compatTarget) {
+      const compat = product.applicability?.material_compatibility;
+      if (compat && compat.length > 0 && !compat.includes(compatTarget)) {
+        info(SOURCE, "APPLICABILITY_SURFACE_FILTER", {
+          productId: product?.id ?? null,
+          slotSurface: safeSlots.surface,
+          compatTarget,
+          productMaterialCompat: compat
+        });
+        return false;
+      }
     }
 
     return true;
@@ -12553,6 +12580,7 @@ module.exports = {
     validateCombination,
     inferWheelsSurfaceFromObject,
     filterProducts,
+    mapSlotSurfaceToCompatEnum,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
