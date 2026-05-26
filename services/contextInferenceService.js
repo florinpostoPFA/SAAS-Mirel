@@ -128,6 +128,20 @@ function inferStrongContextBundles(message, normalized, slots) {
     return { inferredContext: "exterior", reason: "exterior_wash_cues", confidence: "strong" };
   }
 
+  const coatingExteriorStrong =
+    s.includes("coating") ||
+    s.includes("ceramic") ||
+    s.includes("ceramica") ||
+    s.includes("ceara") ||
+    s.includes("sealant") ||
+    s.includes("sigilant") ||
+    s.includes("protectie vopsea") ||
+    s.includes("protectie lac");
+
+  if (coatingExteriorStrong) {
+    return { inferredContext: "exterior", reason: "coating_wax_polish_cues", confidence: "strong" };
+  }
+
   if (hasInteriorCabinObjectSignal(s)) {
     return { inferredContext: "interior", reason: "cabin_object", confidence: "strong" };
   }

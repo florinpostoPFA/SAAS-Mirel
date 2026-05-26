@@ -38,13 +38,13 @@ describe("Clarification improvement prompts", () => {
     expect(res.body.reply).not.toContain("Este interior sau exterior?");
   });
 
-  it("asks improved context clarification prompt", async () => {
+  it("coating ceramic defaults to exterior, does NOT ask interior/exterior", async () => {
     const res = await postChat(
       "Recomanda un coating ceramic pentru masina",
       `clarif-context-${Date.now()}`
     );
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.reply).toContain("Este interior sau exterior?");
+    expect(res.body.reply).not.toContain("Este interior sau exterior?");
   });
 });

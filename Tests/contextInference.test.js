@@ -71,6 +71,41 @@ describe("extractSlotsFromMessage + context", () => {
   });
 });
 
+describe("coating/wax/sealant → exterior context inference", () => {
+  it("ceramic coating message infers exterior", () => {
+    const r = inferContext({ message: "vreau un coating ceramic", slots: {} });
+    expect(r.inferredContext).toBe("exterior");
+    expect(r.confidence).toBe("strong");
+    expect(r.reason).toBe("coating_wax_polish_cues");
+  });
+
+  it("wax (ceara) message infers exterior", () => {
+    const r = inferContext({ message: "ce ceara recomanzi", slots: {} });
+    expect(r.inferredContext).toBe("exterior");
+    expect(r.confidence).toBe("strong");
+    expect(r.reason).toBe("coating_wax_polish_cues");
+  });
+
+  it("polish alone does NOT infer exterior (ambiguous)", () => {
+    const r = inferContext({ message: "am nevoie de polish", slots: {} });
+    expect(r.inferredContext).toBeNull();
+    expect(r.confidence).toBe("weak");
+  });
+
+  it("sealant message infers exterior", () => {
+    const r = inferContext({ message: "sigilant pentru masina", slots: {} });
+    expect(r.inferredContext).toBe("exterior");
+    expect(r.confidence).toBe("strong");
+    expect(r.reason).toBe("coating_wax_polish_cues");
+  });
+
+  it("explicit interior overrides coating cue", () => {
+    const r = inferContext({ message: "protectie ceramica interior", slots: {} });
+    expect(r.inferredContext).toBe("interior");
+    expect(r.reason).toBe("explicit_context");
+  });
+});
+
 describe("D: user correction nu interior overrides exterior", () => {
   it("applyUserCorrection flips context deterministically", () => {
     const r = applyUserCorrection({
