@@ -3449,6 +3449,41 @@ function enforceProductLimit(products, maxLimit) {
 
 const MAX_SELECTION_PRODUCTS = 3;
 const ACCESSORY_TAGS = ["microfiber", "brush", "drying_towel", "tool", "wash_mitt", "bucket"];
+
+const CHEMICAL_PRODUCT_TAGS = new Set([
+  "polish", "polish_compound", "wax", "sealant", "ceramic_coating", "coating",
+  "shampoo", "car_shampoo", "cleaner", "decontamination", "protection"
+]);
+const TOOL_PRODUCT_TAGS = new Set([
+  "microfiber", "brush", "drying_towel", "tool", "wash_mitt", "bucket",
+  "applicator", "pad"
+]);
+const TOOL_NAME_TOKENS = ["burete", "aplicator", "pad ", "laveta", "prosop", "microfibra"];
+const EXPLICIT_TOOL_QUERY_TOKENS = ["burete", "aplicator", "microfibra", "microfibr", "prosop", "laveta", "lavete"];
+
+function isToolProduct(product) {
+  const tags = normalizeProductTags(product);
+  if (tags.some(t => TOOL_PRODUCT_TAGS.has(t))) return true;
+  const name = String(product?.name || "").toLowerCase();
+  return TOOL_NAME_TOKENS.some(token => name.includes(token));
+}
+
+function hasChemicalProductSignal(tags) {
+  return (Array.isArray(tags) ? tags : []).some(t => CHEMICAL_PRODUCT_TAGS.has(t));
+}
+
+function hasExplicitToolIntent(message) {
+  const msg = String(message || "").toLowerCase();
+  return EXPLICIT_TOOL_QUERY_TOKENS.some(token => msg.includes(token));
+}
+
+function excludeToolsForChemicalQuery(products, tags, message) {
+  if (!hasChemicalProductSignal(tags)) return products;
+  if (hasExplicitToolIntent(message)) return products;
+  const filtered = products.filter(p => !isToolProduct(p));
+  if (filtered.length === 0) return products;
+  return filtered;
+}
 const HARD_FILTER_RULES = {
   "interior|textile": {
     allow: ["textile", "cleaner", "stain_remover", "upholstery_cleaner", "textile_cleaner", "microfiber", "brush"],
@@ -10812,7 +10847,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         rankedCandidates,
         Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS)
       );
-      const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
+      const toolExcludedProducts = excludeToolsForChemicalQuery(selectedProducts, selectionTags, userMessage);
+      const enrichedSelectionProducts = enrichProducts(toolExcludedProducts, products);
       const afterMaterialFilter = filterProducts(enrichedSelectionProducts, selectionSlots);
       const afterUseCaseFilter = filterByUseCase(afterMaterialFilter, role);
       const filteredSelectionProducts = filterByFlow(afterUseCaseFilter, sessionContext.lastFlow);
@@ -12758,6 +12794,10 @@ module.exports = {
     invalidateStaleSurfaceFromTags,
     TAG_SURFACE_INCOMPATIBLE,
     resolveApplicabilityDeclineReason,
+    excludeToolsForChemicalQuery,
+    isToolProduct,
+    hasChemicalProductSignal,
+    hasExplicitToolIntent,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,

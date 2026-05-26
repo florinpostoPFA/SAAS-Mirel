@@ -81,6 +81,8 @@ const dictionary = {
 
   sealant: ["sealant", "sigilant"],
 
+  polish: ["polish", "polishat", "polishare"],
+
   protection: ["protect", "seal", "protectie", "protectant"],
 
   restoration: ["restaurare", "revitalizare"],
