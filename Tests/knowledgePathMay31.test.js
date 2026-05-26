@@ -154,4 +154,77 @@ describe("May 31 knowledge path — productSections", () => {
     expect(reply).not.toMatch(/Nu am un extras structurat/i);
     expect(reply).toMatch(/Koch Chemie Top Star|Top Star/i);
   });
+
+  it("description_fallback: 'cum se foloseste EWOCAR Hydro36' returns howToUse from description", async () => {
+    expect(getEntry("HD-36")).toBeNull();
+
+    const sessionId = `may31-hydro36-foloseste-${Date.now()}`;
+    const res = await handleChat("cum se foloseste EWOCAR Hydro36 ?", "C1", products, sessionId);
+    const log = lastLog();
+    const reply = String(res.reply || res.message || "");
+
+    expect(log.decision.action).toBe("knowledge");
+    expect(reply).not.toMatch(/Nu am un extras structurat/i);
+    expect(reply).toMatch(/EWOCAR Hydro36/i);
+  });
+
+  it("description_fallback: 'cum se aplica EWOCAR Hydro36' returns howToUse from description", async () => {
+    const sessionId = `may31-hydro36-aplica-${Date.now()}`;
+    const res = await handleChat("cum se aplica EWOCAR Hydro36 ?", "C1", products, sessionId);
+    const reply = String(res.reply || res.message || "");
+
+    expect(reply).not.toMatch(/Nu am un extras structurat/i);
+    expect(reply).toMatch(/EWOCAR Hydro36/i);
+  });
+
+  it("description_fallback: 'cum utilizez EWOCAR Hydro36 50ml Coating' returns content", async () => {
+    const sessionId = `may31-hydro36-utilizez-${Date.now()}`;
+    const res = await handleChat("cum utilizez EWOCAR Hydro36 50ml Coating?", "C1", products, sessionId);
+    const reply = String(res.reply || res.message || "");
+
+    expect(reply).not.toMatch(/Nu am un extras structurat/i);
+    expect(reply).toMatch(/EWOCAR Hydro36/i);
+  });
+
+  it("description_fallback: 'cum se foloseste Pasta polish pentru plastic Meguiar's Plast' returns content", async () => {
+    expect(getEntry("G12310")).toBeNull();
+
+    const sessionId = `may31-plastx-foloseste-${Date.now()}`;
+    const res = await handleChat("cum se foloseste Pasta polish pentru plastic Meguiar's Plast ?", "C1", products, sessionId);
+    const log = lastLog();
+    const reply = String(res.reply || res.message || "");
+
+    expect(log.decision.action).toBe("knowledge");
+    expect(reply).not.toMatch(/Nu am un extras structurat/i);
+    expect(reply).toMatch(/Plast X|Meguiar/i);
+  });
+
+  it("priority_regression: curated SKU (86001 Koch MZR) does NOT emit description_fallback log", async () => {
+    expect(getEntry("86001")).not.toBeNull();
+
+    const sessionId = `may31-mzr-priority-${Date.now()}`;
+    appendInteractionLine.mockClear();
+    const res = await handleChat("cum se foloseste Koch Chemie MZR?", "C1", products, sessionId);
+    const log = lastLog();
+    const reply = String(res.reply || res.message || "");
+
+    expect(log.decision.action).toBe("knowledge");
+    expect(reply).not.toMatch(/Nu am un extras structurat/i);
+    expect(log.decision.reasonCode).not.toMatch(/description_fallback/);
+  });
+
+  it("fallback_path_positive: HD-36 emits description_fallback reasonCode with markerFound", async () => {
+    const sessionId = `may31-hydro36-fallback-log-${Date.now()}`;
+    appendInteractionLine.mockClear();
+    const res = await handleChat("cum se aplica EWOCAR Hydro36?", "C1", products, sessionId);
+    const log = lastLog();
+
+    expect(log.decision.action).toBe("knowledge");
+    expect(log.decision.reasonCode).toMatch(/description_fallback/);
+  });
+
+  it("short_description_regression: non-existent SKU returns null from extractFromProductDescription", () => {
+    const { extractFromProductDescription } = require("../services/productSectionsKnowledge");
+    expect(extractFromProductDescription("NONEXISTENT_SKU_XYZ_999")).toBeNull();
+  });
 });

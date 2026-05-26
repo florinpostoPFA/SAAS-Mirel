@@ -3,6 +3,7 @@
  */
 const productSectionsData = require("../data/productSections.json");
 const { norm } = require("./sectionExtractor");
+const { info } = require("./logger");
 
 const TIER1_BRANDS = new Set(["Koch Chemie", "Gtechniq", "ZviZZer", "Ewocar", "ADBL"]);
 
@@ -11,7 +12,9 @@ const HERO_DISPLAY_NAMES = {
   "86001": "Koch Chemie MZR",
   "86011": "Koch Chemie MZR 11L",
   "ADB-TYP": "ADBL Typhoon",
-  "ADB-B": "ADBL Bonnet"
+  "ADB-B": "ADBL Bonnet",
+  "HD-36": "EWOCAR Hydro36",
+  "G12310": "Meguiar's Plast X"
 };
 
 let catalogById = null;
@@ -39,7 +42,9 @@ const SKU_MATCHERS = [
   { sku: "86001", patterns: [/\b86001\b/i, /\bmzr\b/i, /mehrzweckreiniger/i, /koch\s+chemie\s+mzr/i] },
   { sku: "ADB-TYP", patterns: [/\badb-typ\b/i, /\btyphoon\b/i, /apc\s+typhoon/i] },
   { sku: "ADB-B", patterns: [/\badb-b\b/i, /\bbonnet\b/i] },
-  { sku: "132001", patterns: [/\btop\s+star\b/i] }
+  { sku: "132001", patterns: [/\btop\s+star\b/i] },
+  { sku: "HD-36", patterns: [/\bhydro\s*36\b/i, /\bewocar\s+hydro/i, /\bhd-?36\b/i] },
+  { sku: "G12310", patterns: [/\bplast\s*-?\s*x\b/i, /meguiar.*plast/i, /\bg12310\b/i] }
 ];
 
 const ANTI_REC_TRIGGERS = [
@@ -80,7 +85,7 @@ function scoreSkuMatches(message) {
     for (const re of patterns) {
       if (re.test(msg)) score += 10;
     }
-    if (score > 0 && getEntry(sku)) scored.push({ sku, score });
+    if (score > 0) scored.push({ sku, score });
   }
   scored.sort((a, b) => b.score - a.score);
   return scored;
@@ -93,6 +98,8 @@ function resolveSkuFromMessage(message) {
   if (/\badb-typ\b/.test(msg) || /\btyphoon\b/.test(msg)) return "ADB-TYP";
   if (/\badb-b\b/.test(msg) || /\bbonnet\b/.test(msg)) return "ADB-B";
   if (/\btop\s+star\b/.test(msg)) return "132001";
+  if (/\bhydro\s*36\b/.test(msg) || /\bewocar\s+hydro/.test(msg) || /\bhd-?36\b/.test(msg)) return "HD-36";
+  if (/\bplast\s*-?\s*x\b/.test(msg) || /meguiar.*plast/.test(msg) || /\bg12310\b/.test(msg)) return "G12310";
 
   const scored = scoreSkuMatches(message);
   return scored.length > 0 ? scored[0].sku : null;
@@ -160,6 +167,34 @@ function formatAntiRecReply(sku, bullets) {
   const displayName = resolveProductDisplayName(sku);
   const lines = bullets.map((b) => (b.endsWith(".") ? b : `${b}.`));
   return `Pentru ${displayName}, conform descrierii producatorului: ${lines.join(" ")}`;
+}
+
+const DESCRIPTION_MARKER_RE = /(?:mod de (?:utilizare|aplicare)|cum se (?:folose[sș]te|aplic[aă])|aplicare:|pa[șs]i|pasul|instruc[țt]iuni)/i;
+
+function extractFromProductDescription(sku) {
+  const product = getCatalogById().get(String(sku));
+  if (!product) return null;
+  const desc = String(product.description || "").trim();
+  if (desc.length < 100) return null;
+
+  const match = DESCRIPTION_MARKER_RE.exec(desc);
+  if (match) {
+    const startIdx = match.index + match[0].length;
+    let extracted = desc.slice(startIdx);
+    const nextMarkerHit = DESCRIPTION_MARKER_RE.exec(extracted);
+    const doubleNewline = extracted.indexOf("\n\n");
+    let endIdx = extracted.length;
+    if (nextMarkerHit && nextMarkerHit.index < endIdx) endIdx = nextMarkerHit.index;
+    if (doubleNewline > 0 && doubleNewline < endIdx) endIdx = doubleNewline;
+    extracted = extracted.slice(0, endIdx).trim();
+    if (extracted.length > 500) extracted = extracted.slice(0, 497).trim() + "…";
+    if (extracted.length >= 20) {
+      return { section: "howToUse", text: extracted, markerFound: true, markerType: match[0] };
+    }
+  }
+
+  let whatIsText = desc.length > 500 ? desc.slice(0, 497).trim() + "…" : desc;
+  return { section: "whatIs", text: whatIsText, markerFound: false, markerType: null };
 }
 
 function buildDeclineCopy(productName) {
@@ -232,7 +267,25 @@ function tryProductSectionQuoteKnowledge(message, queryType, options = {}) {
   if (!sku) return null;
 
   const entry = getEntry(sku);
-  if (!entry) return null;
+  if (!entry) {
+    const descFallback = extractFromProductDescription(sku);
+    if (!descFallback) return null;
+    const product = getCatalogById().get(String(sku));
+    info("productSectionsKnowledge", "product_section_description_fallback", {
+      sku,
+      returnedSection: descFallback.section,
+      descriptionLength: (product?.description || "").length,
+      markerFound: descFallback.markerFound,
+      markerType: descFallback.markerType
+    });
+    return {
+      reply: formatSectionQuote(sku, descFallback.section, descFallback.text),
+      sku,
+      sectionKey: descFallback.section,
+      reasonCode: "routing.knowledge.product_section_description_fallback",
+      selectionEmpty: false
+    };
+  }
 
   const sectionKey = inferSectionKeyFromMessage(message);
   const presence = entry.sectionPresence?.[sectionKey];
@@ -380,5 +433,6 @@ module.exports = {
   messageReferencesCatalogProduct,
   isProductSectionIntent,
   buildDeclineCopy,
+  extractFromProductDescription,
   DECLINE_COPY
 };
