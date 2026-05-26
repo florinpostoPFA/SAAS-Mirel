@@ -4111,6 +4111,57 @@ function filterProducts(products, slots) {
   });
 }
 
+const ROLE_TO_USE_CASE = {
+  wheel_cleaner: 'wheels_cleaning',
+  tire_dressing: 'tires_dressing',
+  tire_cleaner: 'tires_cleaning',
+  leather_cleaner: 'interior_leather_care',
+  leather_protectant: 'interior_leather_care',
+  textile_cleaner: 'interior_textile_cleaning',
+  engine_bay_cleaner: 'engine_bay_cleaning',
+  car_shampoo: 'exterior_wash',
+  interior_cleaner: 'interior_general_clean',
+  glass_rain_repellent: 'exterior_glass',
+  decontamination_chemical: 'exterior_decontamination',
+  decontamination_mechanical: 'exterior_decontamination',
+  prewash_cleaner: 'exterior_wash',
+  protective_shampoo: 'exterior_wash',
+  interior_protection: 'interior_plastic_care',
+  bug_remover: 'exterior_decontamination',
+  glass_cleaner: null,
+  rubber_seal_protectant: null,
+  contact_cleaner: null,
+  interior_tool: null,
+  wash_tool: null,
+  drying_tool: null,
+  microfiber: null,
+};
+
+function mapRoleToUseCase(role) {
+  if (!role) return null;
+  return ROLE_TO_USE_CASE[role] ?? null;
+}
+
+function filterByUseCase(products, role) {
+  const useCaseTarget = mapRoleToUseCase(role);
+  if (!useCaseTarget) return products;
+
+  return products.filter(product => {
+    const useCases = product.applicability?.use_case;
+    if (!useCases || useCases.length === 0) return true;
+    const matches = useCases.includes(useCaseTarget);
+    if (!matches) {
+      info(SOURCE, "APPLICABILITY_USE_CASE_FILTER", {
+        productId: product.id,
+        role,
+        useCaseTarget,
+        productUseCases: useCases,
+      });
+    }
+    return matches;
+  });
+}
+
 /**
  * Flow path: never drop all executeFlow candidates due to tag/slot mismatch alone.
  */
@@ -10664,7 +10715,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         Math.min(roleConfig?.maxProducts || MAX_SELECTION_PRODUCTS, MAX_SELECTION_PRODUCTS)
       );
       const enrichedSelectionProducts = enrichProducts(selectedProducts, products);
-      const filteredSelectionProducts = filterProducts(enrichedSelectionProducts, selectionSlots);
+      const filteredSelectionProducts = filterByUseCase(
+        filterProducts(enrichedSelectionProducts, selectionSlots),
+        role
+      );
       const preTierOneFiltered = filteredSelectionProducts;
       const tierOneSelectionProducts = applyTierOneManufacturerGate(filteredSelectionProducts);
       const selectionBundle = buildProductBundle(tierOneSelectionProducts, {
@@ -12581,6 +12635,8 @@ module.exports = {
     inferWheelsSurfaceFromObject,
     filterProducts,
     mapSlotSurfaceToCompatEnum,
+    mapRoleToUseCase,
+    filterByUseCase,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
