@@ -2338,6 +2338,13 @@ function endInteraction(interactionRef, result, patch = {}) {
       finalResult.products.length < 2;
     sessionContext.lastUserMessage = interactionRef.message;
     sessionContext.lastResponseType = finalOutputType;
+    const replyForEchoStore =
+      finalResult && typeof finalResult === "object"
+        ? String(finalResult.reply ?? finalResult.message ?? "").trim()
+        : "";
+    if (replyForEchoStore.length > 0) {
+      sessionContext.lastBotReply = replyForEchoStore;
+    }
     sessionContext.previousAction = interactionRef?.decision?.action || null;
     const hlMsg = normalizeMessage(interactionRef.message);
     const hlSlang = applySlangNormalize(hlMsg);
@@ -3449,6 +3456,23 @@ function enforceProductLimit(products, maxLimit) {
 
 const MAX_SELECTION_PRODUCTS = 3;
 const ACCESSORY_TAGS = ["microfiber", "brush", "drying_towel", "tool", "wash_mitt", "bucket"];
+
+const ECHO_RECOVERY_REPLY = "Pare că ai trimis din nou răspunsul meu. Spune-mi cu cuvintele tale ce ai nevoie și te ajut.";
+
+function normalizeForEchoCompare(text) {
+  return String(text || "").trim().toLowerCase()
+    .replace(/[.,!?;:…"""''„\-–—]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function isEchoOfLastBotReply(userMessage, sessionContext) {
+  const lastReply = sessionContext?.lastBotReply;
+  if (!lastReply) return false;
+  const normUser = normalizeForEchoCompare(userMessage);
+  const normBot = normalizeForEchoCompare(lastReply);
+  if (normUser.length < 10) return false;
+  return normUser === normBot;
+}
 
 const NON_AUTO_DOMAIN_MARKERS = [
   "casa", "acasa", "bucatari", "baie", "gradin", "apartament",
@@ -8519,6 +8543,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     return { reply: DOMAIN_DECLINE_REPLY, domainDecline: true };
   }
 
+  {
+    const echoSession = getSession(sessionId);
+    if (isEchoOfLastBotReply(userMessage, echoSession)) {
+      logInfo("ECHO_LOOP_DETECTED", { sessionId, messagePreview: String(userMessage).slice(0, 80) });
+      return { reply: ECHO_RECOVERY_REPLY, echoDetected: true };
+    }
+  }
+
   if (!Array.isArray(products) || products.length === 0) {
     products = Array.isArray(fallbackProductsCatalog) ? fallbackProductsCatalog : [];
   }
@@ -12825,6 +12857,8 @@ module.exports = {
     hasChemicalProductSignal,
     hasExplicitToolIntent,
     isOutOfDomain,
+    isEchoOfLastBotReply,
+    normalizeForEchoCompare,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
