@@ -168,6 +168,18 @@ function hasToolCareKeywords(message) {
   return TOOL_CARE_KEYWORDS.some(keyword => msg.includes(keyword));
 }
 
+const CERAMIC_COATING_KEYWORDS = [
+  "ceramic", "ceramica", "ceramice", "ceramicii",
+  "coating", "coatingul", "coatingului",
+  "strat ceramic", "protectie ceramica"
+];
+
+function hasCeramicCoatingIntent(message) {
+  const msg = normalizeValue(message);
+  if (!msg) return false;
+  return CERAMIC_COATING_KEYWORDS.some(kw => msg.includes(kw));
+}
+
 function hasCleaningDomainSignal(message, slots = {}) {
   const msg = normalizeValue(message);
   const safeSlots = slots && typeof slots === "object" ? slots : {};
@@ -628,6 +640,17 @@ function resolveFlow(input, legacySlots = {}) {
     };
   }
 
+  if (hasCeramicCoatingIntent(request.message)) {
+    logInfo("FLOW_CERAMIC_KNOWLEDGE_OVERRIDE", {
+      message: String(request.message || "").slice(0, 120),
+      slots: request.slots
+    });
+    return {
+      flowId: null,
+      type: "knowledge_override"
+    };
+  }
+
   return getBestMatchingFlow(findMatchingFlows(request, false), request.slots, request.message);
 }
 
@@ -713,5 +736,6 @@ module.exports = {
   resolveFlowCandidate,
   resolveFlowCandidates,
   getFlowRequiredSlotsConfig,
-  assertFlowLockInvariant
+  assertFlowLockInvariant,
+  hasCeramicCoatingIntent
 };
