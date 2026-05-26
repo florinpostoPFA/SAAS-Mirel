@@ -196,6 +196,20 @@ function tryProductSectionAntiRecKnowledge(message) {
   };
 }
 
+const SECTION_FALLBACK_ORDER = ["whatIs", "howToUse", "whereToUse", "forWhom", "whatNext"];
+
+function findFallbackSection(entry, excludeKey) {
+  for (const key of SECTION_FALLBACK_ORDER) {
+    if (key === excludeKey) continue;
+    if (entry.sectionPresence?.[key] !== "present") continue;
+    const text = entry.sections?.[key];
+    if (typeof text === "string" && text.trim().length >= 20) {
+      return { key, text };
+    }
+  }
+  return null;
+}
+
 /**
  * Quote whereToUse / howToUse (and role-empty informational fallback).
  * @returns {{ reply: string, sku: string, sectionKey: string, reasonCode: string, decline?: boolean } | null}
@@ -225,6 +239,16 @@ function tryProductSectionQuoteKnowledge(message, queryType, options = {}) {
   const text = entry.sections?.[sectionKey];
 
   if (presence === "missing" || !text || (typeof text === "string" && text.trim().length < 20)) {
+    const fallback = findFallbackSection(entry, sectionKey);
+    if (fallback) {
+      return {
+        reply: formatSectionQuote(sku, fallback.key, fallback.text),
+        sku,
+        sectionKey: fallback.key,
+        reasonCode: "routing.knowledge.product_section_quote",
+        selectionEmpty: false
+      };
+    }
     return {
       reply: buildDeclineCopy(resolveProductDisplayName(sku)),
       sku,

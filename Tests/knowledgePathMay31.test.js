@@ -141,18 +141,17 @@ describe("May 31 knowledge path — productSections", () => {
     expect(reply).not.toMatch(/Pasul 1:/i);
   });
 
-  it("negative_path_decline: tier-1 SKU missing whatNext section", async () => {
+  it("retrieval_fallback: tier-1 SKU missing whatNext serves fallback section", async () => {
     expect(getEntry("132001")?.sectionPresence?.whatNext).toBe("missing");
+    expect(getEntry("132001")?.sectionPresence?.whatIs).toBe("present");
 
-    const sessionId = `may31-decline-whatnext-${Date.now()}`;
+    const sessionId = `may31-fallback-whatnext-${Date.now()}`;
     const res = await handleChat("ce urmeaza dupa Koch Chemie Top Star?", "C1", products, sessionId);
     const log = lastLog();
     const reply = String(res.reply || res.message || "");
 
     expect(log.decision.action).toBe("knowledge");
-    expect(log.decision.selection?.empty).toBe(true);
-    expect(reply).toMatch(/Nu am un extras structurat/i);
-    expect(reply).not.toMatch(/tier-1/i);
-    expect(reply).not.toContain("Ce urmează după");
+    expect(reply).not.toMatch(/Nu am un extras structurat/i);
+    expect(reply).toMatch(/Koch Chemie Top Star|Top Star/i);
   });
 });
