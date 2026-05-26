@@ -3450,6 +3450,27 @@ function enforceProductLimit(products, maxLimit) {
 const MAX_SELECTION_PRODUCTS = 3;
 const ACCESSORY_TAGS = ["microfiber", "brush", "drying_towel", "tool", "wash_mitt", "bucket"];
 
+const NON_AUTO_DOMAIN_MARKERS = [
+  "casa", "acasa", "bucatari", "baie", "gradin", "apartament",
+  "birou", "oficiu", "mobila", "parchet", "gresie", "faianta",
+  "cada", "chiuvet", "aragaz", "cuptor", "frigider", "hol"
+];
+const AUTO_DOMAIN_MARKERS = [
+  "masina", "auto", "caroserie", "vehicul", "automobil", "motor",
+  "capota", "bara", "aripa", "portiera", "parbriz", "luneta",
+  "jante", "roti", "anvelope", "vopsea auto", "detailing"
+];
+const DOMAIN_DECLINE_REPLY = "Sunt asistentul CarHub pentru detailing auto. Pentru suprafețele din casă nu am recomandări specifice — produsele noastre sunt formulate pentru vehicule.";
+
+function isOutOfDomain(message) {
+  const msg = String(message || "").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const hasNonAuto = NON_AUTO_DOMAIN_MARKERS.some(m => msg.includes(m));
+  if (!hasNonAuto) return false;
+  const hasAuto = AUTO_DOMAIN_MARKERS.some(m => msg.includes(m));
+  return !hasAuto;
+}
+
 const CHEMICAL_PRODUCT_TAGS = new Set([
   "polish", "polish_compound", "wax", "sealant", "ceramic_coating", "coating",
   "shampoo", "car_shampoo", "cleaner", "decontamination", "protection"
@@ -8493,6 +8514,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
   logChatPipelineStage("normalize_message", { routingMessageLen: routingMessage.length });
 
+  if (isOutOfDomain(routingMessage)) {
+    logInfo("DOMAIN_GUARDRAIL_DECLINE", { sessionId, message: userMessage });
+    return { reply: DOMAIN_DECLINE_REPLY, domainDecline: true };
+  }
+
   if (!Array.isArray(products) || products.length === 0) {
     products = Array.isArray(fallbackProductsCatalog) ? fallbackProductsCatalog : [];
   }
@@ -12798,6 +12824,7 @@ module.exports = {
     isToolProduct,
     hasChemicalProductSignal,
     hasExplicitToolIntent,
+    isOutOfDomain,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
