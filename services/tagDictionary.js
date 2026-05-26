@@ -75,6 +75,12 @@ const dictionary = {
     "mizerie"
   ],
 
+  ceramic_coating: ["ceramic", "ceramica", "coating", "ceramic coating"],
+
+  wax: ["ceara", "wax", "carnauba"],
+
+  sealant: ["sealant", "sigilant"],
+
   protection: ["protect", "seal", "protectie", "protectant"],
 
   restoration: ["restaurare", "revitalizare"],

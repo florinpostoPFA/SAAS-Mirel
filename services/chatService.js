@@ -4170,6 +4170,44 @@ const FLOW_IDS = new Set([
   'spot_correction_escalation', 'leather_ink_removal',
 ]);
 
+const TAG_SURFACE_INCOMPATIBLE = {
+  ceramic_coating: new Set(['glass', 'plastic', 'leather', 'textile', 'rubber', 'wheels', 'tires']),
+  coating:         new Set(['glass', 'plastic', 'leather', 'textile', 'rubber', 'wheels', 'tires']),
+  wax:             new Set(['glass', 'plastic', 'leather', 'textile', 'rubber', 'wheels', 'tires']),
+  sealant:         new Set(['glass', 'plastic', 'leather', 'textile', 'rubber', 'wheels', 'tires']),
+  glass_cleaner:   new Set(['paint', 'leather', 'textile']),
+  glass:           new Set(['paint', 'leather', 'textile']),
+  tire:            new Set(['paint', 'glass', 'leather', 'textile', 'plastic']),
+  wheel:           new Set(['paint', 'glass', 'leather', 'textile', 'plastic']),
+  wheels:          new Set(['paint', 'glass', 'leather', 'textile', 'plastic']),
+};
+
+function invalidateStaleSurfaceFromTags(slots, tags, sessionId) {
+  if (!slots) return null;
+  const surface = String(slots.surface || "").toLowerCase();
+  if (!surface) return null;
+
+  const compatTarget = mapSlotSurfaceToCompatEnum(surface) || surface;
+
+  for (const tag of tags) {
+    const incompatible = TAG_SURFACE_INCOMPATIBLE[tag];
+    if (incompatible && incompatible.has(compatTarget)) {
+      const invalidated = { surface: slots.surface, object: slots.object, reason: `tag_${tag}_vs_surface_${surface}` };
+      slots.surface = null;
+      slots.object = null;
+      info(SOURCE, "TAG_INVALIDATES_STALE_SURFACE", {
+        sessionId,
+        tag,
+        staleSurface: invalidated.surface,
+        staleObject: invalidated.object,
+        compatTarget,
+      });
+      return invalidated;
+    }
+  }
+  return null;
+}
+
 function filterByFlow(products, activeFlow) {
   if (!activeFlow) return products;
   if (!FLOW_IDS.has(activeFlow)) return products;
@@ -10549,6 +10587,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         buildFinalTags(coreTags, workingTags, slotResult.slots),
         slotResult.slots || {}
       );
+      const staleInvalidation = invalidateStaleSurfaceFromTags(selectionSlots, selectionTags, sessionId);
+      if (staleInvalidation) {
+        if (sessionContext.slots) {
+          sessionContext.slots.surface = null;
+          sessionContext.slots.object = null;
+        }
+        saveSession(sessionId, sessionContext);
+      }
       const msg = userMessage.toLowerCase();
       let role = selectionRoleFromWheelTire(userMessage);
       if (!role && msg.includes("sampon")) role = "car_shampoo";
@@ -12687,6 +12733,8 @@ module.exports = {
     mapRoleToUseCase,
     filterByUseCase,
     filterByFlow,
+    invalidateStaleSurfaceFromTags,
+    TAG_SURFACE_INCOMPATIBLE,
     applyDeterministicTagFallback,
     applyFlowProductFilterWithNoWipeout,
     evaluateDeterministicSessionReset,
