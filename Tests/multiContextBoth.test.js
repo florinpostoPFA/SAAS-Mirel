@@ -1,30 +1,35 @@
-const { detectExplicitContext, inferContext } = require("../services/contextInferenceService");
+const { detectExplicitContext, isExplicitMultiContext } = require("../services/contextInferenceService");
 const { loadSession, resetAllSessions, persistSession } = require("../services/sessionLifecycle");
 const { handleChat } = require("../services/chatService");
 
-describe("multi-context both-affirmative detection", () => {
+describe("multi-context explicit handling", () => {
   beforeEach(() => {
     resetAllSessions();
   });
 
-  test("'si interior si exterior' → context=both", () => {
-    expect(detectExplicitContext("si interior si exterior")).toBe("both");
+  test("'si interior si exterior' is flagged as multi-context", () => {
+    expect(isExplicitMultiContext("si interior si exterior")).toBe(true);
+    expect(detectExplicitContext("si interior si exterior")).toBeNull();
   });
 
-  test("'atat interior cat si exterior' → context=both", () => {
-    expect(detectExplicitContext("atat interior cat si exterior")).toBe("both");
+  test("'atat interior cat si exterior' is flagged as multi-context", () => {
+    expect(isExplicitMultiContext("atat interior cat si exterior")).toBe(true);
+    expect(detectExplicitContext("atat interior cat si exterior")).toBeNull();
   });
 
-  test("'ambele' → context=both", () => {
-    expect(detectExplicitContext("ambele")).toBe("both");
+  test("'ambele' is flagged as multi-context", () => {
+    expect(isExplicitMultiContext("ambele")).toBe(true);
+    expect(detectExplicitContext("ambele")).toBeNull();
   });
 
-  test("'both' → context=both", () => {
-    expect(detectExplicitContext("both")).toBe("both");
+  test("'both' is flagged as multi-context", () => {
+    expect(isExplicitMultiContext("both")).toBe(true);
+    expect(detectExplicitContext("both")).toBeNull();
   });
 
-  test("'interior si exterior' → context=both", () => {
-    expect(detectExplicitContext("interior si exterior")).toBe("both");
+  test("'interior si exterior' is flagged as multi-context", () => {
+    expect(isExplicitMultiContext("interior si exterior")).toBe(true);
+    expect(detectExplicitContext("interior si exterior")).toBeNull();
   });
 
   test("REGRESSION: 'interior' alone → context=interior", () => {
@@ -35,7 +40,7 @@ describe("multi-context both-affirmative detection", () => {
     expect(detectExplicitContext("exterior")).toBe("exterior");
   });
 
-  test("integration: 'si interior si exterior' does not re-ask context", async () => {
+  test("integration: 'si interior si exterior' asks one-at-a-time clarification", async () => {
     const sessionId = `multi-ctx-${Date.now()}`;
     const session = loadSession(sessionId);
     session.slots = {};
@@ -51,8 +56,11 @@ describe("multi-context both-affirmative detection", () => {
 
     const result = await handleChat("si interior si exterior", "C1", products, sessionId);
     const reply = String(result.reply || result.message || "");
-    expect(reply).not.toMatch(/interior sau exterior/i);
+    expect(reply).toMatch(/interior sau exterior/i);
+    expect(reply).toMatch(/luam pe rand|rand/i);
     const s = loadSession(sessionId);
-    expect(s.slots.context).toBe("both");
+    expect(s.slots.context).not.toBe("both");
+    expect(s.pendingQuestion?.slot).toBe("context");
+    expect(s.pendingQuestion?.source).toBe("multi_context_sequential");
   });
 });
