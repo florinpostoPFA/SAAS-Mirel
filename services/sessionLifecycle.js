@@ -42,6 +42,7 @@ function createDefaultUnifiedSession(sessionId) {
     activeProducts: [],
     lastResponse: null,
     pendingQuestion: null,
+    pendingContexts: [],
     messageCount: 0,
     questionCount: 0,
     conversationHistory: [],
@@ -87,6 +88,7 @@ function migrateSessionInPlace(session, sessionId) {
   }
   if (!Array.isArray(session.activeProducts)) session.activeProducts = [];
   if (session.pendingQuestion === undefined) session.pendingQuestion = null;
+  if (!Array.isArray(session.pendingContexts)) session.pendingContexts = [];
   session.messageCount = Number(session.messageCount) || 0;
   session.questionCount = Number(session.questionCount) || 0;
   if (!Array.isArray(session.conversationHistory)) session.conversationHistory = [];

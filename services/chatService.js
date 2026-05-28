@@ -114,6 +114,9 @@ const {
 const {
   inferContext,
   detectExplicitContext,
+  isExplicitMultiContext,
+  hasAmbiguousBothReply,
+  extractContextEntries,
   logContextInferenceTrace,
   normalizeForContextInference
 } = require("./contextInferenceService");
@@ -251,6 +254,38 @@ function appendSurfaceAssistFallbackCTA(baseMessage, responseLocale) {
     return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.en.cta}`;
   }
   return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.ro.cta}`;
+}
+
+function buildContextHintFromEntry(entry) {
+  if (!entry || typeof entry !== "object") return "";
+  const parts = [entry.context, entry.surface];
+  if (entry.treatment && entry.treatment !== "unknown" && entry.treatment !== "none") {
+    parts.push(entry.treatment);
+  }
+  return parts.filter(Boolean).join(" ");
+}
+
+function buildContinuationPrompt(entry) {
+  if (!entry || typeof entry !== "object") {
+    return "Vrei sa continuam cu urmatorul context?";
+  }
+  const surfaceLabel = String(entry.surface || "urmatoarea suprafata");
+  const treatmentLabel =
+    entry.treatment && entry.treatment !== "unknown" && entry.treatment !== "none"
+      ? ` cu ${entry.treatment}`
+      : "";
+  return `Vrei sa continuam si cu ${surfaceLabel}${treatmentLabel}?`;
+}
+
+function addMultiContextTelemetry(interactionRef, event) {
+  if (!interactionRef || !event) return;
+  if (!Array.isArray(interactionRef.multiContextTelemetry)) {
+    interactionRef.multiContextTelemetry = [];
+  }
+  interactionRef.multiContextTelemetry.push({
+    type: event.type,
+    payload: event.payload || {}
+  });
 }
 
 function clearLlmSurfaceAssistSessionState(sessionContext) {
@@ -2382,6 +2417,23 @@ function endInteraction(interactionRef, result, patch = {}) {
 
   finalResult = appendSoftKnowledgeCtaIfEligible(interactionRef?.decision, finalResult);
 
+  if (
+    ["recommend", "knowledge"].includes(String(interactionRef?.decision?.action || "")) &&
+    Array.isArray(sessionContext?.pendingContexts) &&
+    sessionContext.pendingContexts.length > 0 &&
+    finalResult &&
+    typeof finalResult === "object" &&
+    !Array.isArray(finalResult)
+  ) {
+    const nextContext = sessionContext.pendingContexts[0];
+    const continuationPrompt = buildContinuationPrompt(nextContext);
+    if (typeof finalResult.reply === "string" && finalResult.reply.trim()) {
+      finalResult.reply = `${finalResult.reply}\n\n${continuationPrompt}`;
+    } else if (typeof finalResult.message === "string" && finalResult.message.trim()) {
+      finalResult.message = `${finalResult.message}\n\n${continuationPrompt}`;
+    }
+  }
+
   const assistantReply =
     finalResult && typeof finalResult === "object"
       ? String(finalResult.reply ?? finalResult.message ?? "").trim() || null
@@ -2504,7 +2556,13 @@ function endInteraction(interactionRef, result, patch = {}) {
       pendingSelection: sessionContext?.pendingSelection === true,
       lastResponseType: sessionContext?.lastResponseType ?? null,
       sessionState: sessionContext?.state ?? null
-    }
+    },
+    pendingContexts: Array.isArray(sessionContext?.pendingContexts)
+      ? sessionContext.pendingContexts
+      : [],
+    multiContextTelemetry: Array.isArray(interactionRef?.multiContextTelemetry)
+      ? interactionRef.multiContextTelemetry
+      : []
   };
 
   const analysis = classifyInteraction({
@@ -5414,6 +5472,7 @@ function evaluateDeterministicSessionReset({
 function applyDeterministicSessionResetInPlace(sessionContext, sessionId, reasonCode) {
   sessionContext.slots = {};
   sessionContext.pendingQuestion = null;
+  sessionContext.pendingContexts = [];
   sessionContext.pendingSelection = false;
   sessionContext.pendingSelectionMissingSlot = null;
   clearPendingClarificationSlots(sessionContext);
@@ -6467,6 +6526,7 @@ function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   safeContext.proceduralSlots = {};
   safeContext.slots = {};
   safeContext.pendingQuestion = null;
+  safeContext.pendingContexts = [];
   safeContext.glassFlowContextLocked = false;
   clearPendingClarificationSlots(safeContext);
   safeContext.state = "IDLE";
@@ -6485,6 +6545,7 @@ function resetSessionAfterAbuse(sessionContext, sessionId) {
 
   safeContext.slots = {};
   safeContext.pendingQuestion = null;
+  safeContext.pendingContexts = [];
   clearPendingClarificationSlots(safeContext);
   clearSurfaceAssistState(safeContext);
   safeContext.pendingSelection = false;
@@ -8720,6 +8781,52 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     logChatPipelineStage("interaction_ref");
 
+    if (
+      sessionContext.pendingQuestion &&
+      sessionContext.pendingQuestion.slot === "context" &&
+      hasAmbiguousBothReply(userMessage)
+    ) {
+      const reprompt = "Pentru care din cele doua vrei sa incepem: interior sau exterior?";
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+        slot: "context",
+        question: reprompt,
+        source: "ambiguous_both_reprompt"
+      });
+      saveSession(sessionId, sessionContext);
+      return endInteraction(
+        interactionRef,
+        { type: "question", message: reprompt },
+        {
+          decision: { action: "clarification", flowId: null, missingSlot: "context" },
+          outputType: "question"
+        }
+      );
+    }
+
+    if (!Array.isArray(sessionContext.pendingContexts)) {
+      sessionContext.pendingContexts = [];
+    }
+    if (sessionContext.pendingContexts.length > 0) {
+      if (isNo(userMessage)) {
+        sessionContext.pendingContexts = [];
+        saveSession(sessionId, sessionContext);
+      } else if (isYes(userMessage)) {
+        const resumed = sessionContext.pendingContexts.shift();
+        addMultiContextTelemetry(interactionRef, {
+          type: "pendingContextResumed",
+          payload: {
+            resumed,
+            queueRemainder: sessionContext.pendingContexts,
+            turnIndex: Number(sessionContext.routingTurnIndex || 0) + 1
+          }
+        });
+        userMessage = `${userMessage} ${buildContextHintFromEntry(resumed)}`.trim();
+      } else if (!isShortSlotValueMessage(userMessage)) {
+        sessionContext.pendingContexts = [];
+        saveSession(sessionId, sessionContext);
+      }
+    }
+
     loggingV2.emitTurnStart({
       messageLen: userMessage.length,
       ...(loggingV2.DEBUG_V2 ? { messagePreview: userMessage } : {})
@@ -10231,6 +10338,42 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       handledPendingQuestionAnswerEarly,
       previousState
     });
+
+    if (
+      isExplicitMultiContext(userMessage) &&
+      !["knowledge", "meta_question", "safety"].includes(String(queryType || "").toLowerCase())
+    ) {
+      const extractedContexts = extractContextEntries(userMessage);
+      const keptContexts = extractedContexts.slice(0, 2);
+      const droppedContexts = extractedContexts.slice(2);
+
+      if (keptContexts.length > 1) {
+        addMultiContextTelemetry(interactionRef, {
+          type: "multiContextExtracted",
+          payload: {
+            extractedContexts: keptContexts,
+            rawUserMessage: userMessage
+          }
+        });
+      }
+      if (droppedContexts.length > 0) {
+        addMultiContextTelemetry(interactionRef, {
+          type: "multiContextOverflow",
+          payload: {
+            dropped: droppedContexts,
+            kept: keptContexts
+          }
+        });
+      }
+
+      if (keptContexts.length > 0) {
+        sessionContext.pendingContexts = keptContexts.slice(1);
+        const first = keptContexts[0];
+        userMessage = `${userMessage} ${buildContextHintFromEntry(first)}`.trim();
+        queryType = "selection";
+        interactionRef.queryType = queryType;
+      }
+    }
 
     if (!shouldPreserveFollowUpState) {
       const prevSlots = { ...(sessionContext.slots || {}) };
