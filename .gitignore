@@ -1,4 +1,5 @@
 node_modules/
+eval/results/
 logs/
 tests/golden/cases/*/actual/
 .env

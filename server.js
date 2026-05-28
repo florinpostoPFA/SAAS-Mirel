@@ -210,7 +210,8 @@ const chatLimiter = rateLimit({
   max: 20,
   message: { error: "Prea multe cereri. Încearcă din nou peste un minut." },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: () => process.env.EVAL_REPLAY === "1"
 });
 app.post("/chat", chatLimiter, async (req, res) => {
   let canonicalSessionId;
