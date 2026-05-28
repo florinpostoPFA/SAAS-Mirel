@@ -2,10 +2,12 @@
 
 const {
   inferSlotsFromMessage,
+  applyTokenInferenceToSessionSlots,
   normalizeMessageText,
   CANONICAL_SURFACE_VALUES,
   CANONICAL_ACTION_VALUES
 } = require("../services/slotInferenceFromMessage");
+const { getMissingSlot } = require("../services/slotCompleteness");
 
 function infer(message, slots = {}, slotMeta = {}) {
   return inferSlotsFromMessage({ message, currentSlots: slots, slotMeta });
@@ -131,6 +133,110 @@ describe("slotInferenceFromMessage — slot fill policy", () => {
     const r = infer("   ");
     expect(r.tokenInferenceApplied).toBe(false);
     expect(r.skippedReasons).toContain("no_token_match");
+  });
+});
+
+function simulatePipelineMissingSlot(message, priorSlots = {}) {
+  const sessionContext = {
+    slots: { ...priorSlots },
+    slotMeta: { context: "unknown", surface: "unknown", object: "unknown" },
+    objective: { slots: {} }
+  };
+  const interactionRef = {};
+  applyTokenInferenceToSessionSlots({ message, sessionContext, interactionRef });
+  return {
+    missing: getMissingSlot(sessionContext.slots),
+    slots: sessionContext.slots,
+    telemetry: interactionRef.tokenInferenceTelemetry
+  };
+}
+
+describe("slotInferenceFromMessage — friction turns replay (26.05 prod)", () => {
+  const FRICTION_TURNS = [
+    {
+      id: 1,
+      message: "recomandare de produse",
+      rescued: false,
+      note: "no context token — clarification acceptable"
+    },
+    {
+      id: 2,
+      message: "recomanda un produs hidrofob",
+      rescued: true,
+      avoidMissing: "context"
+    },
+    {
+      id: 3,
+      message: "recomanda-mi o solutie cu efect hidrofob",
+      rescued: true,
+      avoidMissing: "context"
+    },
+    {
+      id: 4,
+      message: "cum curat urmele de calcar de pe caroseria exterioara",
+      rescued: true,
+      avoidMissing: "surface"
+    },
+    {
+      id: 5,
+      message: "pe vopseaua de la exterior",
+      rescued: true,
+      avoidMissing: "surface"
+    },
+    {
+      id: 6,
+      message: "murdarie usoara",
+      rescued: false,
+      note: "carry-over out of scope for v0"
+    }
+  ];
+
+  test("at least 4 of 6 friction turns avoid the targeted clarification slot", () => {
+    let rescued = 0;
+    for (const turn of FRICTION_TURNS) {
+      const { missing } = simulatePipelineMissingSlot(turn.message);
+      const ok = turn.rescued
+        ? turn.avoidMissing
+          ? missing !== turn.avoidMissing
+          : missing === null
+        : turn.avoidMissing
+          ? missing === turn.avoidMissing
+          : true;
+      if (ok) rescued += 1;
+    }
+    expect(rescued).toBeGreaterThanOrEqual(4);
+  });
+
+  test.each(FRICTION_TURNS.filter((t) => t.rescued))(
+    "friction turn $id rescues missing=$avoidMissing",
+    (turn) => {
+      const { missing } = simulatePipelineMissingSlot(turn.message);
+      expect(missing).not.toBe(turn.avoidMissing);
+    }
+  );
+});
+
+describe("slotInferenceFromMessage — audit FN replay (action-verb audit v0)", () => {
+  const AUDIT_FN_MESSAGES = [
+    { message: "recomanda un produs hidrofob", expectAction: "protect" },
+    { message: "recomanda-mi o solutie cu efect hidrofob", expectAction: "protect" },
+    { message: "vreau hidrofob pe masina", expectAction: "protect" },
+    { message: "ce ceara recomanzi", expectAction: "protect" },
+    { message: "vreau ceramica auto", expectAction: "protect" },
+    { message: "am nevoie de polish", expectAction: "polish" },
+    { message: "lustruire faruri", expectAction: "polish" },
+    { message: "intretinere rapida", expectAction: "maintain" },
+    { message: "vreau sa protejez vopseaua", expectAction: "protect" },
+    { message: "protectie ceramica", expectAction: "protect" }
+  ];
+
+  test("at least 7 of 10 audit FN messages infer the expected action verb", () => {
+    let hits = 0;
+    for (const row of AUDIT_FN_MESSAGES) {
+      const { slots } = simulatePipelineMissingSlot(row.message);
+      if (slots.action === row.expectAction) hits += 1;
+    }
+    expect(hits).toBeGreaterThanOrEqual(7);
   });
 });
 

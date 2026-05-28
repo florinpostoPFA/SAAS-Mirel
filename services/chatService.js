@@ -117,6 +117,7 @@ const {
   logContextInferenceTrace,
   normalizeForContextInference
 } = require("./contextInferenceService");
+const { applyTokenInferenceToSessionSlots } = require("./slotInferenceFromMessage");
 const { stripGreetingAndFillers, applySlangNormalize } = require("./messagePreprocessService");
 const { getNowIso } = require("./runtimeContext");
 const loggingV2 = require("./loggingV2");
@@ -2488,6 +2489,12 @@ function endInteraction(interactionRef, result, patch = {}) {
     preprocessStrippedGreeting: Boolean(
       interactionRef.intentRoutingTelemetry?.preprocessStrippedGreeting
     ),
+    tokenInferenceApplied: Boolean(interactionRef.tokenInferenceTelemetry?.tokenInferenceApplied),
+    tokenInferenceMatches: interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? [],
+    tokenInferenceSkippedReasons:
+      interactionRef.tokenInferenceTelemetry?.tokenInferenceSkippedReasons ?? [],
+    tokenInferenceActionMatch:
+      interactionRef.tokenInferenceTelemetry?.tokenInferenceActionMatch ?? null,
     catalogVersion: interactionRef.artifactVersions?.catalogVersion || null,
     rolesVersion: interactionRef.artifactVersions?.rolesVersion || null,
     flowsVersion: interactionRef.artifactVersions?.flowsVersion || null,
@@ -4275,6 +4282,46 @@ const TAG_SURFACE_INCOMPATIBLE = {
   wheel:           new Set(['paint', 'glass', 'leather', 'textile', 'plastic']),
   wheels:          new Set(['paint', 'glass', 'leather', 'textile', 'plastic']),
 };
+
+function runTokenSlotInferencePass({
+  userMessage,
+  sessionContext,
+  interactionRef,
+  sessionId,
+  tags = null
+}) {
+  if (!sessionContext || typeof sessionContext !== "object") return null;
+  if (Array.isArray(tags) && sessionContext.slots) {
+    const staleInvalidation = invalidateStaleSurfaceFromTags(sessionContext.slots, tags, sessionId);
+    if (staleInvalidation) {
+      sessionContext.slotMeta = sessionContext.slotMeta || {
+        context: "unknown",
+        surface: "unknown",
+        object: "unknown"
+      };
+      if (sessionContext.slots.surface == null) {
+        sessionContext.slotMeta.surface = "stale";
+      }
+      if (sessionContext.slots.object == null) {
+        sessionContext.slotMeta.object = "stale";
+      }
+    }
+  }
+  interactionRef.currentPhase = "token_inference";
+  const tokenResult = applyTokenInferenceToSessionSlots({
+    message: userMessage,
+    sessionContext,
+    interactionRef
+  });
+  logInfo("TOKEN_SLOT_INFERENCE", {
+    sessionId,
+    applied: tokenResult.tokenInferenceApplied,
+    slotUpdates: tokenResult.slotUpdates,
+    skippedReasons: tokenResult.skippedReasons,
+    matchCount: tokenResult.matches.length
+  });
+  return tokenResult;
+}
 
 function invalidateStaleSurfaceFromTags(slots, tags, sessionId) {
   if (!slots) return null;
@@ -10703,6 +10750,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         saveSession(sessionId, sessionContext);
       }
+      runTokenSlotInferencePass({
+        userMessage,
+        sessionContext,
+        interactionRef,
+        sessionId,
+        tags: selectionTags
+      });
       const msg = userMessage.toLowerCase();
       let role = selectionRoleFromWheelTire(userMessage);
       if (!role && msg.includes("sampon")) role = "car_shampoo";
@@ -11589,6 +11643,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     });
 
     sessionContext.slots = proposedSlots;
+    const tagsBeforeValidate = sanitizeTagsForMessage(
+      userMessage,
+      buildFinalTags(coreTags, workingTags, sessionContext.slots || {}),
+      sessionContext.slots || {}
+    );
+    runTokenSlotInferencePass({
+      userMessage,
+      sessionContext,
+      interactionRef,
+      sessionId,
+      tags: tagsBeforeValidate
+    });
+    proposedSlots = sessionContext.slots;
     sessionContext.objective.slots = {
       ...(sessionContext.objective.slots || {}),
       ...proposedSlots
@@ -11927,7 +11994,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     interactionRef.slots = {
       context: sessionContext.slots?.context || null,
       object: sessionContext.slots?.object || null,
-      surface: sessionContext.slots?.surface || null
+      surface: sessionContext.slots?.surface || null,
+      action: sessionContext.slots?.action || null
     };
 
     // Log execution path (fulfills requirement for single execution path per request)

@@ -248,8 +248,74 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
   };
 }
 
+/**
+ * Apply token inference into live session slots (Run C integration helper).
+ * @param {object} params
+ * @param {string} params.message
+ * @param {object} params.sessionContext
+ * @param {object} [params.interactionRef]
+ * @returns {ReturnType<inferSlotsFromMessage>}
+ */
+function applyTokenInferenceToSessionSlots({ message, sessionContext, interactionRef = null }) {
+  if (!sessionContext || typeof sessionContext !== "object") {
+    return inferSlotsFromMessage({ message, currentSlots: {}, slotMeta: {} });
+  }
+
+  sessionContext.slots = sessionContext.slots && typeof sessionContext.slots === "object"
+    ? sessionContext.slots
+    : {};
+  sessionContext.slotMeta =
+    sessionContext.slotMeta && typeof sessionContext.slotMeta === "object"
+      ? sessionContext.slotMeta
+      : { context: "unknown", surface: "unknown", object: "unknown" };
+
+  const result = inferSlotsFromMessage({
+    message,
+    currentSlots: sessionContext.slots,
+    slotMeta: sessionContext.slotMeta
+  });
+
+  const actionMatches = result.matches.filter((m) => m.slotKey === "action");
+
+  if (interactionRef && typeof interactionRef === "object") {
+    interactionRef.tokenInferenceTelemetry = {
+      tokenInferenceApplied: result.tokenInferenceApplied,
+      tokenInferenceMatches: result.matches,
+      tokenInferenceSkippedReasons: result.skippedReasons,
+      tokenInferenceActionMatch: actionMatches.length > 0 ? actionMatches : null
+    };
+  }
+
+  if (result.slotUpdates.domain === "out_of_domain") {
+    sessionContext.tokenInferenceDomain = "out_of_domain";
+    return result;
+  }
+
+  for (const [slotKey, value] of Object.entries(result.slotUpdates)) {
+    if (slotKey === "domain" || value == null) continue;
+    const cur = sessionContext.slots[slotKey];
+    const empty = cur == null || String(cur).trim() === "";
+    const meta = sessionContext.slotMeta[slotKey];
+    if (!empty && meta !== "stale") continue;
+    sessionContext.slots[slotKey] = value;
+    if (meta !== "confirmed") {
+      sessionContext.slotMeta[slotKey] = "inferred";
+    }
+  }
+
+  if (sessionContext.objective && typeof sessionContext.objective === "object") {
+    sessionContext.objective.slots = {
+      ...(sessionContext.objective.slots || {}),
+      ...sessionContext.slots
+    };
+  }
+
+  return result;
+}
+
 module.exports = {
   inferSlotsFromMessage,
+  applyTokenInferenceToSessionSlots,
   normalizeMessageText,
   CANONICAL_SURFACE_VALUES,
   CANONICAL_ACTION_VALUES,
