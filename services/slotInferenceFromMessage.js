@@ -227,7 +227,12 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
  * @param {object} [params.interactionRef]
  * @returns {ReturnType<inferSlotsFromMessage>}
  */
-function applyTokenInferenceToSessionSlots({ message, sessionContext, interactionRef = null }) {
+function applyTokenInferenceToSessionSlots({
+  message,
+  sessionContext,
+  interactionRef = null,
+  options = {}
+}) {
   if (!sessionContext || typeof sessionContext !== "object") {
     return inferSlotsFromMessage({ message, currentSlots: {}, slotMeta: {} });
   }
@@ -245,6 +250,8 @@ function applyTokenInferenceToSessionSlots({ message, sessionContext, interactio
     currentSlots: sessionContext.slots,
     slotMeta: sessionContext.slotMeta
   });
+  const blockAll = options && options.blockAll === true;
+  const blockSurfaceObject = options && options.blockSurfaceObject === true;
 
   const actionMatches = result.matches.filter((m) => m.slotKey === "action");
 
@@ -278,8 +285,19 @@ function applyTokenInferenceToSessionSlots({ message, sessionContext, interactio
     return result;
   }
 
+  if (blockAll) {
+    result.skippedReasons = [...new Set([...(result.skippedReasons || []), "blocked_guard_all"])];
+    return result;
+  }
+
   for (const [slotKey, value] of Object.entries(result.slotUpdates)) {
     if (slotKey === "domain" || value == null) continue;
+    if (blockSurfaceObject && (slotKey === "surface" || slotKey === "object")) {
+      if (!result.skippedReasons.includes("blocked_guard_surface_object")) {
+        result.skippedReasons.push("blocked_guard_surface_object");
+      }
+      continue;
+    }
     const cur = sessionContext.slots[slotKey];
     const empty = cur == null || String(cur).trim() === "";
     const meta = sessionContext.slotMeta[slotKey];

@@ -4291,24 +4291,22 @@ function runTokenSlotInferencePass({
   tags = null
 }) {
   if (!sessionContext || typeof sessionContext !== "object") return null;
-  interactionRef.currentPhase = "token_inference";
-  const tokenResult = applyTokenInferenceToSessionSlots({
-    message: userMessage,
-    sessionContext,
-    interactionRef
-  });
-  const tokenAppliedSurface = Boolean(tokenResult?.slotUpdates?.surface);
-  const hasTokenInferredSurface =
-    sessionContext.slots?.surface != null &&
-    String(sessionContext.slots.surface).trim() !== "" &&
-    sessionContext.slotMeta?.surface === "inferred";
+  const loopBreakerActive =
+    sessionContext?.pendingQuestion?.slot === "intent_level" &&
+    sessionContext?.pendingQuestion?.source === "loop_breaker";
+
+  let blockSurfaceObject = false;
   if (
-    Array.isArray(tags) &&
-    sessionContext.slots &&
-    !tokenAppliedSurface &&
-    !hasTokenInferredSurface
+    String(interactionRef?.queryType || "").toLowerCase() === "selection" &&
+    sessionContext?.slotMeta?.surface === "confirmed" &&
+    sessionContext?.slots?.surface
   ) {
-    const staleInvalidation = invalidateStaleSurfaceFromTags(sessionContext.slots, tags, sessionId);
+    blockSurfaceObject = true;
+  }
+
+  let staleInvalidation = null;
+  if (Array.isArray(tags) && sessionContext.slots) {
+    staleInvalidation = invalidateStaleSurfaceFromTags(sessionContext.slots, tags, sessionId);
     if (staleInvalidation) {
       sessionContext.slotMeta = sessionContext.slotMeta || {
         context: "unknown",
@@ -4321,8 +4319,20 @@ function runTokenSlotInferencePass({
       if (sessionContext.slots.object == null) {
         sessionContext.slotMeta.object = "stale";
       }
+      blockSurfaceObject = true;
     }
   }
+
+  interactionRef.currentPhase = "token_inference";
+  const tokenResult = applyTokenInferenceToSessionSlots({
+    message: userMessage,
+    sessionContext,
+    interactionRef,
+    options: {
+      blockAll: loopBreakerActive,
+      blockSurfaceObject
+    }
+  });
   logChatPipelineStage("token_inference", {
     sessionId,
     applied: tokenResult.tokenInferenceApplied,
@@ -4333,7 +4343,10 @@ function runTokenSlotInferencePass({
     applied: tokenResult.tokenInferenceApplied,
     slotUpdates: tokenResult.slotUpdates,
     skippedReasons: tokenResult.skippedReasons,
-    matchCount: tokenResult.matches.length
+    matchCount: tokenResult.matches.length,
+    loopBreakerActive,
+    staleInvalidation: staleInvalidation || null,
+    blockSurfaceObject
   });
   return tokenResult;
 }
@@ -10264,15 +10277,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
     }
 
-    runTokenSlotInferencePass({
-      userMessage,
-      sessionContext,
-      interactionRef,
-      sessionId,
-      tags: null
-    });
-    if (sessionContext.slots && typeof sessionContext.slots === "object") {
-      interactionRef.slots = { ...sessionContext.slots };
+    if (!shouldPreserveFollowUpState && !sessionContext.pendingQuestion) {
+      runTokenSlotInferencePass({
+        userMessage,
+        sessionContext,
+        interactionRef,
+        sessionId,
+        tags: null
+      });
+      if (sessionContext.slots && typeof sessionContext.slots === "object") {
+        interactionRef.slots = { ...sessionContext.slots };
+      }
     }
 
     mergePreResetKnowledgeFollowupSlots(userMessage, sessionContext, sessionId);
@@ -10677,23 +10692,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slotResult.slots.surface = null;
       }
       currentSlots = inferWheelsSurfaceFromObject(currentSlots);
+      if (interactionRef?.tokenInferenceTelemetry?.tokenInferenceApplied) {
+        currentSlots = mergeSlots(currentSlots, sessionContext.slots || {});
+      }
       slotResult.slots = currentSlots;
-      sessionContext.slots = { ...(sessionContext.slots || {}), ...currentSlots };
-      const selectionTagsBeforeDecision = sanitizeTagsForMessage(
-        userMessage,
-        buildFinalTags(coreTags, workingTags, currentSlots),
-        currentSlots
-      );
-      runTokenSlotInferencePass({
-        userMessage,
-        sessionContext,
-        interactionRef,
-        sessionId,
-        tags: selectionTagsBeforeDecision
-      });
-      currentSlots = { ...(sessionContext.slots || {}) };
-      slotResult.slots = currentSlots;
-
       const problemType = sessionContext.problemType || null;
       const selectionDecision = enforceClarificationContract(resolveActionFinal({
         problemType,
@@ -10791,13 +10793,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         saveSession(sessionId, sessionContext);
       }
-      runTokenSlotInferencePass({
-        userMessage,
-        sessionContext,
-        interactionRef,
-        sessionId,
-        tags: selectionTags
-      });
       const msg = userMessage.toLowerCase();
       let role = selectionRoleFromWheelTire(userMessage);
       if (!role && msg.includes("sampon")) role = "car_shampoo";
@@ -11589,9 +11584,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
       proposedSlots = freshSlots;
     } else {
+      const shouldCarryTokenInferredSlots =
+        !shouldPreserveFollowUpState &&
+        Boolean(interactionRef?.tokenInferenceTelemetry?.tokenInferenceApplied);
       proposedSlots = slotMode === "merge"
         ? mergeSlots(sessionContext.slots || {}, slotResult.slots || {})
-        : mergeSlots(slotResult.slots || {}, sessionContext.slots || {});
+        : shouldCarryTokenInferredSlots
+          ? mergeSlots(slotResult.slots || {}, sessionContext.slots || {})
+          : { ...(slotResult.slots || {}) };
     }
 
     if (
@@ -11684,19 +11684,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     });
 
     sessionContext.slots = proposedSlots;
-    const tagsBeforeValidate = sanitizeTagsForMessage(
-      userMessage,
-      buildFinalTags(coreTags, workingTags, sessionContext.slots || {}),
-      sessionContext.slots || {}
-    );
-    runTokenSlotInferencePass({
-      userMessage,
-      sessionContext,
-      interactionRef,
-      sessionId,
-      tags: tagsBeforeValidate
-    });
-    proposedSlots = sessionContext.slots;
     sessionContext.objective.slots = {
       ...(sessionContext.objective.slots || {}),
       ...proposedSlots
