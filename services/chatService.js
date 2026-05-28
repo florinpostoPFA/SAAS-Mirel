@@ -4291,7 +4291,23 @@ function runTokenSlotInferencePass({
   tags = null
 }) {
   if (!sessionContext || typeof sessionContext !== "object") return null;
-  if (Array.isArray(tags) && sessionContext.slots) {
+  interactionRef.currentPhase = "token_inference";
+  const tokenResult = applyTokenInferenceToSessionSlots({
+    message: userMessage,
+    sessionContext,
+    interactionRef
+  });
+  const tokenAppliedSurface = Boolean(tokenResult?.slotUpdates?.surface);
+  const hasTokenInferredSurface =
+    sessionContext.slots?.surface != null &&
+    String(sessionContext.slots.surface).trim() !== "" &&
+    sessionContext.slotMeta?.surface === "inferred";
+  if (
+    Array.isArray(tags) &&
+    sessionContext.slots &&
+    !tokenAppliedSurface &&
+    !hasTokenInferredSurface
+  ) {
     const staleInvalidation = invalidateStaleSurfaceFromTags(sessionContext.slots, tags, sessionId);
     if (staleInvalidation) {
       sessionContext.slotMeta = sessionContext.slotMeta || {
@@ -4307,11 +4323,10 @@ function runTokenSlotInferencePass({
       }
     }
   }
-  interactionRef.currentPhase = "token_inference";
-  const tokenResult = applyTokenInferenceToSessionSlots({
-    message: userMessage,
-    sessionContext,
-    interactionRef
+  logChatPipelineStage("token_inference", {
+    sessionId,
+    applied: tokenResult.tokenInferenceApplied,
+    matchCount: tokenResult.matches.length
   });
   logInfo("TOKEN_SLOT_INFERENCE", {
     sessionId,
@@ -10249,6 +10264,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
     }
 
+    runTokenSlotInferencePass({
+      userMessage,
+      sessionContext,
+      interactionRef,
+      sessionId,
+      tags: null
+    });
+    if (sessionContext.slots && typeof sessionContext.slots === "object") {
+      interactionRef.slots = { ...sessionContext.slots };
+    }
+
     mergePreResetKnowledgeFollowupSlots(userMessage, sessionContext, sessionId);
 
     const reinforcedSessionTags = sessionTagsReinforcedByCurrentMessage(
@@ -10651,6 +10677,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slotResult.slots.surface = null;
       }
       currentSlots = inferWheelsSurfaceFromObject(currentSlots);
+      slotResult.slots = currentSlots;
+      sessionContext.slots = { ...(sessionContext.slots || {}), ...currentSlots };
+      const selectionTagsBeforeDecision = sanitizeTagsForMessage(
+        userMessage,
+        buildFinalTags(coreTags, workingTags, currentSlots),
+        currentSlots
+      );
+      runTokenSlotInferencePass({
+        userMessage,
+        sessionContext,
+        interactionRef,
+        sessionId,
+        tags: selectionTagsBeforeDecision
+      });
+      currentSlots = { ...(sessionContext.slots || {}) };
       slotResult.slots = currentSlots;
 
       const problemType = sessionContext.problemType || null;
@@ -11550,7 +11591,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     } else {
       proposedSlots = slotMode === "merge"
         ? mergeSlots(sessionContext.slots || {}, slotResult.slots || {})
-        : { ...(slotResult.slots || {}) };
+        : mergeSlots(slotResult.slots || {}, sessionContext.slots || {});
     }
 
     if (

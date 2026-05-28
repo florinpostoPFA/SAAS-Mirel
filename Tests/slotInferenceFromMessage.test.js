@@ -8,6 +8,7 @@ const {
   CANONICAL_ACTION_VALUES
 } = require("../services/slotInferenceFromMessage");
 const { getMissingSlot } = require("../services/slotCompleteness");
+const { SLOT_INFERENCE_RULES } = require("../services/slotInferenceRules");
 
 function infer(message, slots = {}, slotMeta = {}) {
   return inferSlotsFromMessage({ message, currentSlots: slots, slotMeta });
@@ -33,7 +34,7 @@ describe("slotInferenceFromMessage — unit (token categories)", () => {
     expect(r.slotUpdates.action).toBe("protect");
   });
 
-  test("scaun → textile (upholstery) + interior", () => {
+  test("scaun → textile + interior", () => {
     const r = infer("curat scaunele");
     expect(r.slotUpdates.surface).toBe("textile");
     expect(r.slotUpdates.context).toBe("interior");
@@ -241,6 +242,16 @@ describe("slotInferenceFromMessage — audit FN replay (action-verb audit v0)", 
 });
 
 describe("slotInferenceFromMessage — load-time enums", () => {
+  test("every rule surface is in the closed Roles Dictionary enum", () => {
+    const surfaceSet = new Set(CANONICAL_SURFACE_VALUES);
+    for (const rule of SLOT_INFERENCE_RULES) {
+      const surface = rule.sets && rule.sets.surface;
+      if (surface != null) {
+        expect(surfaceSet.has(String(surface).toLowerCase())).toBe(true);
+      }
+    }
+  });
+
   test("canonical surface enum includes CTO + exterior extensions", () => {
     expect(CANONICAL_SURFACE_VALUES).toEqual(
       expect.arrayContaining(["textile", "piele", "plastic", "alcantara", "paint", "glass"])

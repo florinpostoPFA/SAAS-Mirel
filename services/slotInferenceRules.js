@@ -165,58 +165,56 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     raw: "faruri",
     family: "surface",
     priority: 125,
-    sets: { surface: "headlights", context: "exterior" },
-    notes: "Ticket v0 label; Run B may map to catalog surface enum if needed."
+    sets: { surface: "glass", context: "exterior" }
   },
   {
     token: "farurile",
     raw: "farurile",
     family: "surface",
     priority: 126,
-    sets: { surface: "headlights", context: "exterior" }
+    sets: { surface: "glass", context: "exterior" }
   },
   {
     token: "scaun",
     raw: "scaun",
     family: "surface",
     priority: 130,
-    sets: { surface: "upholstery", context: "interior" },
-    notes: "Ticket v0: upholstery; codebase CTO often uses textile until refined."
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "scaune",
     raw: "scaune",
     family: "surface",
     priority: 131,
-    sets: { surface: "upholstery", context: "interior" }
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "bancheta",
     raw: "bancheta",
     family: "surface",
     priority: 132,
-    sets: { surface: "upholstery", context: "interior" }
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "banchete",
     raw: "banchete",
     family: "surface",
     priority: 133,
-    sets: { surface: "upholstery", context: "interior" }
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "cotiera",
     raw: "cotieră",
     family: "surface",
     priority: 134,
-    sets: { surface: "upholstery", context: "interior" }
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "cotiere",
     raw: "cotiere",
     family: "surface",
     priority: 135,
-    sets: { surface: "upholstery", context: "interior" }
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "bord",
@@ -245,29 +243,28 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     raw: "mochetă",
     family: "surface",
     priority: 139,
-    sets: { surface: "carpet", context: "interior" },
-    notes: "Ticket v0: carpet; tagDictionary maps mocheta → textile vocabulary."
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "covorase",
     raw: "covorașe",
     family: "surface",
     priority: 140,
-    sets: { surface: "carpet", context: "interior" }
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "covor",
     raw: "covor",
     family: "surface",
     priority: 141,
-    sets: { surface: "carpet", context: "interior" }
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "piele",
     raw: "piele",
     family: "surface",
     priority: 142,
-    sets: { surface: "leather", context: "interior" },
+    sets: { surface: "piele", context: "interior" },
     notes: "NOT when followed by din casa; NOT after exterior-strong context (Run B guard)."
   },
   {
@@ -282,14 +279,14 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     raw: "motor",
     family: "surface",
     priority: 144,
-    sets: { surface: "engine_bay", context: "exterior" }
+    sets: { context: "exterior" }
   },
   {
     token: "compartiment motor",
     raw: "compartiment motor",
     family: "surface",
     priority: 145,
-    sets: { surface: "engine_bay", context: "exterior" }
+    sets: { context: "exterior" }
   },
 
   // ── Strong context-only ───────────────────────────────────────────────────

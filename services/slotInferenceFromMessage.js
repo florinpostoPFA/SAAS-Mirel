@@ -28,23 +28,6 @@ const CANONICAL_ACTION_VALUES = Object.freeze([
 
 const CANONICAL_CONTEXT_VALUES = Object.freeze(["interior", "exterior"]);
 
-/** Map ticket v0 rule surface labels → canonical slot surface values. */
-const RULE_SURFACE_TO_CANONICAL = Object.freeze({
-  upholstery: "textile",
-  carpet: "textile",
-  leather: "piele",
-  headlights: "glass",
-  engine_bay: null,
-  textile: "textile",
-  piele: "piele",
-  plastic: "plastic",
-  alcantara: "alcantara",
-  paint: "paint",
-  wheels: "wheels",
-  tires: "tires",
-  glass: "glass"
-});
-
 const SLOT_KEYS = Object.freeze(["context", "surface", "object", "action", "domain"]);
 
 function normalizeMessageText(text) {
@@ -57,15 +40,6 @@ function normalizeMessageText(text) {
     .trim();
 }
 
-function normalizeRuleSurface(surface) {
-  if (surface == null || surface === "") return null;
-  const key = String(surface).trim().toLowerCase();
-  if (!Object.prototype.hasOwnProperty.call(RULE_SURFACE_TO_CANONICAL, key)) {
-    throw new Error(`slotInferenceFromMessage: unknown rule surface "${surface}"`);
-  }
-  return RULE_SURFACE_TO_CANONICAL[key];
-}
-
 function validateRulesAtLoad() {
   const surfaceSet = new Set(CANONICAL_SURFACE_VALUES);
   const actionSet = new Set(CANONICAL_ACTION_VALUES);
@@ -73,10 +47,10 @@ function validateRulesAtLoad() {
   for (const rule of SLOT_INFERENCE_RULES) {
     const sets = rule.sets || {};
     if (sets.surface != null) {
-      const canonical = normalizeRuleSurface(sets.surface);
-      if (canonical != null && !surfaceSet.has(canonical)) {
+      const surface = String(sets.surface).trim().toLowerCase();
+      if (!surfaceSet.has(surface)) {
         throw new Error(
-          `slotInferenceFromMessage: rule surface "${sets.surface}" maps to invalid canonical "${canonical}"`
+          `slotInferenceFromMessage: rule surface "${sets.surface}" is outside closed enum (token ${rule.token})`
         );
       }
     }
@@ -145,10 +119,7 @@ function canonicalizeRuleSets(sets) {
   if (sets.action != null) out.action = sets.action;
   if (sets.domain != null) out.domain = sets.domain;
   if (sets.surface != null) {
-    const canonicalSurface = normalizeRuleSurface(sets.surface);
-    if (canonicalSurface != null) {
-      out.surface = canonicalSurface;
-    }
+    out.surface = String(sets.surface).trim().toLowerCase();
   }
   return out;
 }
@@ -278,11 +249,27 @@ function applyTokenInferenceToSessionSlots({ message, sessionContext, interactio
   const actionMatches = result.matches.filter((m) => m.slotKey === "action");
 
   if (interactionRef && typeof interactionRef === "object") {
+    const prior = interactionRef.tokenInferenceTelemetry;
+    const mergedMatches = [
+      ...(Array.isArray(prior?.tokenInferenceMatches) ? prior.tokenInferenceMatches : []),
+      ...result.matches
+    ];
     interactionRef.tokenInferenceTelemetry = {
-      tokenInferenceApplied: result.tokenInferenceApplied,
-      tokenInferenceMatches: result.matches,
-      tokenInferenceSkippedReasons: result.skippedReasons,
-      tokenInferenceActionMatch: actionMatches.length > 0 ? actionMatches : null
+      tokenInferenceApplied:
+        result.tokenInferenceApplied || Boolean(prior?.tokenInferenceApplied),
+      tokenInferenceMatches: mergedMatches,
+      tokenInferenceSkippedReasons: [
+        ...new Set([
+          ...(Array.isArray(prior?.tokenInferenceSkippedReasons)
+            ? prior.tokenInferenceSkippedReasons
+            : []),
+          ...result.skippedReasons
+        ])
+      ],
+      tokenInferenceActionMatch:
+        actionMatches.length > 0
+          ? actionMatches
+          : prior?.tokenInferenceActionMatch ?? null
     };
   }
 
@@ -318,6 +305,5 @@ module.exports = {
   applyTokenInferenceToSessionSlots,
   normalizeMessageText,
   CANONICAL_SURFACE_VALUES,
-  CANONICAL_ACTION_VALUES,
-  RULE_SURFACE_TO_CANONICAL
+  CANONICAL_ACTION_VALUES
 };
