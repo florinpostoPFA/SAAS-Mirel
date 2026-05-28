@@ -25,7 +25,6 @@ jest.mock("../../services/logger", () => ({
 
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
 
 const { askLLM } = require("../../services/llm");
 const { executeFlow } = require("../../services/flowExecutor");
@@ -33,6 +32,7 @@ const { applyTurn, resetSessionState } = require("../../architectures/current");
 const { getArchitecture } = require("../../architectures");
 
 const FIXTURE_CORPUS = path.join(__dirname, "fixtures", "replaySmokeCorpus.jsonl");
+const FIXTURE_DETERMINISM = path.join(__dirname, "fixtures", "replayDeterminism5.jsonl");
 const SMOKE_SESSION_ID = "6c0f1348-cc59-43b8-8616-472a1fccbe0b";
 
 function readFixtureLines() {
@@ -60,6 +60,58 @@ function expectResultShape(row) {
   expect(row.output).toMatchObject({ reply: expect.any(String) });
   expect(typeof row.wallclockMs).toBe("number");
   expect(row.error).toBeUndefined();
+}
+
+function normalizeDeterminismRows(rows) {
+  return rows.map((row) => {
+    const clean = { ...row };
+    delete clean.wallclockMs;
+    return clean;
+  });
+}
+
+async function runFiveTurnSliceRun(runIdx) {
+  const lines = fs
+    .readFileSync(FIXTURE_DETERMINISM, "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+
+  const { seedGoldenConversationSession } = require("../../services/sessionStore");
+  const sessionId = `determinism-6c0f1348-run-${runIdx}`;
+  let session = {
+    sessionId,
+    slots: { ...lines[0].currentSlots }
+  };
+  seedGoldenConversationSession(sessionId, { slots: session.slots });
+
+  const rows = [];
+  for (const turn of lines) {
+    const archResult = await applyTurn({
+      session,
+      message: turn.message,
+      catalogVersion: turn.catalogVersion,
+      rolesVersion: turn.rolesVersion,
+      flowsVersion: turn.flowsVersion
+    });
+    rows.push({
+      corpusFile: "session_6c0f1348.jsonl",
+      turnIdx: turn.turnIdx,
+      input: {
+        message: turn.message,
+        currentSlots: turn.currentSlots,
+        catalogVersion: turn.catalogVersion,
+        rolesVersion: turn.rolesVersion,
+        flowsVersion: turn.flowsVersion
+      },
+      slotsAfter: archResult.slotsAfter,
+      decision: archResult.decision,
+      output: archResult.output,
+      wallclockMs: archResult.wallclockMs,
+      ...(archResult.error ? { error: archResult.error } : {})
+    });
+  }
+  return rows;
 }
 
 describe("eval runReplay smoke", () => {
@@ -149,5 +201,25 @@ describe("eval runReplay smoke", () => {
 
     expect(rows).toHaveLength(3);
     rows.forEach(expectResultShape);
+  });
+
+  it("is deterministic across 3 runs on a 5-turn real slice (ignoring wallclockMs)", async () => {
+    resetSessionState();
+    const run1 = await runFiveTurnSliceRun(1);
+    resetSessionState();
+    const run2 = await runFiveTurnSliceRun(2);
+    resetSessionState();
+    const run3 = await runFiveTurnSliceRun(3);
+
+    expect(run1).toHaveLength(5);
+    expect(run2).toHaveLength(5);
+    expect(run3).toHaveLength(5);
+
+    const n1 = normalizeDeterminismRows(run1);
+    const n2 = normalizeDeterminismRows(run2);
+    const n3 = normalizeDeterminismRows(run3);
+
+    expect(JSON.stringify(n1)).toBe(JSON.stringify(n2));
+    expect(JSON.stringify(n2)).toBe(JSON.stringify(n3));
   });
 });

@@ -24,7 +24,8 @@
     "logs:ingest": "node scripts/ingestDailyLogsToNotion.js",
     "logs:daily": "bash scripts/daily-log-rotation.sh",
     "demo:op": "node scripts/op-demo.js --all",
-    "demo:op:one": "node scripts/op-demo.js --topic matte_paint_summer_maintenance"
+    "demo:op:one": "node scripts/op-demo.js --topic matte_paint_summer_maintenance",
+    "eval:replay": "node eval/runReplay.js && node eval/report.js"
   },
   "keywords": [],
   "author": "",
