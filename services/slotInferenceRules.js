@@ -19,6 +19,7 @@
 /**
  * @typedef {Object} SlotInferenceRule
  * @property {string|RegExp} token
+ * @property {string} [tokenText]
  * @property {{ surface?: string, context?: string, action?: string, domain?: string }} sets
  * @property {number} priority
  * @property {SlotInferenceRuleFamily} family
@@ -800,10 +801,46 @@ const SLOT_INFERENCE_RULES = Object.freeze([
   }
 ]);
 
+function normalizeTokenText(token) {
+  return String(token || "")
+    .toLowerCase()
+    .replace(/[ăâ]/g, "a")
+    .replace(/î/g, "i")
+    .replace(/[șş]/g, "s")
+    .replace(/[țţ]/g, "t")
+    .trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function toWordBoundaryRegex(tokenText) {
+  if (tokenText.includes(" ")) {
+    return new RegExp(`\\b${escapeRegExp(tokenText)}\\b`, "i");
+  }
+  return new RegExp(`\\b${escapeRegExp(tokenText)}\\w*\\b`, "i");
+}
+
+const COMPILED_SLOT_INFERENCE_RULES = Object.freeze(
+  SLOT_INFERENCE_RULES.map((rule) => {
+    if (!rule || typeof rule !== "object") return rule;
+    if (rule.token instanceof RegExp) {
+      return Object.freeze({ ...rule });
+    }
+    const tokenText = normalizeTokenText(rule.token);
+    return Object.freeze({
+      ...rule,
+      tokenText,
+      token: toWordBoundaryRegex(tokenText)
+    });
+  })
+);
+
 /** Apply families in this order when Run B sorts rules. */
 const SLOT_INFERENCE_RULE_FAMILY_ORDER = Object.freeze(["ood", "surface", "context", "action"]);
 
 module.exports = {
-  SLOT_INFERENCE_RULES,
+  SLOT_INFERENCE_RULES: COMPILED_SLOT_INFERENCE_RULES,
   SLOT_INFERENCE_RULE_FAMILY_ORDER
 };

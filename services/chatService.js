@@ -10835,9 +10835,21 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slotResult.slots.surface = null;
       }
       currentSlots = inferWheelsSurfaceFromObject(currentSlots);
-      if (interactionRef?.tokenInferenceTelemetry?.tokenInferenceApplied) {
-        currentSlots = mergeSlots(currentSlots, sessionContext.slots || {});
-      }
+      slotResult.slots = currentSlots;
+      sessionContext.slots = { ...(sessionContext.slots || {}), ...currentSlots };
+      const selectionTagsBeforeDecision = sanitizeTagsForMessage(
+        userMessage,
+        buildFinalTags(coreTags, workingTags, currentSlots),
+        currentSlots
+      );
+      runTokenSlotInferencePass({
+        userMessage,
+        sessionContext,
+        interactionRef,
+        sessionId,
+        tags: selectionTagsBeforeDecision
+      });
+      currentSlots = { ...(sessionContext.slots || {}) };
       slotResult.slots = currentSlots;
       const problemType = sessionContext.problemType || null;
       const selectionDecision = enforceClarificationContract(resolveActionFinal({
@@ -10865,6 +10877,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const missing = selectionDecision.missingSlot;
 
         sessionContext.slots = currentSlots;
+        interactionRef.slots = currentSlots;
         sessionContext.state =
           missing === "context" ? "NEEDS_CONTEXT" :
           missing === "object" ? "NEEDS_OBJECT" :

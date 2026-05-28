@@ -103,6 +103,16 @@ describe("slotInferenceFromMessage — traps", () => {
     expect(r.slotUpdates.surface).toBeUndefined();
     expect(r.skippedReasons).toContain("domain_out_of_scope");
   });
+
+  test("mohair in stare buna does not infer tar decontaminate action", () => {
+    const r = infer("ce folosesc pe mohair pentru a-l pastra in stare buna?");
+    expect(
+      r.matches.some(
+        (m) => String(m.token || "").toLowerCase() === "tar" && m.slotKey === "action"
+      )
+    ).toBe(false);
+    expect(r.slotUpdates.action).not.toBe("decontaminate");
+  });
 });
 
 describe("slotInferenceFromMessage — slot fill policy", () => {
