@@ -44,15 +44,7 @@ function hasStrongGlassInteriorSignal(message) {
 function detectExplicitContext(message) {
   const s = normalizeForContextInference(message);
 
-  const bothAffirmative =
-    (s.includes("si interior") && s.includes("si exterior")) ||
-    s.includes("atat interior cat si exterior") ||
-    s.includes("interior si exterior") ||
-    s.includes("exterior si interior") ||
-    /\bambele\b/.test(s) ||
-    /\bboth\b/.test(s);
-
-  if (bothAffirmative) return "both";
+  if (isExplicitMultiContext(message)) return null;
 
   const hasInterior =
     s.includes("interior") ||
@@ -72,6 +64,76 @@ function detectExplicitContext(message) {
   if (hasInterior && !hasExterior) return "interior";
   if (hasExterior && !hasInterior) return "exterior";
   return null;
+}
+
+const CONTEXT_ENTRY_TREATMENTS = Object.freeze(["ceramic", "ppf", "wax", "none", "unknown"]);
+
+function hasAmbiguousBothReply(message) {
+  const s = normalizeForContextInference(message);
+  return /\bambele\b/.test(s) || /\bboth\b/.test(s) || s === "amandoua";
+}
+
+function isExplicitMultiContext(message) {
+  const s = normalizeForContextInference(message);
+  const hasInteriorKeyword =
+    s.includes("interior") || s.includes("in interior") || s.includes("habitaclu") || s.includes("cabina");
+  const hasExteriorKeyword =
+    s.includes("exterior") || s.includes("in exterior") || s.includes("pe afara") || s.includes("caroserie");
+
+  const hasInteriorObject = hasInteriorCabinObjectSignal(s);
+  const hasInteriorMaterial = s.includes("piele") || s.includes("textil") || s.includes("alcantara");
+  const hasExteriorObject =
+    s.includes("caroserie") || s.includes("jante") || s.includes("anvelope") || s.includes("vopsea");
+
+  return (
+    (hasInteriorKeyword && hasExteriorKeyword) ||
+    ((hasInteriorObject || hasInteriorMaterial) && hasExteriorKeyword) ||
+    (hasInteriorKeyword && hasExteriorObject) ||
+    ((hasInteriorObject || hasInteriorMaterial) && hasExteriorObject) ||
+    s.includes("atat interior cat si exterior") ||
+    s.includes("interior si exterior") ||
+    s.includes("exterior si interior")
+  );
+}
+
+function inferTreatment(message) {
+  const s = normalizeForContextInference(message);
+  if (s.includes("ceramic")) return "ceramic";
+  if (s.includes("ppf")) return "ppf";
+  if (s.includes("ceara") || s.includes("wax")) return "wax";
+  return "unknown";
+}
+
+function inferInteriorSurface(message) {
+  const s = normalizeForContextInference(message);
+  if (s.includes("piele")) return "leather";
+  if (s.includes("textil") || s.includes("textile")) return "textile";
+  if (s.includes("alcantara")) return "alcantara";
+  if (s.includes("bord") || s.includes("plastic")) return "plastic";
+  return "interior";
+}
+
+function inferExteriorSurface(message) {
+  const s = normalizeForContextInference(message);
+  if (s.includes("geam") || s.includes("sticla") || s.includes("parbriz")) return "glass";
+  if (s.includes("jante")) return "wheels";
+  if (s.includes("anvelope")) return "tires";
+  return "paint";
+}
+
+function buildContextEntry(context, surface, treatment, source) {
+  const t = CONTEXT_ENTRY_TREATMENTS.includes(treatment) ? treatment : "unknown";
+  return { context, surface, treatment: t, source };
+}
+
+function extractContextEntries(message) {
+  if (!isExplicitMultiContext(message)) return [];
+  const treatment = inferTreatment(message);
+  const entries = [
+    buildContextEntry("interior", inferInteriorSurface(message), "unknown", "user_input"),
+    buildContextEntry("exterior", inferExteriorSurface(message), treatment, "user_input")
+  ];
+  return entries;
 }
 
 function hasInteriorCabinObjectSignal(normalized) {
@@ -193,6 +255,11 @@ function inferContext(params) {
     return { inferredContext: explicit, reason: "explicit_context", confidence: "strong" };
   }
 
+  const extracted = extractContextEntries(message);
+  if (extracted.length > 1) {
+    return { inferredContext: null, reason: "multi_context_explicit", confidence: "weak" };
+  }
+
   const bundle = inferStrongContextBundles(message, normalized, slots);
   if (bundle) {
     return bundle;
@@ -208,6 +275,10 @@ function logContextInferenceTrace(payload) {
 module.exports = {
   normalizeForContextInference,
   detectExplicitContext,
+  isExplicitMultiContext,
+  hasAmbiguousBothReply,
+  extractContextEntries,
+  CONTEXT_ENTRY_TREATMENTS,
   inferContext,
   logContextInferenceTrace
 };
