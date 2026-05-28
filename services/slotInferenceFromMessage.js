@@ -159,7 +159,12 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
   for (const rule of rules) {
     if (!ruleMatches(rule, normalized)) continue;
 
-    const tokenLabel = rule.token instanceof RegExp ? String(rule.token) : String(rule.token);
+    const tokenLabel =
+      typeof rule.tokenText === "string" && rule.tokenText
+        ? rule.tokenText
+        : rule.token instanceof RegExp
+          ? String(rule.token)
+          : String(rule.token);
     const canonicalSets = canonicalizeRuleSets(rule.sets);
 
     if (rule.family === "ood") {
