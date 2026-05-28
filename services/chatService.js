@@ -2390,6 +2390,13 @@ function endInteraction(interactionRef, result, patch = {}) {
     timestamp: interactionRef.timestamp,
     traceId: interactionRef.traceId ?? null,
     sessionId: interactionRef.sessionId,
+    level: "INFO",
+    phase:
+      typeof interactionRef.currentPhase === "string" && interactionRef.currentPhase.trim()
+        ? interactionRef.currentPhase.trim()
+        : "unknown",
+    service: "chatService",
+    env: process.env.NODE_ENV === "production" ? "prod" : "dev",
     message: interactionRef.message,
     assistantReply,
     normalizedMessage: interactionRef.message ? String(interactionRef.message).toLowerCase().trim() : null,
@@ -8632,7 +8639,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         intentHeuristicOverrideFrom: null,
         intentHeuristicOverrideTo: null,
         intentHeuristicReason: null
-      }
+      },
+      currentPhase: "intent"
     };
 
     logChatPipelineStage("interaction_ref");
@@ -11322,6 +11330,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       (isSelectionFollowupMessage(userMessage) &&
         hasCarryoverSelectionContext(sessionContext) &&
         (queryType === "selection" || intent === "selection"));
+    interactionRef.currentPhase = "slots";
     logChatPipelineStage("slot_extract_merge", { queryType, intent });
     const slotResult = processSlots(userMessage, intent, sessionContext, {
       mergeWithSession: mainSlotMergeSession
@@ -11734,6 +11743,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     console.log("SLOT_SOURCE_CHECK", {
       slotsUsed: sessionContext.slots
     });
+    interactionRef.currentPhase = "routing";
     logChatPipelineStage("route_request", { queryType });
     routingDecision = routeRequest({
       queryType,
@@ -11927,6 +11937,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       reason: "routing_decision_finalized"
     });
 
+    interactionRef.currentPhase = "assistant_reply";
     logChatPipelineStage("execution", { action: resolvedAction.action });
 
     let shouldHandleClarification = false;
@@ -12696,6 +12707,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
 
         // Step 7–8: Search for products (tagged phase for logging v2)
+        interactionRef.currentPhase = "retrieval";
         const selectionOpts = {
           message: userMessage,
           slots: sessionContext.slots || {},

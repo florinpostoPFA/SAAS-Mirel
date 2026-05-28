@@ -316,6 +316,16 @@ describe("AI eCommerce Assistant API", () => {
       expect(res.body.reply).toBe("A apărut o eroare.");
       expect(res.body.sessionId).toBe("55555555-5555-4555-8555-555555555555");
       expect(String(res.body.sessionId).length).toBeGreaterThan(0);
+      expect(appendInteractionLine).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionId: "55555555-5555-4555-8555-555555555555",
+          level: "ERROR",
+          phase: "assistant_reply",
+          assistantReply: "A apărut o eroare.",
+          decision: expect.objectContaining({ action: "error" }),
+          output: expect.objectContaining({ type: "error", productsLength: 0 })
+        })
+      );
     });
   });
 

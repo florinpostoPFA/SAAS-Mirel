@@ -35,6 +35,8 @@ const { getArtifactVersions } = require("./services/artifactVersions");
 const { getDeployVersion } = require("./services/deployVersion");
 const { validateFeedbackPayload, appendFeedbackRow } = require("./services/feedbackService");
 const { applyTrustProxy, apiProxyObservability } = require("./services/proxyBoundary");
+const loggingV2 = require("./services/loggingV2");
+const { appendInteractionLine } = require("./services/interactionLog");
 
 const surfaceAssistStartup = computeSurfaceAssistEnabled({
   env: process.env,
@@ -122,6 +124,86 @@ function getClient(api_key) {
   return { id: config.server.defaultClientId };
 }
 
+function mapStageToPhase(stage) {
+  const s = String(stage || "").toLowerCase();
+  if (s.includes("intent")) return "intent";
+  if (s.includes("slot")) return "slots";
+  if (s.includes("route")) return "routing";
+  if (s.includes("search") || s.includes("retriev")) return "retrieval";
+  if (s.includes("reply") || s.includes("llm")) return "assistant_reply";
+  return "unknown";
+}
+
+function buildErrorInteractionEntry({ message, sessionId, error, traceId, phase }) {
+  return {
+    sessionId,
+    traceId,
+    level: "ERROR",
+    phase: phase || "unknown",
+    service: "server",
+    env: process.env.NODE_ENV === "production" ? "prod" : "dev",
+    message: typeof message === "string" ? message : "",
+    assistantReply: "A apărut o eroare.",
+    decision: {
+      action: "error",
+      flowId: null,
+      missingSlot: null,
+      hardGuardFallback: false
+    },
+    output: {
+      type: "error",
+      products: [],
+      productsLength: 0,
+      productsReason: "exception_fallback"
+    },
+    intent: {
+      queryType: null,
+      type: null,
+      tags: null
+    },
+    error: {
+      message: error && error.message ? String(error.message) : String(error),
+      name: error && error.name ? String(error.name) : "Error"
+    }
+  };
+}
+
+async function appendInteractionLineWithTimeout(entry, timeoutMs = 1000) {
+  await Promise.race([
+    Promise.resolve().then(() => appendInteractionLine(entry)),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`interaction_log_timeout_${timeoutMs}ms`)), timeoutMs);
+    })
+  ]);
+}
+
+async function emitGlobalErrorTurnLog({ stage, error, sessionId, message }) {
+  const traceId = loggingV2.createTraceId({ sessionId });
+  const phase = mapStageToPhase(stage);
+  await loggingV2.runWithTraceContext(
+    { traceId, sessionId, service: "server" },
+    async () => {
+      loggingV2.emitError(error, { stage });
+      const entry = buildErrorInteractionEntry({ message, sessionId, error, traceId, phase });
+      try {
+        await appendInteractionLineWithTimeout(entry, 1000);
+      } catch (logErr) {
+        console.error(
+          JSON.stringify({
+            loggerFailed: true,
+            stage,
+            phase,
+            traceId,
+            sessionId,
+            logError: logErr && logErr.message ? String(logErr.message) : String(logErr),
+            originalError: error && error.message ? String(error.message) : String(error)
+          })
+        );
+      }
+    }
+  );
+}
+
 // 💬 CHAT
 const chatLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -132,6 +214,7 @@ const chatLimiter = rateLimit({
 });
 app.post("/chat", chatLimiter, async (req, res) => {
   let canonicalSessionId;
+  let currentPhase = "intent";
   try {
     const { message, feedback } = req.body;
 
@@ -152,6 +235,7 @@ app.post("/chat", chatLimiter, async (req, res) => {
       });
     }
 
+    currentPhase = "assistant_reply";
     const result = await chatService.handleChat({
       message,
       sessionId: canonicalSessionId,
@@ -170,6 +254,12 @@ app.post("/chat", chatLimiter, async (req, res) => {
       canonicalSessionId != null && String(canonicalSessionId).length > 0
         ? canonicalSessionId
         : require("crypto").randomUUID();
+    await emitGlobalErrorTurnLog({
+      stage: currentPhase,
+      error: err,
+      sessionId: sessionIdForClient,
+      message: req.body && typeof req.body.message === "string" ? req.body.message : ""
+    });
     res.json({
       reply: "A apărut o eroare.",
       sessionId: sessionIdForClient,

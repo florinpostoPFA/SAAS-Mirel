@@ -54,6 +54,8 @@ function enrichInteractionExportRow(entry) {
 
   return {
     ...safe,
+    level: typeof safe.level === "string" && safe.level.trim() ? safe.level.trim().toUpperCase() : "INFO",
+    phase: typeof safe.phase === "string" && safe.phase.trim() ? safe.phase.trim() : "unknown",
     schemaVersion: INTERACTION_JSONL_SCHEMA_VERSION,
     traceId,
     traceContextMissing,
