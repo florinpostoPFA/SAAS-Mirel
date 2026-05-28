@@ -119,6 +119,16 @@ describe("ingestDailyLogsToNotion: mapping", () => {
       })
     ).toBe("2026-05-06 ERROR knowledge abcdef01");
   });
+
+  test("buildPageProperties maps row.level=ERROR to Notion Level select", () => {
+    const props = buildPageProperties({
+      row: { ...FIXTURE_ROW, level: "ERROR" },
+      date: "2026-05-06",
+      eventId: "error-eid",
+      ingestedAtIso: "2026-05-07T00:05:00.000Z"
+    });
+    expect(getSelect(props.Level)).toBe("ERROR");
+  });
 });
 
 describe("ingestDailyLogsToNotion: Raw JSON truncation", () => {
