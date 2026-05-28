@@ -44,10 +44,15 @@ function hasStrongGlassInteriorSignal(message) {
 function detectExplicitContext(message) {
   const s = normalizeForContextInference(message);
 
-  const multiContextExplicit = isExplicitMultiContext(message);
+  const bothAffirmative =
+    (s.includes("si interior") && s.includes("si exterior")) ||
+    s.includes("atat interior cat si exterior") ||
+    s.includes("interior si exterior") ||
+    s.includes("exterior si interior") ||
+    /\bambele\b/.test(s) ||
+    /\bboth\b/.test(s);
 
-  // Multi-context turns are handled conversationally (one-at-a-time) in chatService.
-  if (multiContextExplicit) return null;
+  if (bothAffirmative) return "both";
 
   const hasInterior =
     s.includes("interior") ||
@@ -67,18 +72,6 @@ function detectExplicitContext(message) {
   if (hasInterior && !hasExterior) return "interior";
   if (hasExterior && !hasInterior) return "exterior";
   return null;
-}
-
-function isExplicitMultiContext(message) {
-  const s = normalizeForContextInference(message);
-  return (
-    (s.includes("si interior") && s.includes("si exterior")) ||
-    s.includes("atat interior cat si exterior") ||
-    s.includes("interior si exterior") ||
-    s.includes("exterior si interior") ||
-    /\bambele\b/.test(s) ||
-    /\bboth\b/.test(s)
-  );
 }
 
 function hasInteriorCabinObjectSignal(normalized) {
@@ -215,7 +208,6 @@ function logContextInferenceTrace(payload) {
 module.exports = {
   normalizeForContextInference,
   detectExplicitContext,
-  isExplicitMultiContext,
   inferContext,
   logContextInferenceTrace
 };

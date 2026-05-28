@@ -114,7 +114,6 @@ const {
 const {
   inferContext,
   detectExplicitContext,
-  isExplicitMultiContext,
   logContextInferenceTrace,
   normalizeForContextInference
 } = require("./contextInferenceService");
@@ -10232,29 +10231,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       handledPendingQuestionAnswerEarly,
       previousState
     });
-
-    if (
-      isExplicitMultiContext(userMessage) &&
-      !["knowledge", "meta_question", "safety"].includes(String(queryType || "").toLowerCase())
-    ) {
-      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
-        slot: "context",
-        question: "Le luam pe rand. Pentru care context vrei sa incepem: interior sau exterior?",
-        source: "multi_context_sequential"
-      });
-      saveSession(sessionId, sessionContext);
-      return endInteraction(
-        interactionRef,
-        {
-          type: "question",
-          message: "Le luam pe rand. Pentru care context vrei sa incepem: interior sau exterior?"
-        },
-        {
-          decision: { action: "clarification", flowId: null, missingSlot: "context" },
-          outputType: "question"
-        }
-      );
-    }
 
     if (!shouldPreserveFollowUpState) {
       const prevSlots = { ...(sessionContext.slots || {}) };
