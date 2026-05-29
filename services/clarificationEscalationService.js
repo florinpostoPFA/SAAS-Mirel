@@ -46,6 +46,7 @@ function buildPendingQuestionState(previousPending, nextPending) {
     return {
       ...normalized,
       attemptCount: 0,
+      turnsSinceArmed: 0,
       lastFailureReason: null,
       lastUserAnswerNormalized: null,
       escalated: false,
@@ -56,6 +57,9 @@ function buildPendingQuestionState(previousPending, nextPending) {
   return {
     ...normalized,
     attemptCount: prevTracked.attemptCount,
+    turnsSinceArmed: Number.isFinite(Number(prevTracked.turnsSinceArmed))
+      ? Number(prevTracked.turnsSinceArmed)
+      : 0,
     lastFailureReason: prevTracked.lastFailureReason,
     lastUserAnswerNormalized: prevTracked.lastUserAnswerNormalized,
     escalated: prevTracked.escalated,
