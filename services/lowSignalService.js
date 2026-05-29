@@ -195,10 +195,9 @@ function normalizeResponseLocaleHint(locale) {
  * @param {string} [responseLocale] session response locale ("ro" | "en")
  * @returns {string}
  */
-function buildLowSignalClarificationQuestion(message, normalizedMessage, responseLocale = "ro") {
+function buildLowSignalClarificationQuestion(message, normalizedMessage, _responseLocale = "ro") {
   const raw = String(message || "");
   const norm = normalizedMessage != null ? String(normalizedMessage) : normalizeRo(raw);
-  const loc = normalizeResponseLocaleHint(responseLocale);
 
   const interiorOnly =
     /\binterior\b/i.test(norm) &&
@@ -210,20 +209,14 @@ function buildLowSignalClarificationQuestion(message, normalizedMessage, respons
     !hasDomainNoun(norm);
 
   if (interiorOnly || exteriorOnly) {
-    return loc === "en"
-      ? "Which area do you want to treat? (e.g. dash, seats, carpet, glass)"
-      : "Ce zonă vrei să tratezi? (ex: bord, scaune, mocheta, geamuri)";
+    return "Ce zonă vrei să tratezi? (ex: bord, scaune, mocheta, geamuri)";
   }
 
   if (hasCleaningHintWithoutObject(norm)) {
-    return loc === "en"
-      ? "What do you want to clean: interior, exterior, glass, wheels, or tires?"
-      : "Ce vrei să cureți: interior, exterior, geamuri, jante sau anvelope?";
+    return "Ce vrei să cureți: interior, exterior, geamuri, jante sau anvelope?";
   }
 
-  return loc === "en"
-    ? "Do you want steps (how-to) or product recommendations?"
-    : "Vrei pași (cum se face) sau vrei recomandare de produse?";
+  return "Vrei pași (cum se face) sau vrei recomandare de produse?";
 }
 
 /**
