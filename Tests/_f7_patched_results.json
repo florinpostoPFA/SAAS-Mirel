@@ -1,0 +1,108 @@
+{
+  "messages": [
+    "interior scaune textile",
+    "cat costa abonamentul",
+    "bună ziua",
+    "vreau sa cumpar o solutie pentru anvelope"
+  ],
+  "turns": [
+    {
+      "turn": 1,
+      "message": "interior scaune textile",
+      "pendingQuestion": {
+        "slot": "intent_level",
+        "source": "coverage_role_goal",
+        "question": "Vrei sa o cureti sau sa o protejezi/hidratezi?",
+        "roleFamily": "leather",
+        "object": "scaun",
+        "context": "interior",
+        "surface": "textile"
+      },
+      "pendingSlot": "intent_level",
+      "turnsSinceArmed": null,
+      "decision": {
+        "action": "recommend",
+        "missingSlot": null,
+        "reasonCode": "routing.recommend"
+      },
+      "sessionSlots": {
+        "context": "interior",
+        "surface": "textile",
+        "object": "scaun",
+        "brand": null,
+        "vehicleMake": null,
+        "vehicleModel": null,
+        "vehicleYear": null,
+        "action": null
+      }
+    },
+    {
+      "turn": 2,
+      "message": "cat costa abonamentul",
+      "pendingQuestion": null,
+      "pendingSlot": null,
+      "turnsSinceArmed": null,
+      "decision": {
+        "action": "clarification",
+        "missingSlot": "context",
+        "reasonCode": "routing.clarification.slot"
+      },
+      "sessionSlots": {
+        "context": null,
+        "object": null,
+        "surface": null,
+        "action": null,
+        "brand": null,
+        "vehicleMake": null,
+        "vehicleModel": null,
+        "vehicleYear": null
+      }
+    },
+    {
+      "turn": 3,
+      "message": "bună ziua",
+      "pendingQuestion": null,
+      "pendingSlot": null,
+      "turnsSinceArmed": null,
+      "decision": {
+        "action": "clarification",
+        "missingSlot": "context",
+        "reasonCode": "routing.clarification.slot"
+      },
+      "sessionSlots": {
+        "context": null,
+        "object": null,
+        "surface": null,
+        "action": null,
+        "brand": null,
+        "vehicleMake": null,
+        "vehicleModel": null,
+        "vehicleYear": null
+      }
+    },
+    {
+      "turn": 4,
+      "message": "vreau sa cumpar o solutie pentru anvelope",
+      "pendingQuestion": null,
+      "pendingSlot": null,
+      "turnsSinceArmed": null,
+      "decision": {
+        "action": "flow",
+        "missingSlot": null,
+        "reasonCode": "routing.flow"
+      },
+      "sessionSlots": {
+        "context": "exterior",
+        "surface": "tires",
+        "object": "anvelope",
+        "brand": null,
+        "vehicleMake": null,
+        "vehicleModel": null,
+        "vehicleYear": null,
+        "action": null
+      }
+    }
+  ],
+  "pendingSurvivedAll": false,
+  "t1ArmedIntentLevel": true
+}

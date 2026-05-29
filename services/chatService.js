@@ -145,6 +145,7 @@ const {
   buildPendingQuestionState,
   evaluateClarificationEscalation
 } = require("./clarificationEscalationService");
+const { evaluatePendingQuestionStaleness } = require("./pendingQuestionLifecycle");
 const { getArtifactVersions } = require("./artifactVersions");
 
 const SOURCE = "ChatService";
@@ -5369,6 +5370,26 @@ function isInterrogativeFollowUpMessage(message) {
     /^(care|ce)\s+e\b/.test(msg);
 }
 
+function isPricingOrSubscriptionOffTopic(message) {
+  const msg = String(message || "")
+    .toLowerCase()
+    .replace(/[ăâ]/g, "a")
+    .replace(/î/g, "i")
+    .replace(/[șş]/g, "s")
+    .replace(/[țţ]/g, "t")
+    .trim();
+  if (!msg) return false;
+  if (/\b(abonament|subscript|factur)\w*/.test(msg)) return true;
+  if (
+    /\b(cat|cata|ce)\b/.test(msg) &&
+    /\b(cost|costa|pret|pretul)\b/.test(msg) &&
+    !/\b(produs|solutie|curat|spal|protej|masina|auto)\b/.test(msg)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /** Declarative product-recommendation follow-up (e.g. A3 v4 T2), not a topic shift. */
 function isDeclarativeProductRecommendationFollowUp(message) {
   const msg = String(message || "")
@@ -9196,6 +9217,52 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
+    if (sessionContext.pendingQuestion?.slot) {
+      sessionContext.pendingQuestion.turnsSinceArmed =
+        (Number(sessionContext.pendingQuestion.turnsSinceArmed) || 0) + 1;
+      const pendingStale = evaluatePendingQuestionStaleness(
+        sessionContext,
+        userMessage,
+        {
+          intentCore,
+          maxTurns: Number(process.env.PENDING_QUESTION_MAX_TURNS) || 3,
+          getSingleTokenBinding: getSingleTokenBindingForPendingQuestion,
+          evaluateSessionReset: (msg, ctx, ic) =>
+            evaluateDeterministicSessionReset({
+              userMessage: msg,
+              sessionContext: ctx,
+              intentCore: ic,
+              pendingSlotClarificationActive: false
+            }),
+          isInterrogativeFollowUp: isInterrogativeFollowUpMessage,
+          isOffTopicForPending: (msg, ctx, ic) =>
+            shouldResetForNonCleaningMessage(msg, ic) ||
+            isPricingOrSubscriptionOffTopic(msg) ||
+            hasExplicitTopicShiftOnNewTurn(msg, ctx?.slots || {})
+        }
+      );
+      if (pendingStale.stale) {
+        logInfo("pending_expired", {
+          sessionId,
+          reason: pendingStale.reason,
+          turnsSinceArmed: sessionContext.pendingQuestion.turnsSinceArmed,
+          pendingSlot: sessionContext.pendingQuestion.slot,
+          messagePreview: String(userMessage || "").slice(0, 120)
+        });
+        sessionContext.pendingQuestion = null;
+        sessionContext.pendingSelection = false;
+        sessionContext.pendingSelectionMissingSlot = null;
+        sessionContext.originalIntent = null;
+        if (sessionContext.pendingClarification?.active) {
+          clearPendingClarificationSlots(sessionContext);
+        }
+        if (String(sessionContext.state || "").startsWith("NEEDS_")) {
+          sessionContext.state = "IDLE";
+        }
+        saveSession(sessionId, sessionContext);
+      }
+    }
+
     // Low-signal intent_level can emit before LOCALE_SET; prefer persisted session locale, then cautious EN detection.
     const responseLocaleForLowSignal = normalizeResponseLocale(
       sessionContext.responseLocale ??
@@ -9209,16 +9276,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     logChatPipelineStage("low_signal_gate");
     const continuationGuardActive =
       sessionContext?.pendingSelection === true ||
-      Boolean(sessionContext?.pendingQuestion);
+      Boolean(sessionContext?.pendingQuestion) ||
+      (String(sessionContext?.state || "").startsWith("NEEDS_") &&
+        sessionContext?.pendingClarification?.active === true);
 
-    const lowSignalIntent = (clarificationPendingAtEntry || continuationGuardActive)
+    const lowSignalIntent = (continuationGuardActive)
       ? null
       : detectIntent(intentCore, sessionId);
     const lowSignalSlots = extractSlotsFromMessage(userMessage);
     rememberLastNonNullSlots(sessionContext, lowSignalSlots);
 
     const lowSignalNormalized = normalizeLowSignalText(intentCore);
-    let lowSignalCheck = !(clarificationPendingAtEntry || continuationGuardActive)
+    let lowSignalCheck = !continuationGuardActive
       ? isLowSignalMessage(
           userMessage,
           lowSignalNormalized,
