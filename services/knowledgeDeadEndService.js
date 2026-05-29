@@ -58,8 +58,27 @@ const STRONG_PRODUCT_SIGNALS = [
   "îmi trebuie"
 ];
 
-function shouldBypassKnowledgeDeadEndRecovery(interactionRef) {
+function isInterrogativeProductFollowUp(message) {
+  const msg = String(message || "").toLowerCase().trim();
+  return (
+    /^(care|ce)\s+(e|este)\s+cel\s+mai\s+bun/.test(msg) ||
+    /^(care|ce)\s+produs/.test(msg)
+  );
+}
+
+function shouldBypassKnowledgeDeadEndRecovery(interactionRef, sessionContext = null) {
   if (!interactionRef || typeof interactionRef !== "object") {
+    return true;
+  }
+  const slots =
+    sessionContext?.slots && typeof sessionContext.slots === "object"
+      ? sessionContext.slots
+      : interactionRef.slots;
+  if (
+    slots?.context &&
+    (slots.action || slots.object) &&
+    isInterrogativeProductFollowUp(interactionRef.message)
+  ) {
     return true;
   }
   const raw = String(interactionRef.message || "").trim();
@@ -149,7 +168,12 @@ function pickKnowledgeRecovery(deps) {
     getMissingSlot
   } = deps;
 
-  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const safeSlots = {
+    ...(sessionContext?.slots && typeof sessionContext.slots === "object"
+      ? sessionContext.slots
+      : {}),
+    ...(slots && typeof slots === "object" ? slots : {})
+  };
   const count = sessionContext?.knowledgeDeadEndRecoveryCount || 0;
 
   if (count >= 1) {
@@ -227,7 +251,7 @@ function buildKnowledgeDeadEndRecoveryPatch({
   getMissingSlot,
   currentDecision = null
 }) {
-  if (shouldBypassKnowledgeDeadEndRecovery(interactionRef)) {
+  if (shouldBypassKnowledgeDeadEndRecovery(interactionRef, sessionContext)) {
     return null;
   }
 
@@ -246,7 +270,10 @@ function buildKnowledgeDeadEndRecoveryPatch({
   }
 
   const pick = pickKnowledgeRecovery({
-    slots: interactionRef?.slots,
+    slots: {
+      ...(sessionContext?.slots || {}),
+      ...(interactionRef?.slots || {})
+    },
     userMessage: interactionRef?.message,
     sessionContext,
     getMissingSlot

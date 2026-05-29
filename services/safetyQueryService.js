@@ -97,6 +97,16 @@ function includesAny(hay, list) {
   return list.some((x) => hay.includes(x));
 }
 
+/** Product recommendation / selection — not a compatibility safety check. */
+function isProductRecommendationQuery(msg) {
+  return (
+    /\b(care|ce)\s+produs\b/.test(msg) ||
+    /\brecomand(a|ati|are)?\b/.test(msg) ||
+    /\bce\s+.+\s+(e|este)\s+cel\s+mai\s+bun\b/.test(msg) ||
+    /\bcel\s+mai\s+bun\b/.test(msg) && /\b(produs|solutie|soluție|detergent)\b/.test(msg)
+  );
+}
+
 /**
  * @returns {{ triggered: boolean, reason: string, missingCriticalField?: string, safetyAnswerType?: "yes"|"no"|"depends" }}
  */
@@ -119,6 +129,10 @@ function analyzeSafetyQuery(message) {
 
   if (!hasTrigger) {
     return { triggered: false, reason: "no_safety_phrase" };
+  }
+
+  if (isProductRecommendationQuery(msg)) {
+    return { triggered: false, reason: "product_recommendation_not_safety" };
   }
 
   const hasMaterial = includesAny(msg, MATERIAL_KEYWORDS);
@@ -368,6 +382,7 @@ function logSafetyFields(payload) {
 module.exports = {
   analyzeSafetyQuery,
   isSafetyQuery,
+  isProductRecommendationQuery,
   resolveSafetyTrustContext,
   runSafetyGate,
   buildSafetyAnswerText,

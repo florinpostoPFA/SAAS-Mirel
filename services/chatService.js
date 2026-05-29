@@ -2295,9 +2295,7 @@ function endInteraction(interactionRef, result, patch = {}) {
       flowId: prep.workingDecision?.flowId ?? null,
       missingSlot: prep.workingDecision?.missingSlot ?? null
     });
-  }
-
-  commitTurnDecision(interactionRef, prep.workingDecision);
+  }  commitTurnDecision(interactionRef, prep.workingDecision);
 
   let {
     finalResult,
@@ -2916,9 +2914,13 @@ function extractSlotsForSafetyQuery(message) {
   return { context, object, surface };
 }
 
-function mergeSlots(sessionSlots, newSlots) {
+function mergeSlotsCore(sessionSlots, newSlots, options = {}) {
   const prev = sessionSlots && typeof sessionSlots === "object" ? sessionSlots : {};
   const next = newSlots && typeof newSlots === "object" ? newSlots : {};
+  const sessionFallback =
+    options.sessionSlots && typeof options.sessionSlots === "object"
+      ? options.sessionSlots
+      : {};
   return {
     context: next.context || prev.context || null,
     surface: next.surface || prev.surface || null,
@@ -2926,8 +2928,15 @@ function mergeSlots(sessionSlots, newSlots) {
     brand: next.brand || prev.brand || null,
     vehicleMake: next.vehicleMake ?? prev.vehicleMake ?? null,
     vehicleModel: next.vehicleModel ?? prev.vehicleModel ?? null,
-    vehicleYear: next.vehicleYear ?? prev.vehicleYear ?? null
+    vehicleYear: next.vehicleYear ?? prev.vehicleYear ?? null,
+    action: next.action ?? prev.action ?? sessionFallback.action ?? null
   };
+}
+
+function mergeSlots(sessionSlots, newSlots, options = {}) {
+  const prev = sessionSlots && typeof sessionSlots === "object" ? sessionSlots : {};
+  const next = newSlots && typeof newSlots === "object" ? newSlots : {};
+  return mergeSlotsCore(prev, next, options);
 }
 
 function mergePendingClarificationSlots(previousSlots, parsedSlots) {
@@ -3350,8 +3359,18 @@ function extractNormalizedSlotsFromMessage(message) {
 function processSlots(message, intent, sessionContext, options = {}) {
   const extracted = extractNormalizedSlotsFromMessage(message);
   const shouldMerge = options.mergeWithSession === true;
-  const baseSlots = shouldMerge ? (sessionContext.slots || {}) : {};
-  const slots = mergeSlots(baseSlots, extracted);
+  const sessionSlots =
+    sessionContext?.slots && typeof sessionContext.slots === "object"
+      ? sessionContext.slots
+      : {};
+  const carrySessionOnFreshMerge =
+    !shouldMerge &&
+    isDeclarativeProductRecommendationFollowUp(message) &&
+    Boolean(sessionSlots.context || sessionSlots.action || sessionSlots.object);
+  const baseSlots = shouldMerge || carrySessionOnFreshMerge ? sessionSlots : {};
+  const slots = mergeSlots(baseSlots, extracted, {
+    sessionSlots: shouldMerge || carrySessionOnFreshMerge ? sessionSlots : null
+  });
 
   const missing = getMissingSlot(slots);
 
@@ -5318,17 +5337,65 @@ function isFollowUpMessage(message) {
   );
 }
 
+/**
+ * Mid-pipeline slot wipe for explicit context/topic switches only.
+ * Does NOT fire on common Romanian question openers ("cum curat", "vreau sa")
+ * or bare context words embedded in longer product questions.
+ */
 function isHardReset(message) {
-  const msg = String(message || "").toLowerCase();
+  const msg = String(message || "").toLowerCase().trim();
+  if (!msg) return false;
 
-  return (
-    msg.includes("cum curat") ||
-    msg.includes("vreau sa") ||
-    msg.includes("cum spal") ||
-    msg.includes("cum fac") ||
-    msg.includes("exterior") ||
-    msg.includes("interior masina")
-  );
+  const resetPatterns = [
+    /\bcum\s+spal\b/,
+    /\bcum\s+fac\b/,
+    /\binterior\s+masina\b/,
+    /\binterior\s+masinii\b/,
+    /^(exterior|interior)(\s+masina)?\s*$/,
+    /\btrec\s+la\s+(exterior|interior)\b/,
+    /\bschimb\s+la\s+(exterior|interior)\b/,
+    /\bvreau\s+(exterior|interior)\s+masina\b/
+  ];
+
+  return resetPatterns.some((pattern) => pattern.test(msg));
+}
+
+/** T2 interrogative follow-up on the same topic (not a topic shift). */
+function isInterrogativeFollowUpMessage(message) {
+  const msg = String(message || "").toLowerCase().trim();
+  if (!msg) return false;
+  if (/\?$/.test(msg)) return true;
+  return /^(cum|care|ce|de ce|cand|cat|unde|cine)\b/.test(msg) ||
+    /^(care|ce)\s+e\b/.test(msg);
+}
+
+/** Declarative product-recommendation follow-up (e.g. A3 v4 T2), not a topic shift. */
+function isDeclarativeProductRecommendationFollowUp(message) {
+  const msg = String(message || "")
+    .toLowerCase()
+    .replace(/[ăâ]/g, "a")
+    .replace(/î/g, "i")
+    .replace(/[șş]/g, "s")
+    .replace(/[țţ]/g, "t")
+    .trim();
+  if (!msg) return false;
+  return /\b(recomand|recomanda|produs|sugerezi|sugereaza|ce\s+imi\s+recomanzi)\b/.test(msg);
+}
+
+function hasExplicitTopicShiftOnNewTurn(message, prevSlots) {
+  const prev = prevSlots && typeof prevSlots === "object" ? prevSlots : {};
+  const explicitNewContext = detectExplicitContext(message);
+  if (explicitNewContext && prev.context && explicitNewContext !== prev.context) {
+    return true;
+  }
+  const extracted = extractNormalizedSlotsFromMessage(message);
+  if (extracted.object && prev.object && extracted.object !== prev.object) {
+    return true;
+  }
+  if (extracted.context && prev.context && extracted.context !== prev.context) {
+    return true;
+  }
+  return false;
 }
 
 function isNewRootQuery(message) {
@@ -5469,7 +5536,37 @@ function evaluateDeterministicSessionReset({
   return { reset: false, reasonCode: null };
 }
 
-function applyDeterministicSessionResetInPlace(sessionContext, sessionId, reasonCode) {
+function applyDeterministicSessionResetInPlace(
+  sessionContext,
+  sessionId,
+  reasonCode,
+  userMessage = null
+) {
+  const currentSlots =
+    sessionContext?.slots && typeof sessionContext.slots === "object"
+      ? sessionContext.slots
+      : {};
+  if (
+    userMessage &&
+    isInterrogativeFollowUpMessage(userMessage) &&
+    !matchesInformationalException(userMessage) &&
+    currentSlots.context &&
+    (currentSlots.action || currentSlots.object) &&
+    !hasExplicitTopicShiftOnNewTurn(userMessage, currentSlots)
+  ) {
+    logInfo("DETERMINISTIC_RESET_SKIPPED", {
+      reason: "interrogative_follow_up",
+      messagePreview: String(userMessage).slice(0, 80),
+      sessionId,
+      preserved: {
+        context: currentSlots.context,
+        object: currentSlots.object ?? null,
+        surface: currentSlots.surface ?? null,
+        action: currentSlots.action ?? null
+      }
+    });    return false;
+  }
+
   sessionContext.slots = {};
   sessionContext.pendingQuestion = null;
   sessionContext.pendingContexts = [];
@@ -5497,7 +5594,7 @@ function applyDeterministicSessionResetInPlace(sessionContext, sessionId, reason
   console.log("CONTEXT_RESET", {
     triggered: true,
     reason: reasonCode
-  });
+  });  return true;
 }
 
 /**
@@ -6513,7 +6610,7 @@ function consumeValidationInfo(sessionContext, sessionId) {
   return null;
 }
 
-function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
+function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId, userMessage = null) {
   const safeContext = sessionContext && typeof sessionContext === "object"
     ? sessionContext
     : {};
@@ -6521,6 +6618,24 @@ function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   const currentSlots = safeContext.slots && typeof safeContext.slots === "object"
     ? safeContext.slots
     : {};
+
+  if (
+    userMessage &&
+    isInterrogativeFollowUpMessage(userMessage) &&
+    currentSlots.context &&
+    (currentSlots.action || currentSlots.object)
+  ) {
+    logInfo("KNOWLEDGE_BOUNDARY_PRESERVE_SLOTS", {
+      sessionId,
+      messagePreview: String(userMessage).slice(0, 120),
+      preserved: {
+        context: currentSlots.context,
+        object: currentSlots.object ?? null,
+        surface: currentSlots.surface ?? null,
+        action: currentSlots.action ?? null
+      }
+    });    return safeContext;
+  }
 
   safeContext.lastProceduralSlots = { ...currentSlots };
   safeContext.proceduralSlots = {};
@@ -6534,7 +6649,6 @@ function clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId) {
   clearClarificationAskTracking(safeContext);
 
   saveSession(sessionId, safeContext);
-
   return safeContext;
 }
 
@@ -8544,14 +8658,32 @@ function handleSafetyTrustTurn({
     };
   }
 
-  sessionContext.slots = {};
+  const priorSlots = { ...(sessionContext.slots || {}) };
+  const shouldWipeSlotsForSafety =
+    analysis.reason === "safety_complete_signal" ||
+    (!analysis.missingCriticalField && analysis.triggered);
+
+  if (shouldWipeSlotsForSafety) {
+    sessionContext.slots = {};
+    sessionContext.tags = [];
+    logInfo("SAFETY_SLOT_WIPE", {
+      sessionId,
+      reason: analysis.reason,
+      priorSlots
+    });  } else {
+    logInfo("SAFETY_SLOT_PRESERVE", {
+      sessionId,
+      reason: analysis.reason,
+      missingCriticalField: analysis.missingCriticalField ?? null,
+      preservedSlots: priorSlots
+    });  }
+
   sessionContext.pendingQuestion = null;
   clearPendingClarificationSlots(sessionContext);
   sessionContext.state = "IDLE";
   delete sessionContext.pendingSelection;
   delete sessionContext.pendingSelectionMissingSlot;
   sessionContext.originalIntent = null;
-  sessionContext.tags = [];
 
   if (analysis.missingCriticalField && !trust.clarificationAsked) {
     const q =
@@ -8725,8 +8857,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     },
     async () => {
   try {
-    let sessionContext = getSession(sessionId);
-    const clarificationPendingAtEntry =
+    let sessionContext = getSession(sessionId);    const clarificationPendingAtEntry =
       Boolean(sessionContext?.pendingQuestion) ||
       (String(sessionContext?.state || "").startsWith("NEEDS_") &&
         sessionContext?.pendingClarification?.active === true);
@@ -8948,7 +9079,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     logChatPipelineStage("safety_gate");
     const precomputedSafetyGate = runSafetyGate({ routingMessage, sessionContext });
     interactionRef._precomputedSafetyGate = precomputedSafetyGate;
-
     if (precomputedSafetyGate.triggered) {
       logInfo("SAFETY_GATE_HARD_EXIT", {
         safetyTriggered: true,
@@ -9288,8 +9418,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       pendingSlotClarificationActive
     });
     if (!pendingSlotClarificationActive && sessionResetEval.reset && sessionResetEval.reasonCode) {
-      didContextResetForLocale = true;
-      applyDeterministicSessionResetInPlace(sessionContext, sessionId, sessionResetEval.reasonCode);
+      const deterministicResetApplied = applyDeterministicSessionResetInPlace(
+        sessionContext,
+        sessionId,
+        sessionResetEval.reasonCode,
+        userMessage
+      );
+      if (deterministicResetApplied) {
+        didContextResetForLocale = true;
+      }
     }
 
     const newDomain = detectDomain(userMessage);
@@ -9614,9 +9751,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     });
 
     if (isSafetyEnforced) {
-      logInfo("ENFORCED_SAFETY", { message: userMessage });
-      interactionRef.slots = {};
-      interactionRef.tags = [];
+      logInfo("ENFORCED_SAFETY", {
+        message: userMessage,
+        sessionSlotsBefore: { ...(sessionContext.slots || {}) }
+      });
+      interactionRef.slots = { ...(sessionContext.slots || {}) };
+      interactionRef.tags = sessionContext.tags || [];
       saveSession(sessionId, sessionContext);
       const safetyTurn = handleSafetyTrustTurn({
         userMessage,
@@ -10386,7 +10526,50 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         msgLen < 50 &&
         (!explicitNewContext || explicitNewContext === prevContext);
 
-      sessionContext.slots = preserveContext ? { context: prevContext } : {};
+      const interrogativeFollowUp =
+        isInterrogativeFollowUpMessage(userMessage) &&
+        !hasExplicitTopicShiftOnNewTurn(userMessage, prevSlots);
+      const declarativeProductFollowUp =
+        isDeclarativeProductRecommendationFollowUp(userMessage) &&
+        !hasExplicitTopicShiftOnNewTurn(userMessage, prevSlots);
+      const preserveFollowUpSlots =
+        (interrogativeFollowUp || declarativeProductFollowUp) &&
+        (prevSlots.action || prevSlots.object || prevSlots.surface);
+
+      if (preserveFollowUpSlots) {
+        sessionContext.slots = {
+          context: preserveContext ? prevContext : (prevSlots.context ?? null),
+          object: prevSlots.object ?? null,
+          surface: prevSlots.surface ?? null,
+          action: prevSlots.action ?? null,
+          brand: prevSlots.brand ?? null,
+          vehicleMake: prevSlots.vehicleMake ?? null,
+          vehicleModel: prevSlots.vehicleModel ?? null,
+          vehicleYear: prevSlots.vehicleYear ?? null
+        };
+        sessionContext.slotMeta = sessionContext.slotMeta || {};
+        for (const key of ["context", "object", "surface", "action"]) {
+          if (sessionContext.slots[key] != null) {
+            sessionContext.slotMeta[key] = "stale";
+          }
+        }
+        logInfo("SCOPE_RESET_FOLLOWUP_PRESERVE", {
+          sessionId,
+          preserved: {
+            context: sessionContext.slots.context,
+            object: sessionContext.slots.object,
+            surface: sessionContext.slots.surface,
+            action: sessionContext.slots.action
+          },
+          messagePreview: String(userMessage || "").slice(0, 120)
+        });      } else {
+        sessionContext.slots = preserveContext ? { context: prevContext } : {};
+        sessionContext.slotMeta = {
+          context: preserveContext ? "inferred" : "unknown",
+          surface: "unknown",
+          object: "unknown"
+        };      }
+
       sessionContext.pendingQuestion = null;
       sessionContext.pendingSelection = false;
       sessionContext.pendingSelectionMissingSlot = null;
@@ -10395,12 +10578,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext.originalIntent = null;
       clearPendingClarificationSlots(sessionContext);
       clearSurfaceAssistState(sessionContext);
-      sessionContext.slotMeta = {
-        context: preserveContext ? "inferred" : "unknown",
-        surface: "unknown",
-        object: "unknown"
-      };
-      if (preserveContext) {
+      if (!preserveFollowUpSlots && preserveContext) {
         logInfo("SLOT_CONTEXT_STICKY", {
           sessionId,
           preservedContext: prevContext,
@@ -10411,7 +10589,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (process.env.SESSION_DEBUG_LOG === "1") {
         logInfo("SESSION_SLOT_SCOPE_RESET", {
           sessionId,
-          reason: "new_turn_not_continuation",
+          reason: preserveFollowUpSlots
+            ? "interrogative_followup_preserve"
+            : "new_turn_not_continuation",
           clearedSlots: prevSlots,
           preservedContext: preserveContext ? prevContext : null,
           messagePreview: String(userMessage || "").slice(0, 120)
@@ -10535,17 +10715,22 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const DETERMINISTIC_SURFACE_OBJECTS = new Set(["glass", "jante", "caroserie", "mocheta"]);
       if (queryType === "procedural" && isHowToActionMsg) {
         const currentMsgSlots = extractSlotsFromMessage(userMessage);
+        const surfaceStatedInMessage = currentMsgSlots.surface || null;
         const clarificationSlots = {
           context: currentMsgSlots.context || sessionContext.slots?.context || null,
           object: currentMsgSlots.object || sessionContext.slots?.object || null,
-          surface: currentMsgSlots.surface || sessionContext.slots?.surface || null
+          surface: surfaceStatedInMessage
         };
         applyObjectContextInferenceInPlace(clarificationSlots, sessionContext.slotMeta);
         const mergedContext = clarificationSlots.context;
         const mergedObject = clarificationSlots.object;
-        const mergedSurface = clarificationSlots.surface;
 
-        if (mergedContext && mergedObject && !mergedSurface && !DETERMINISTIC_SURFACE_OBJECTS.has(mergedObject)) {
+        if (
+          mergedContext &&
+          mergedObject &&
+          !surfaceStatedInMessage &&
+          !DETERMINISTIC_SURFACE_OBJECTS.has(mergedObject)
+        ) {
           logInfo("PROCEDURAL_SURFACE_CLARIFICATION", {
             queryType,
             isHowToAction: isHowToActionMsg,
@@ -10597,8 +10782,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       ? processSlots(userMessage, "selection", sessionContext, {
         mergeWithSession: selectionPreviewMergeSession
       })
-      : null;
-    let routingDecision = routeRequest({
+      : null;    let routingDecision = routeRequest({
       queryType,
       message: userMessage,
       slots: selectionPreview?.slots || sessionContext?.slots || {}
@@ -10700,7 +10884,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     // INFORMATIONAL
     if (queryType === "informational" && previewAction === "knowledge") {
-      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
+      sessionContext = clearProceduralStateForKnowledgeBoundary(
+        sessionContext,
+        sessionId,
+        userMessage
+      );
 
       const sectionQuote = tryProductSectionQuoteKnowledge(userMessage, queryType);
       if (sectionQuote) {
@@ -11698,14 +11886,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         correctedContext: "interior"
       });
     }
-    if (isHardReset(userMessage)) {
+    const hardResetTriggered = isHardReset(userMessage);    if (hardResetTriggered) {
       sessionContext.slots = {};
       sessionContext.state = null;
       sessionContext.pendingQuestion = null;
       clearPendingClarificationSlots(sessionContext);
       clearSurfaceAssistState(sessionContext);
-    }
-    const pendingBeforeSlotUpdate = sessionContext.pendingQuestion
+    }    const pendingBeforeSlotUpdate = sessionContext.pendingQuestion
       ? { ...sessionContext.pendingQuestion }
       : null;
     // P0.6 — Build proposed slots in memory; commit to session only after pipeline + slot_validate.
@@ -11882,8 +12069,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (_vc.status !== "VALID") {
         // Apply any safe slot corrections first
         if (_vc.correctedSlots) {
-          Object.assign(sessionContext.slots, _vc.correctedSlots);
-        }
+          Object.assign(sessionContext.slots, _vc.correctedSlots);        }
         if (_vc.correctedSlotMeta) {
           sessionContext.slotMeta = {
             ...(sessionContext.slotMeta || {}),
@@ -11995,8 +12181,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       slotsUsed: sessionContext.slots
     });
     interactionRef.currentPhase = "routing";
-    logChatPipelineStage("route_request", { queryType });
-    routingDecision = routeRequest({
+    logChatPipelineStage("route_request", { queryType });    routingDecision = routeRequest({
       queryType,
       message: userMessage,
       slots: sessionContext.slots
@@ -12165,7 +12350,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     if (resolvedAction.action === "knowledge" || resolvedAction.action === "safety") {
-      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId);
+      sessionContext = clearProceduralStateForKnowledgeBoundary(
+        sessionContext,
+        sessionId,
+        userMessage
+      );
     }
 
     logInfo("ROUTER_DECISION", routingDecision);
@@ -12179,7 +12368,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       context: sessionContext.slots?.context || null,
       object: sessionContext.slots?.object || null,
       surface: sessionContext.slots?.surface || null,
-      action: sessionContext.slots?.action || null
+      action: sessionContext.slots?.action ?? null
     };
 
     // Log execution path (fulfills requirement for single execution path per request)
@@ -13136,6 +13325,12 @@ module.exports = {
     buildNoProductFallbackResponse,
     getClarificationQuestion,
     hasExplicitSelectionIntent,
-    appendSoftKnowledgeCtaIfEligible
+    appendSoftKnowledgeCtaIfEligible,
+    mergeSlots,
+    processSlots,
+    isHardReset,
+    isInterrogativeFollowUpMessage,
+    isDeclarativeProductRecommendationFollowUp,
+    hasExplicitTopicShiftOnNewTurn
   }
 };

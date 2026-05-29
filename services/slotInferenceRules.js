@@ -643,6 +643,34 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     sets: { action: "protect" }
   },
   {
+    token: "protejeaza",
+    raw: "protejează",
+    family: "action",
+    priority: 340,
+    sets: { action: "protect" }
+  },
+  {
+    token: /\bprotejare\b/,
+    raw: "protejare",
+    family: "action",
+    priority: 340,
+    sets: { action: "protect" }
+  },
+  {
+    token: /\bprotejarea\b/,
+    raw: "protejarea",
+    family: "action",
+    priority: 340,
+    sets: { action: "protect" }
+  },
+  {
+    token: /\bprotectia\b/,
+    raw: "protecția",
+    family: "action",
+    priority: 340,
+    sets: { action: "protect" }
+  },
+  {
     token: "protectie",
     raw: "protecție",
     family: "action",
