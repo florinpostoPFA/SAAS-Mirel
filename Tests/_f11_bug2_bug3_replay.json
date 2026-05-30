@@ -1,0 +1,24 @@
+{
+  "bug2": {
+    "input": "recomanda-mi o solutie pentru curatat farurile",
+    "decision": {
+      "action": "recommend",
+      "reasonCode": "routing.recommend",
+      "flowId": null,
+      "missingSlot": null
+    },
+    "assistantReply": "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)",
+    "productCount": 0
+  },
+  "bug3": {
+    "input": "recomanda un prosop de uscare",
+    "decision": {
+      "action": "selection",
+      "reasonCode": "routing.selection.retrieval_before_clarify",
+      "flowId": null,
+      "missingSlot": null
+    },
+    "assistantReply": "— Recomandări produse —\n• Soluție:\n- Prosop\n\nClarificare:\nUn detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?",
+    "productCount": 1
+  }
+}
