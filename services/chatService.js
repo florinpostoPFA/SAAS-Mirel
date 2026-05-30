@@ -120,7 +120,10 @@ const {
   logContextInferenceTrace,
   normalizeForContextInference
 } = require("./contextInferenceService");
-const { applyTokenInferenceToSessionSlots } = require("./slotInferenceFromMessage");
+const {
+  applyTokenInferenceToSessionSlots,
+  inferSlotsFromMessage
+} = require("./slotInferenceFromMessage");
 const { stripGreetingAndFillers, applySlangNormalize } = require("./messagePreprocessService");
 const { getNowIso } = require("./runtimeContext");
 const loggingV2 = require("./loggingV2");
@@ -1384,6 +1387,72 @@ function getFlowClarification(flowId, missingSlot, slots, responseLocale = "ro")
   };
 }
 
+const F12_SMART_FALLBACK_STOPWORDS = new Set([
+  "cum",
+  "curat",
+  "curata",
+  "curatat",
+  "vreau",
+  "am",
+  "sa",
+  "de",
+  "la",
+  "un",
+  "o",
+  "mi",
+  "ma",
+  "ce",
+  "pentru",
+  "mai",
+  "bine",
+  "exact",
+  "recomanda",
+  "recomand",
+  "solutie",
+  "produs"
+]);
+
+function extractUserNounFromMessage(message) {
+  const norm = normalizeTextForMatch(String(message || ""));
+  const tokens = norm
+    .split(/\s+/)
+    .map((t) => t.replace(/[^a-z0-9ăâîșț]+/gi, ""))
+    .filter((t) => t.length >= 4 && !F12_SMART_FALLBACK_STOPWORDS.has(t));
+  if (tokens.length === 0) return null;
+  return tokens.sort((a, b) => b.length - a.length)[0];
+}
+
+function formatSlotContextForSmartFallback(slots) {
+  const parts = [];
+  if (slots?.context) parts.push(String(slots.context));
+  if (slots?.surface) parts.push(String(slots.surface));
+  return parts.length ? parts.join(" + ") : null;
+}
+
+function buildSmartNoProductFallbackMessage(userMessage, slots) {
+  const noun = extractUserNounFromMessage(userMessage);
+  const ctx = formatSlotContextForSmartFallback(slots);
+  if (noun && ctx) {
+    return `Pentru \`${noun}\` (${ctx}) nu am gasit produs potrivit. Vrei sa cauti dupa alta categorie sau marca?`;
+  }
+  if (noun) {
+    return `Pentru \`${noun}\` nu am gasit produs potrivit. Vrei sa cauti dupa alta categorie sau marca?`;
+  }
+  return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
+}
+
+function buildSmartValidatorClarificationMessage(userMessage, slots, defaultQuestion) {
+  const noun = extractUserNounFromMessage(userMessage);
+  const ctx = formatSlotContextForSmartFallback(slots);
+  if (noun && ctx) {
+    return `Pentru \`${noun}\` (${ctx}) nu am gasit produs potrivit. Vrei sa cauti dupa alta categorie sau marca?`;
+  }
+  if (noun) {
+    return `Pentru \`${noun}\` nu am gasit produs potrivit. Vrei sa cauti dupa alta categorie sau marca?`;
+  }
+  return defaultQuestion;
+}
+
 function getClarificationQuestion(missingSlot, slots, _responseLocale = "ro") {
   if (missingSlot === "context") {
     return "Este pentru interior sau exterior?";
@@ -1394,7 +1463,7 @@ function getClarificationQuestion(missingSlot, slots, _responseLocale = "ro") {
   }
 
   if (missingSlot === "object") {
-    return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
+    return buildSmartNoProductFallbackMessage("", slots);
   }
 
   if (missingSlot === "intent_level") {
@@ -2853,6 +2922,9 @@ function extractSlotsForSafetyQuery(message) {
   if (msg.includes("scaun")) object = "scaun";
   if (msg.includes("cotiera")) object = "cotiera";
   if (msg.includes("parbriz")) object = "glass";
+  if (msg.includes("faruri") || msg.includes("farurile") || msg.includes("farul")) {
+    object = object || "glass";
+  }
   if (msg.includes("mocheta")) object = "mocheta";
   if (msg.includes("bord")) object = "bord";
   if (msg.includes("volan")) object = "volan";
@@ -4339,6 +4411,22 @@ const TAG_SURFACE_INCOMPATIBLE = {
   wheels:          new Set(['paint', 'glass', 'leather', 'textile', 'plastic']),
 };
 
+/** F12 — stale object slot vs intent tags (twin of TAG_SURFACE_INCOMPATIBLE). */
+const TAG_OBJECT_INCOMPATIBLE = {
+  glass_cleaner: new Set(["caroserie", "bord", "scaun", "mocheta", "jante", "anvelope"]),
+  glass: new Set(["caroserie", "bord", "scaun", "mocheta", "jante", "anvelope"]),
+  glass_cleaner_exterior: new Set(["caroserie", "bord", "scaun", "mocheta", "jante", "anvelope"]),
+  tire: new Set(["caroserie", "geam", "parbriz", "scaun", "bord", "mocheta", "glass"]),
+  wheel: new Set(["caroserie", "geam", "parbriz", "scaun", "bord", "mocheta", "glass"]),
+  wheels: new Set(["caroserie", "geam", "parbriz", "scaun", "bord", "mocheta", "glass"]),
+  ceramic_coating: new Set(["geam", "glass", "parbriz", "scaun", "mocheta", "bord"]),
+  coating: new Set(["geam", "glass", "parbriz", "scaun", "mocheta", "bord"]),
+  wax: new Set(["geam", "glass", "parbriz", "scaun", "mocheta", "bord"]),
+  sealant: new Set(["geam", "glass", "parbriz", "scaun", "mocheta", "bord"]),
+  interior_cleaner: new Set(["caroserie", "geam", "glass", "parbriz", "jante", "anvelope"]),
+  upholstery_cleaner: new Set(["caroserie", "geam", "glass", "parbriz", "jante", "anvelope"])
+};
+
 function runTokenSlotInferencePass({
   userMessage,
   sessionContext,
@@ -4363,6 +4451,10 @@ function runTokenSlotInferencePass({
   let staleInvalidation = null;
   if (Array.isArray(tags) && sessionContext.slots) {
     staleInvalidation = invalidateStaleSurfaceFromTags(sessionContext.slots, tags, sessionId);
+    const objectStale = invalidateStaleObjectFromTags(sessionContext.slots, tags, sessionId);
+    if (objectStale) {
+      staleInvalidation = staleInvalidation || objectStale;
+    }
     if (staleInvalidation) {
       sessionContext.slotMeta = sessionContext.slotMeta || {
         context: "unknown",
@@ -4431,6 +4523,65 @@ function invalidateStaleSurfaceFromTags(slots, tags, sessionId) {
     }
   }
   return null;
+}
+
+function invalidateStaleObjectFromTags(slots, tags, sessionId) {
+  if (!slots) return null;
+  const object = canonicalizeObjectValue(slots.object);
+  if (!object) return null;
+
+  for (const tag of tags) {
+    const tagKey = String(tag || "").toLowerCase();
+    const incompatible = TAG_OBJECT_INCOMPATIBLE[tagKey];
+    if (incompatible && incompatible.has(object)) {
+      const oldObject = slots.object;
+      slots.object = null;
+      const reason = `tag_${tagKey}_vs_object_${object}`;
+      logInfo("STALE_OBJECT_RESET", {
+        sessionId,
+        tag: tagKey,
+        oldObject,
+        newTags: tags,
+        reason
+      });
+      return { object: oldObject, reason };
+    }
+  }
+  return null;
+}
+
+function isIntentLevelPendingConfirmationOnly(message) {
+  const norm = String(message || "").toLowerCase().trim();
+  if (!norm) return true;
+  const words = norm.split(/\s+/).filter(Boolean);
+  if (words.length === 1 && (isYes(norm) || isNo(norm) || ["ok", "sigur"].includes(norm))) {
+    return true;
+  }
+  if (classifyIntentLevelReply(message).kind !== "none") {
+    return true;
+  }
+  return false;
+}
+
+function tryClearIntentLevelPendingForTokenSignal(sessionContext, userMessage, sessionId) {
+  const pending = sessionContext?.pendingQuestion;
+  if (pending?.slot !== "intent_level") return false;
+  if (isIntentLevelPendingConfirmationOnly(userMessage)) return false;
+  const preview = inferSlotsFromMessage({
+    message: userMessage,
+    currentSlots: sessionContext.slots || {},
+    slotMeta: sessionContext.slotMeta || {}
+  });
+  if (!preview.matches || preview.matches.length === 0) return false;
+  sessionContext.pendingQuestion = null;
+  sessionContext.state = "IDLE";
+  clearPendingClarificationSlots(sessionContext);
+  logInfo("INTENT_LEVEL_PENDING_CLEARED_TOKEN_INFERENCE", {
+    sessionId,
+    matchCount: preview.matches.length,
+    tokens: preview.matches.map((m) => m.token)
+  });
+  return true;
 }
 
 function filterByFlow(products, activeFlow) {
@@ -10750,6 +10901,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
     }
 
+    tryClearIntentLevelPendingForTokenSignal(sessionContext, userMessage, sessionId);
+
     if (!shouldPreserveFollowUpState && !sessionContext.pendingQuestion) {
       runTokenSlotInferencePass({
         userMessage,
@@ -11320,10 +11473,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slotResult.slots || {}
       );
       const staleInvalidation = invalidateStaleSurfaceFromTags(selectionSlots, selectionTags, sessionId);
-      if (staleInvalidation) {
+      const staleObjectInvalidation = invalidateStaleObjectFromTags(selectionSlots, selectionTags, sessionId);
+      if (staleInvalidation || staleObjectInvalidation) {
         if (sessionContext.slots) {
-          sessionContext.slots.surface = null;
-          sessionContext.slots.object = null;
+          if (staleInvalidation) {
+            sessionContext.slots.surface = null;
+            sessionContext.slots.object = null;
+          } else if (staleObjectInvalidation) {
+            sessionContext.slots.object = null;
+          }
         }
         saveSession(sessionId, sessionContext);
       }
@@ -11864,9 +12022,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             sessionContext.slots = proceduralSlots;
             saveSession(sessionId, sessionContext);
             interactionRef.slotValidatorTelemetry = previewValidation.validatorTelemetry || null;
+            const validatorQuestion = buildSmartValidatorClarificationMessage(
+              userMessage,
+              proceduralSlots,
+              previewValidation.ask.question
+            );
             return endInteraction(interactionRef, {
               type: "question",
-              message: previewValidation.ask.question
+              message: validatorQuestion
             }, {
               slots: sessionContext.slots,
               decision: {
@@ -12763,13 +12926,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       const allowedObjects = getAllowedObjects(slotResult.slots);
       const options = allowedObjects.join(", ");
+      const smartFallback = buildSmartNoProductFallbackMessage(userMessage, slotResult.slots);
+      const objectQuestion =
+        smartFallback.includes("nu am gasit produs")
+          ? smartFallback
+          : `${smartFallback} (${options})`;
 
       logResponseSummary("question", { products: 0 });
       return endInteraction(interactionRef, {
         type: "question",
         message: resolvedAction?.correctionAck
-          ? `${resolvedAction.correctionAck}\nCe vrei sa cureti mai exact? (ex: scaune, bord, geamuri) (${options})`
-          : `Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri) (${options})`
+          ? `${resolvedAction.correctionAck}\n${objectQuestion}`
+          : objectQuestion
       }, {
         decision: resolvedAction,
         outputType: "question"
@@ -13495,7 +13663,13 @@ module.exports = {
     filterByUseCase,
     filterByFlow,
     invalidateStaleSurfaceFromTags,
+    invalidateStaleObjectFromTags,
     TAG_SURFACE_INCOMPATIBLE,
+    TAG_OBJECT_INCOMPATIBLE,
+    buildSmartNoProductFallbackMessage,
+    buildSmartValidatorClarificationMessage,
+    extractUserNounFromMessage,
+    tryClearIntentLevelPendingForTokenSignal,
     resolveApplicabilityDeclineReason,
     excludeToolsForChemicalQuery,
     isToolProduct,

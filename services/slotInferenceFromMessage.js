@@ -28,6 +28,25 @@ const CANONICAL_ACTION_VALUES = Object.freeze([
 
 const CANONICAL_CONTEXT_VALUES = Object.freeze(["interior", "exterior"]);
 
+const CANONICAL_OBJECT_VALUES = Object.freeze([
+  "glass",
+  "geam",
+  "parbriz",
+  "oglinzi",
+  "oglinda",
+  "scaun",
+  "cotiera",
+  "bord",
+  "mocheta",
+  "jante",
+  "anvelope",
+  "caroserie",
+  "volan",
+  "tapiterie",
+  "plafon",
+  "faruri"
+]);
+
 const SLOT_KEYS = Object.freeze(["context", "surface", "object", "action", "domain"]);
 
 function normalizeMessageText(text) {
@@ -59,6 +78,12 @@ function validateRulesAtLoad() {
     }
     if (sets.context != null && !CANONICAL_CONTEXT_VALUES.includes(sets.context)) {
       throw new Error(`slotInferenceFromMessage: invalid context "${sets.context}" in rule token ${rule.token}`);
+    }
+    if (sets.object != null) {
+      const obj = String(sets.object).trim().toLowerCase();
+      if (!CANONICAL_OBJECT_VALUES.includes(obj)) {
+        throw new Error(`slotInferenceFromMessage: invalid object "${sets.object}" in rule token ${rule.token}`);
+      }
     }
   }
 }
@@ -120,6 +145,9 @@ function canonicalizeRuleSets(sets) {
   if (sets.domain != null) out.domain = sets.domain;
   if (sets.surface != null) {
     out.surface = String(sets.surface).trim().toLowerCase();
+  }
+  if (sets.object != null) {
+    out.object = String(sets.object).trim().toLowerCase();
   }
   return out;
 }
@@ -185,7 +213,7 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
     }
 
     for (const slotKey of SLOT_KEYS) {
-      if (slotKey === "domain" || slotKey === "object") continue;
+      if (slotKey === "domain") continue;
       const value = canonicalSets[slotKey];
       if (value == null) continue;
 
