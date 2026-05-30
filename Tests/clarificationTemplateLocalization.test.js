@@ -58,10 +58,10 @@ describe("F10 — clarification template localization", () => {
     expect(q).not.toMatch(/\bWhich surface are you working\b/i);
   });
 
-  it("Bug #3 replay returns Romanian context clarification", async () => {
+  it("generic product search returns Romanian context clarification (F11 defers catalog match to routingRetrievalBeforeClarify)", async () => {
     sessionLifecycle.resetAllSessions();
     const handleChat = loadFreshHandleChat();
-    const sid = `f10-bug3-${Date.now()}`;
+    const sid = `f10-clarify-ro-${Date.now()}`;
     const products = [
       {
         id: "stub-towel",
@@ -71,7 +71,7 @@ describe("F10 — clarification template localization", () => {
         searchText: "prosop uscare microfibră"
       }
     ];
-    const reply = await handleChat("recomanda un prosop de uscare", "C1", products, sid);
+    const reply = await handleChat("vreau un articol bun", "C1", products, sid);
     const msg = reply?.message || reply?.reply || "";
     expect(reply?.decisionTrace?.missingSlot).toBe("context");
     expect(String(msg)).toMatch(/Este pentru interior sau exterior/i);
@@ -83,7 +83,7 @@ describe("F10 — clarification template localization", () => {
       outPath,
       JSON.stringify(
         {
-          input: "recomanda un prosop de uscare",
+          input: "vreau un articol bun",
           missingSlot: reply?.decisionTrace?.missingSlot,
           assistantReply: msg,
           sessionSlots: snap?.slots || {}

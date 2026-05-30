@@ -4688,6 +4688,84 @@ function buildFinalTags(coreTags, workingTags, slots = {}) {
   ].filter(Boolean))];
 }
 
+const RETRIEVAL_BEFORE_CLARIFY_STOPWORDS = new Set([
+  "recomanda",
+  "recomand",
+  "recomandă",
+  "recomandare",
+  "recomandari",
+  "recomandarii",
+  "recomandam",
+  "recomandati",
+  "vreau",
+  "un",
+  "o",
+  "de",
+  "pentru",
+  "mi",
+  "ma",
+  "ce",
+  "cel",
+  "mai",
+  "bun",
+  "buna",
+  "solutie",
+  "solutii",
+  "produs",
+  "produse",
+  "masina",
+  "auto",
+  "cum",
+  "sa",
+  "si",
+  "eu",
+  "ceva",
+  "care",
+  "este",
+  "sunt"
+]);
+
+function extractRetrievalMatchPhrasesFromMessage(message) {
+  const norm = normalizeTextForMatch(String(message || ""));
+  if (!norm) return [];
+  const tokens = norm
+    .split(/\s+/)
+    .map((t) => t.replace(/[^a-z0-9ăâîșț]+/gi, ""))
+    .filter((t) => t.length >= 4 && !RETRIEVAL_BEFORE_CLARIFY_STOPWORDS.has(t));
+  const phrases = [...tokens];
+  if (tokens.length >= 2) {
+    phrases.push(tokens.join(" "));
+  }
+  return [...new Set(phrases)].filter(Boolean);
+}
+
+/**
+ * F11 — catalog text retrieval when slots are empty but intent is product_search.
+ * Reuses findProductsByRoleConfig strong/weak matchText paths (searchText + customer_language).
+ */
+function tryRetrieveBeforeClarifySelection(userMessage, products, tagHints = []) {
+  const matchText = extractRetrievalMatchPhrasesFromMessage(userMessage);
+  if (matchText.length === 0 || matchText.length < 2) {
+    return { candidates: [], decision: "fall_through_to_clarify", matchText };
+  }
+  const safeTags = Array.isArray(tagHints)
+    ? tagHints.map((t) => String(t).toLowerCase()).filter(Boolean)
+    : [];
+  const roleConfig = {
+    matchText,
+    matchTags: safeTags,
+    requiredTags: [],
+    optionalTags: safeTags,
+    excludeTags: []
+  };
+  const candidates = findProductsByRoleConfig(roleConfig, products);
+  return {
+    candidates,
+    decision: candidates.length > 0 ? "retrieve" : "fall_through_to_clarify",
+    matchText
+  };
+}
+
 function findProductsByRoleConfig(roleConfig, products, roleId = null, informationalContext = null) {
   const safeRoleConfig = roleConfig && typeof roleConfig === "object" ? roleConfig : {};
   const matchTags = Array.isArray(safeRoleConfig.matchTags)
@@ -9359,6 +9437,34 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       lowSignalCheck.lowSignal &&
       !hasStrongSlots(lowSignalSlots)
     ) {
+      const lowSignalHl = inferHighLevelIntent(intentCore);
+      if (lowSignalHl === "product_search") {
+        const lowSignalTags = Array.isArray(lowSignalIntent?.tags) ? lowSignalIntent.tags : [];
+        const retrievalAttempt = tryRetrieveBeforeClarifySelection(
+          userMessage,
+          products,
+          lowSignalTags
+        );
+        logInfo("ROUTING_RETRIEVAL_BEFORE_CLARIFY", {
+          intentType: lowSignalHl,
+          intentTags: lowSignalTags,
+          tokenInferenceMatches: [],
+          retrievalCandidateCount: retrievalAttempt.candidates.length,
+          decision: retrievalAttempt.decision,
+          matchPhrases: retrievalAttempt.matchText,
+          path: "low_signal_gate"
+        });
+        if (retrievalAttempt.candidates.length > 0) {
+          lowSignalCheck = { lowSignal: false, reason: "f11_retrieval_before_clarify" };
+          lowSignalTelemetryFirst.lowSignalDetected = false;
+          lowSignalTelemetryFirst.lowSignalReason = "f11_retrieval_before_clarify";
+          lowSignalTelemetryFirst.lowSignalRecoveryApplied = true;
+        }
+      }
+
+      if (!lowSignalCheck.lowSignal) {
+        // Fall through to normal routing (F11 retrieval matched).
+      } else {
       sessionContext.slots = {};
       sessionContext.state = "IDLE";
       sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
@@ -9411,6 +9517,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           slots: sessionContext.slots || {}
         }
       );
+      }
     }
 
     // Load settings once and reuse the full object across the whole flow.
@@ -11083,7 +11190,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       currentSlots = { ...(sessionContext.slots || {}) };
       slotResult.slots = currentSlots;
       const problemType = sessionContext.problemType || null;
-      const selectionDecision = enforceClarificationContract(resolveActionFinal({
+      let selectionDecision = enforceClarificationContract(resolveActionFinal({
         problemType,
         message: {
           text: userMessage,
@@ -11104,32 +11211,72 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           after: selectionDecision
         });
       }
+
+      let selectionPreRetrievedCandidates = null;
+      const tokenInferenceMatches =
+        interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? [];
+      const tokenInferenceEmpty =
+        !Array.isArray(tokenInferenceMatches) || tokenInferenceMatches.length === 0;
+      const highLevelIntent = inferHighLevelIntent(userMessage);
+
       if (!hasRequiredSelectionSlots(currentSlots)) {
         const missing = selectionDecision.missingSlot;
+        let retrievalCandidateCount = 0;
+        let retrievalDecision = "fall_through_to_clarify";
 
-        sessionContext.slots = currentSlots;
-        interactionRef.slots = currentSlots;
-        sessionContext.state =
-          missing === "context" ? "NEEDS_CONTEXT" :
-          missing === "object" ? "NEEDS_OBJECT" :
-          missing === "surface" ? "NEEDS_SURFACE" :
-          sessionContext.state;
-        sessionContext.originalIntent = "selection";
-        sessionContext.pendingSelection = true;
-        sessionContext.pendingSelectionMissingSlot = missing || null;
-        saveSession(sessionId, sessionContext);
+        if (highLevelIntent === "product_search" && tokenInferenceEmpty) {
+          const retrievalAttempt = tryRetrieveBeforeClarifySelection(
+            userMessage,
+            products,
+            selectionTagsBeforeDecision
+          );
+          retrievalCandidateCount = retrievalAttempt.candidates.length;
+          retrievalDecision = retrievalAttempt.decision;
+          logInfo("ROUTING_RETRIEVAL_BEFORE_CLARIFY", {
+            intentType: highLevelIntent,
+            intentTags: workingTags,
+            tokenInferenceMatches,
+            retrievalCandidateCount,
+            decision: retrievalDecision,
+            matchPhrases: retrievalAttempt.matchText
+          });
+          if (retrievalAttempt.candidates.length > 0) {
+            selectionPreRetrievedCandidates = retrievalAttempt.candidates;
+            selectionDecision = {
+              ...selectionDecision,
+              action: "selection",
+              flowId: null,
+              missingSlot: null,
+              reasonCode: "routing.selection.retrieval_before_clarify"
+            };
+          }
+        }
 
-        return endInteraction(interactionRef, {
-          type: "question",
-          message:
-            getClarificationQuestion(missing, currentSlots, sessionContext.responseLocale)
-        }, {
-          decision: selectionDecision,
-          outputType: "question"
-        });
+        if (!selectionPreRetrievedCandidates) {
+          sessionContext.slots = currentSlots;
+          interactionRef.slots = currentSlots;
+          sessionContext.state =
+            missing === "context" ? "NEEDS_CONTEXT" :
+            missing === "object" ? "NEEDS_OBJECT" :
+            missing === "surface" ? "NEEDS_SURFACE" :
+            sessionContext.state;
+          sessionContext.originalIntent = "selection";
+          sessionContext.pendingSelection = true;
+          sessionContext.pendingSelectionMissingSlot = missing || null;
+          saveSession(sessionId, sessionContext);
+
+          return endInteraction(interactionRef, {
+            type: "question",
+            message:
+              getClarificationQuestion(missing, currentSlots, sessionContext.responseLocale)
+          }, {
+            decision: selectionDecision,
+            outputType: "question"
+          });
+        }
       }
 
-      if (selectionDecision.action === "clarification") {
+      if (selectionDecision.action === "clarification" && !selectionPreRetrievedCandidates) {
         logInfo("ENFORCED_CLARIFICATION", {
           queryType,
           missingSlot: selectionDecision.missingSlot
@@ -11296,18 +11443,20 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         maxProducts: MAX_SELECTION_PRODUCTS
       });
 
-      const broadCandidates = roleConfig
-        ? findProductsByRoleConfig(roleConfig, products, role)
-        : loggingV2.withSearchPhaseSync(
-            () =>
-              findRelevantProducts(selectionTags, products, MAX_SELECTION_PRODUCTS, {
-                strictTagFilter: !(sessionContext.objective?.needsCompletion && isContinuation),
-                message: userMessage,
-                slots: selectionSlots,
-                settings
-              }),
-            (c) => ({ productCount: Array.isArray(c) ? c.length : 0, path: "selection" })
-          );
+      const broadCandidates = selectionPreRetrievedCandidates
+        ? selectionPreRetrievedCandidates
+        : roleConfig
+          ? findProductsByRoleConfig(roleConfig, products, role)
+          : loggingV2.withSearchPhaseSync(
+              () =>
+                findRelevantProducts(selectionTags, products, MAX_SELECTION_PRODUCTS, {
+                  strictTagFilter: !(sessionContext.objective?.needsCompletion && isContinuation),
+                  message: userMessage,
+                  slots: selectionSlots,
+                  settings
+                }),
+              (c) => ({ productCount: Array.isArray(c) ? c.length : 0, path: "selection" })
+            );
 
       const hardFilterResult = applyHardFilter(broadCandidates, selectionSlots);
       logInfo("HARD_FILTER", hardFilterResult.meta);
@@ -13367,6 +13516,8 @@ module.exports = {
     isCleaningProduct,
     buildNoProductFallbackResponse,
     getClarificationQuestion,
+    tryRetrieveBeforeClarifySelection,
+    extractRetrievalMatchPhrasesFromMessage,
     hasExplicitSelectionIntent,
     appendSoftKnowledgeCtaIfEligible,
     mergeSlots,
