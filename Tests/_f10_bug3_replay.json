@@ -1,0 +1,15 @@
+{
+  "input": "recomanda un prosop de uscare",
+  "missingSlot": "context",
+  "assistantReply": "Este pentru interior sau exterior?",
+  "sessionSlots": {
+    "context": null,
+    "surface": null,
+    "object": null,
+    "brand": null,
+    "vehicleMake": null,
+    "vehicleModel": null,
+    "vehicleYear": null,
+    "action": null
+  }
+}

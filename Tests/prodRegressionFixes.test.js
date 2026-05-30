@@ -35,26 +35,24 @@ describe("Prod regression fixes (locale, mirrors, shine heuristic, narrowing)", 
     expect(s.context).toBe("exterior");
   });
 
-  it("buildLowSignalClarificationQuestion uses English for intent_level when locale is en", () => {
+  it("buildLowSignalClarificationQuestion uses Romanian for intent_level even when locale is en (F10)", () => {
     const q = buildLowSignalClarificationQuestion("x", "x", "en");
-    expect(q.toLowerCase()).toContain("steps");
-    expect(q.toLowerCase()).toContain("product");
-    expect(q).not.toMatch(/recomandare de produse|vrei pași/i);
+    expect(q).toMatch(/recomandare de produse|vrei pași/i);
+    expect(q).not.toMatch(/\bDo you want steps\b/i);
   });
 
   it("inferHighLevelIntent: BMW + shine goal → product_search (not knowledge dead-end)", () => {
     expect(inferHighLevelIntent("bmw negru mat vreau sa luceasca")).toBe("product_search");
   });
 
-  it("handleChat: EN opener then low-signal follow-up → English intent_level question", async () => {
+  it("handleChat: EN opener then low-signal follow-up → Romanian intent_level question (F10)", async () => {
     const sessionId = `prod-reg-en-intent-${Date.now()}`;
     await handleChat("Hello I need help cleaning my car exterior", "C1", [], sessionId);
     const r2 = await handleChat("x", "C1", [], sessionId);
     const msg = String(r2.message || r2.reply || "");
     expect(r2.type).toBe("question");
-    expect(msg.toLowerCase()).toContain("steps");
-    expect(msg.toLowerCase()).toContain("product");
-    expect(msg).not.toMatch(/recomandare de produse|vrei pași/i);
+    expect(msg).toMatch(/recomandare de produse|vrei pași/i);
+    expect(msg).not.toMatch(/\bDo you want steps\b/i);
   });
 
   it("handleChat: oglinzile → glass_clean_basic flow", async () => {

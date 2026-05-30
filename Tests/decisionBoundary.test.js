@@ -301,7 +301,7 @@ describe("Decision boundary and reset rules", () => {
     expect(message).toContain("\n\n");
   });
 
-  it("missing surface clarification in en contains only english helper", async () => {
+  it("missing surface clarification uses Romanian helper even when session locale is en (F10)", async () => {
     const sessionId = `surface-clar-en-${Date.now()}`;
 
     saveSession(sessionId, {
@@ -319,9 +319,9 @@ describe("Decision boundary and reset rules", () => {
 
     expect(result.type).toBe("question");
     const message = String(result.message || result.reply || "");
-    expect(message).toContain("What surface is it: textile, piele, plastic, or alcantara?");
-    expect(message).toContain("Not sure? Tell me your car (make, model, year) and I'll help you pick.");
-    expect(message).not.toContain("Nu esti sigur?");
+    expect(message).toContain("Ce suprafata este: textile, piele, plastic sau alcantara?");
+    expect(message).toContain("Nu esti sigur?");
+    expect(message).not.toContain("Not sure?");
     expect(message).toContain("\n\n");
   });
 

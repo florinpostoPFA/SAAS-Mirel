@@ -199,17 +199,12 @@ function containsEnglishPhrases(text) {
   return /\b(what|which|recommend|product|products|please|sorry|no matching|interior|exterior|surface|material)\b/.test(s);
 }
 
-function getProceduralSurfaceEnumQuestion(responseLocale) {
-  return normalizeResponseLocale(responseLocale) === "en"
-    ? "What surface is it: textile, piele, plastic, or alcantara?"
-    : "Ce suprafata este: textile, piele, plastic sau alcantara?";
+function getProceduralSurfaceEnumQuestion(_responseLocale) {
+  return "Ce suprafata este: textile, piele, plastic sau alcantara?";
 }
 
-function getInteriorSurfaceLlmAssistBaseQuestion(responseLocale) {
-  const loc = normalizeResponseLocale(responseLocale);
-  return loc === "en"
-    ? "What material is the surface? (textile, leather, etc.) If you are not sure, tell me your car make, model, and year."
-    : "Din ce material este suprafata? (textil, piele, etc.) Daca nu esti sigur, spune-mi marca, modelul si anul masinii.";
+function getInteriorSurfaceLlmAssistBaseQuestion(_responseLocale) {
+  return "Din ce material este suprafata? (textil, piele, etc.) Daca nu esti sigur, spune-mi marca, modelul si anul masinii.";
 }
 
 const SURFACE_ASSIST_STRINGS = {
@@ -246,13 +241,9 @@ function qualifiesForInteriorSurfaceAssist(slots) {
   return true;
 }
 
-function appendSurfaceAssistFallbackCTA(baseMessage, responseLocale) {
+function appendSurfaceAssistFallbackCTA(baseMessage, _responseLocale) {
   if (!resolveSurfaceAssistFlag().effective || typeof baseMessage !== "string") {
     return baseMessage;
-  }
-  const loc = normalizeResponseLocale(responseLocale);
-  if (loc === "en") {
-    return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.en.cta}`;
   }
   return `${baseMessage}\n\n${SURFACE_ASSIST_STRINGS.ro.cta}`;
 }
@@ -1393,34 +1384,24 @@ function getFlowClarification(flowId, missingSlot, slots, responseLocale = "ro")
   };
 }
 
-function getClarificationQuestion(missingSlot, slots, responseLocale = "ro") {
-  const loc = normalizeResponseLocale(responseLocale);
+function getClarificationQuestion(missingSlot, slots, _responseLocale = "ro") {
   if (missingSlot === "context") {
-    if (canonicalizeObjectValue(slots?.object) === "glass") {
-      return loc === "en" ? "Is it interior or exterior?" : "Este interior sau exterior?";
-    }
-    return loc === "en"
-      ? "Is it interior or exterior?"
-      : "Este interior sau exterior?";
+    return "Este pentru interior sau exterior?";
   }
 
   if (missingSlot === "surface") {
-    return buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, null, null);
+    return buildSurfaceClarificationQuestionWithAssist(slots, "ro", null, null);
   }
 
   if (missingSlot === "object") {
-    return loc === "en"
-      ? "What exactly do you want to clean? (e.g., seats, dashboard, windows)"
-      : "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
+    return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
   }
 
   if (missingSlot === "intent_level") {
-    return buildLowSignalClarificationQuestion("", "", responseLocale);
+    return buildLowSignalClarificationQuestion("", "", "ro");
   }
 
-  return loc === "en"
-    ? "What exactly do you want to clean? (e.g., seats, dashboard, windows)"
-    : "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
+  return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
 }
 
 function withClarificationRetryHint(message, shouldAppend, responseLocale = "ro") {
@@ -3467,10 +3448,7 @@ function buildSurfaceClarificationQuestionWithAssist(slots, responseLocale, sess
   if (s.context === "interior") {
     base = llmAssistInterior ? getInteriorSurfaceLlmAssistBaseQuestion(loc) : getProceduralSurfaceEnumQuestion(loc);
   } else if (s.context === "exterior") {
-    base =
-      loc === "en"
-        ? "Is it interior or exterior? Which surface are you working on? (paint / glass / wheels)"
-        : "Este interior sau exterior? Pe ce suprafata lucrezi? (vopsea / geamuri / jante)";
+    base = "Este pentru interior sau exterior? Pe ce suprafata lucrezi? (vopsea / geamuri / jante)";
   } else {
     base = getProceduralSurfaceEnumQuestion(loc);
   }
@@ -4967,15 +4945,12 @@ function enrichProducts(products, catalog = []) {
 function getFlowDisambiguationQuestion(candidateFlows, slots, responseLocale = "ro") {
   const safeFlows = Array.isArray(candidateFlows) ? candidateFlows : [];
   const safeSlots = slots && typeof slots === "object" ? slots : {};
-  const loc = normalizeResponseLocale(responseLocale);
 
   const missing = getMissingSlot(safeSlots);
   if (missing === "context") {
     return {
       state: "NEEDS_CONTEXT",
-      message: loc === "en"
-        ? "Do you want to clean the interior or the exterior?"
-        : "Vrei să cureți interiorul sau exteriorul mașinii?"
+      message: "Vrei să cureți interiorul sau exteriorul mașinii?"
     };
   }
 
@@ -5012,9 +4987,7 @@ function getFlowDisambiguationQuestion(candidateFlows, slots, responseLocale = "
 
     return {
       state: "NEEDS_SURFACE",
-      message: loc === "en"
-        ? `Which surface are you working on? (${options})`
-        : `Pe ce suprafata vrei să lucrezi? (${options})`
+      message: `Pe ce suprafata vrei să lucrezi? (${options})`
     };
   }
 
@@ -6089,7 +6062,8 @@ function isMaterialAnswer(message) {
 const RO_WORDS = [
   "salut", "buna", "bună", "cum", "cat", "unde", "cand",
   "curat", "curata", "spal", "masina", "cotiera", "bord",
-  "murdar", "solutie"
+  "murdar", "solutie",
+  "recomanda", "recomand", "prosop", "uscare", "produs", "produse"
 ];
 
 function detectLanguage(message) {

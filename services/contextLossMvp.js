@@ -256,13 +256,12 @@ function maybeAutoConfirmSurfaceFromMessage(message, slots, slotMeta) {
   meta.surface = "confirmed";
 }
 
-function pickClarificationQuestion(locale, useRecovery, useDegraded, normalQuestion) {
-  const loc = String(locale || "ro").toLowerCase() === "en" ? "en" : "ro";
+function pickClarificationQuestion(_locale, useRecovery, useDegraded, normalQuestion) {
   if (useDegraded) {
-    return loc === "en" ? buildNarrowDegradedQuestionEn() : buildNarrowDegradedQuestionRo();
+    return buildNarrowDegradedQuestionRo();
   }
   if (useRecovery) {
-    return loc === "en" ? buildRecoveryClarificationEn() : buildRecoveryClarificationRo();
+    return buildRecoveryClarificationRo();
   }
   return normalQuestion;
 }
