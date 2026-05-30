@@ -1,0 +1,94 @@
+[
+  {
+    "case": "log_a_polluted",
+    "input": "cum curat farurile?",
+    "decisionAction": "flow",
+    "missingSlot": null,
+    "reasonCode": "routing.flow",
+    "productCount": 1,
+    "assistantReply": "— Flux recomandat —\nSubiect: Curatare geamuri (ghid rapid)\n\nTitlu: Curatare geamuri (ghid rapid)\nPasi:\n\nPasul 1: Aplicare glass cleaner\n\nCe faci:\nPulverizeaza moderat pe geam sau pe laveta dedicata.\n\nProduse:\n\nRecomandat:\n- Glass Cleaner Stub\n\nPasul 2: Stergere cu microfibra\n\nCe faci:\nSterge uniform si finiseaza cu partea uscata pentru claritate.\n\nProduse:\n\nRecomandat:\n- Glass Cleaner Stub\n\nPasul ",
+    "slots": {
+      "context": "exterior",
+      "surface": "glass",
+      "object": "glass",
+      "brand": null,
+      "vehicleMake": null,
+      "vehicleModel": null,
+      "vehicleYear": null,
+      "action": "clean"
+    }
+  },
+  {
+    "case": "log_a_fresh",
+    "input": "cum curat farurile?",
+    "decisionAction": "flow",
+    "missingSlot": null,
+    "reasonCode": "routing.flow",
+    "productCount": 1,
+    "assistantReply": "— Flux recomandat —\nSubiect: Curatare geamuri (ghid rapid)\n\nTitlu: Curatare geamuri (ghid rapid)\nPasi:\n\nPasul 1: Aplicare glass cleaner\n\nCe faci:\nPulverizeaza moderat pe geam sau pe laveta dedicata.\n\nProduse:\n\nRecomandat:\n- Glass Cleaner Stub\n\nPasul 2: Stergere cu microfibra\n\nCe faci:\nSterge uniform si finiseaza cu partea uscata pentru claritate.\n\nProduse:\n\nRecomandat:\n- Glass Cleaner Stub\n\nPasul ",
+    "slots": {
+      "context": "exterior",
+      "surface": "glass",
+      "object": "glass",
+      "brand": null,
+      "vehicleMake": null,
+      "vehicleModel": null,
+      "vehicleYear": null,
+      "action": "clean"
+    }
+  },
+  {
+    "case": "log_b_pending_intent",
+    "input": "curatat farurile",
+    "decisionAction": "flow",
+    "missingSlot": null,
+    "reasonCode": "routing.flow",
+    "productCount": 1,
+    "assistantReply": "— Flux recomandat —\nSubiect: Curatare geamuri (ghid rapid)\n\nTitlu: Curatare geamuri (ghid rapid)\nPasi:\n\nPasul 1: Aplicare glass cleaner\n\nCe faci:\nPulverizeaza moderat pe geam sau pe laveta dedicata.\n\nProduse:\n\nRecomandat:\n- Glass Cleaner Stub\n\nPasul 2: Stergere cu microfibra\n\nCe faci:\nSterge uniform si finiseaza cu partea uscata pentru claritate.\n\nProduse:\n\nRecomandat:\n- Glass Cleaner Stub\n\nPasul ",
+    "slots": {
+      "context": "exterior",
+      "surface": "glass",
+      "object": "glass",
+      "brand": null,
+      "vehicleMake": null,
+      "vehicleModel": null,
+      "vehicleYear": null,
+      "action": "clean"
+    }
+  },
+  {
+    "case": "regression_si_pentru_interior",
+    "input": "si pentru interior?",
+    "decisionAction": "clarification",
+    "missingSlot": "object",
+    "reasonCode": "routing.clarification.slot",
+    "productCount": 0,
+    "assistantReply": "Pentru `interior` (interior) nu am gasit produs potrivit. Vrei sa cauti dupa alta categorie sau marca?",
+    "slots": {
+      "context": "interior",
+      "surface": null,
+      "object": null,
+      "brand": null,
+      "vehicleMake": null,
+      "vehicleModel": null,
+      "vehicleYear": null,
+      "action": null
+    }
+  },
+  {
+    "case": "regression_vreu_ceramica",
+    "input": "vreu ceramica",
+    "decisionAction": "clarification",
+    "productCount": 0,
+    "slots": {
+      "context": "exterior",
+      "surface": null,
+      "object": null,
+      "brand": null,
+      "vehicleMake": null,
+      "vehicleModel": null,
+      "vehicleYear": null,
+      "action": "protect"
+    }
+  }
+]

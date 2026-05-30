@@ -24,7 +24,7 @@
     "optionalTags": ["cleaner", "cleaning"],
     "excludeTags": ["leather", "tires"],
     "matchTags": ["glass_cleaner", "glass", "cleaner", "cleaning"],
-    "matchText": ["geam", "parbriz", "sticla"]
+    "matchText": ["geam", "geamuri", "parbriz", "parbrize", "sticla", "sticle", "luneta", "oglinda", "oglinzi", "far", "faruri", "farul", "farurile", "semnalizare"]
   },
   "glass_rain_repellent": {
     "requiredTags": ["glass"],
@@ -61,7 +61,7 @@
     "optionalTags": ["tires", "rubber", "protection", "dressing"],
     "excludeTags": ["wheel_cleaner", "metal", "glass"],
     "matchTags": ["tire_dressing", "dressing", "tires", "rubber", "protection"],
-    "matchText": ["anvelope", "tire", "luciu", "gel", "cauciuc"],
+    "matchText": ["anvelope", "anvelopa", "tire", "luciu", "gel", "cauciuc"],
     "maxProducts": 2
   },
   "rubber_seal_protectant": {

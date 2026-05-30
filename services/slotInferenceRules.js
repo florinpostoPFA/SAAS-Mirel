@@ -110,21 +110,21 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     raw: "parbriz",
     family: "surface",
     priority: 112,
-    sets: { surface: "glass", context: "exterior" }
+    sets: { surface: "glass", context: "exterior", object: "glass" }
   },
   {
     token: "luneta",
     raw: "lunetă",
     family: "surface",
     priority: 113,
-    sets: { surface: "glass", context: "exterior" }
+    sets: { surface: "glass", context: "exterior", object: "glass" }
   },
   {
     token: "oglinzi",
     raw: "oglinzi",
     family: "surface",
     priority: 114,
-    sets: { surface: "glass", context: "exterior" }
+    sets: { surface: "glass", context: "exterior", object: "glass" }
   },
   {
     token: "jante",
@@ -166,14 +166,21 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     raw: "faruri",
     family: "surface",
     priority: 125,
-    sets: { surface: "glass", context: "exterior" }
+    sets: { surface: "glass", context: "exterior", object: "glass" }
   },
   {
     token: "farurile",
     raw: "farurile",
     family: "surface",
     priority: 126,
-    sets: { surface: "glass", context: "exterior" }
+    sets: { surface: "glass", context: "exterior", object: "glass" }
+  },
+  {
+    token: "farul",
+    raw: "farul",
+    family: "surface",
+    priority: 127,
+    sets: { surface: "glass", context: "exterior", object: "glass" }
   },
   {
     token: "scaun",
