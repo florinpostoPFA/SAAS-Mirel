@@ -111,17 +111,7 @@ const {
   clearClarificationAskTracking,
   hasExplicitCorrectionPattern
 } = require("./slotCorrectionService");
-const {
-  evaluateHumanHandoffTrigger,
-  canEvaluateHumanHandoff,
-  clearHandoffState,
-  recordClarificationLoopAsk,
-  recordLowSignalDeadEnd
-} = require("./handoff/humanHandoffTrigger");
-const {
-  processHandoffContinuation,
-  buildHandoffTriggerResponse
-} = require("./handoff/handoffFlow");
+const { logHandoffSafe, getTriggerReply } = require("./handoff/handoffLogger");
 const {
   inferContext,
   detectExplicitContext,
@@ -6919,12 +6909,30 @@ function resetSessionAfterAbuse(sessionContext, sessionId) {
   return safeContext;
 }
 
+function emitHandoff(session, reason, traceId, sessionId) {
+  logHandoffSafe({ session, reason, traceId, sessionId });
+  return getTriggerReply();
+}
+
+function endWithHandoff(interactionRef, sessionContext, sessionId, reason) {
+  const reply = emitHandoff(sessionContext, reason, interactionRef?.traceId, sessionId);
+  saveSession(sessionId, sessionContext);
+  return endInteraction(interactionRef, { reply, products: [] }, {
+    decision: buildDecision({ action: "knowledge", flowId: null, missingSlot: null, reasonCode: `routing.handoff.${reason}` }),
+    outputType: "reply"
+  });
+}
+
 function tryClarificationLoopBreaker(sessionContext, interactionRef, sessionId, slotKey) {
   if (!sessionContext || !["context", "object", "surface"].includes(slotKey)) {
     return null;
   }
   if (!shouldBreakRepeatedAsk(sessionContext, slotKey)) {
     return null;
+  }
+  const askCount = (sessionContext.clarificationAskCounts || {})[slotKey] || 0;
+  if (askCount >= 2) {
+    return endWithHandoff(interactionRef, sessionContext, sessionId, "clarification_loop");
   }
   sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
     slot: "intent_level",
@@ -6956,183 +6964,6 @@ function tryClarificationLoopBreaker(sessionContext, interactionRef, sessionId, 
         pendingQuestionAfter: { ...sessionContext.pendingQuestion }
       },
       slots: sessionContext.slots || {}
-    }
-  );
-}
-
-function buildHandoffGateOpts(sessionContext, userMessage, overrides = {}) {
-  const pending = sessionContext?.pendingQuestion;
-  return {
-    userMessage,
-    clarificationPendingAtEntry: overrides.clarificationPendingAtEntry,
-    pendingSlotClarificationActive: overrides.pendingSlotClarificationActive,
-    purpose: overrides.purpose,
-    isDirectPendingClarificationAnswer: isDirectPendingClarificationAnswer(userMessage, pending),
-    isShortSlotValueMessage: isShortSlotValueMessage(userMessage),
-    isLikelySlotFill: isLikelySlotFill(userMessage)
-  };
-}
-
-function maybeEndWithHumanHandoff(
-  interactionRef,
-  sessionContext,
-  sessionId,
-  triggerParams,
-  gateOpts = {}
-) {
-  if (!canEvaluateHumanHandoff(sessionContext, gateOpts)) {
-    return null;
-  }
-  const evalResult = evaluateHumanHandoffTrigger(triggerParams);
-  if (!evalResult.trigger) {
-    return null;
-  }
-  const turnCount = Array.isArray(sessionContext?.turnHistory)
-    ? sessionContext.turnHistory.length
-    : 0;
-  const built = buildHandoffTriggerResponse(
-    sessionContext,
-    sessionId,
-    interactionRef?.traceId ?? null,
-    evalResult.reason,
-    turnCount
-  );
-  saveSession(sessionId, sessionContext);
-  const isQuestion = built.outputType === "question";
-  const handoffDecision = buildDecision({
-    ...built.decision,
-    handoffReason: evalResult.reason,
-    reasonCode: `routing.human_handoff.${evalResult.reason}`
-  });
-  interactionRef.decision = handoffDecision;
-  return endInteraction(
-    interactionRef,
-    {
-      type: isQuestion ? "question" : "reply",
-      message: built.reply,
-      reply: isQuestion ? undefined : built.reply
-    },
-    {
-      decision: handoffDecision,
-      outputType: built.outputType
-    }
-  );
-}
-
-function shouldDeferHandoffContinuation(sessionContext, userMessage) {
-  const pending = sessionContext?.pendingQuestion;
-  if (pending?.slot && ["context", "object", "surface"].includes(String(pending.slot))) {
-    return true;
-  }
-  if (pending?.source === "coverage_role_goal") {
-    return true;
-  }
-  if (sessionContext?.pendingSelection === true) {
-    return true;
-  }
-  if (String(sessionContext?.state || "").startsWith("NEEDS_")) {
-    return true;
-  }
-  if (isDirectPendingClarificationAnswer(userMessage, pending)) {
-    return true;
-  }
-  if (isShortSlotValueMessage(userMessage) && pending) {
-    return true;
-  }
-  if (/^(curatare|curat|protejezi|protejare|hidratezi|hidratare)$/i.test(String(userMessage || "").trim())) {
-    return true;
-  }
-  return false;
-}
-
-function maybeHandoffNicheBeforeWheelTire(
-  interactionRef,
-  sessionContext,
-  sessionId,
-  userMessage,
-  products,
-  intentCore
-) {
-  const gateOpts = buildHandoffGateOpts(sessionContext, userMessage, {
-    purpose: "t1_niche_wheel"
-  });
-  if (!canEvaluateHumanHandoff(sessionContext, gateOpts)) {
-    return null;
-  }
-  const probeIntent = detectIntent(intentCore, sessionId);
-  const probeType = typeof probeIntent === "string" ? probeIntent : probeIntent?.type;
-  if (probeType !== "product_search") {
-    return null;
-  }
-  sessionContext.lastDetectIntentType = probeType;
-  runTokenSlotInferencePass({
-    userMessage,
-    sessionContext,
-    interactionRef,
-    sessionId,
-    tags: Array.isArray(sessionContext.tags) ? sessionContext.tags : []
-  });
-  const probeTokenMatches =
-    interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? [];
-  const probeRetrieval = tryRetrieveBeforeClarifySelection(
-    userMessage,
-    products,
-    Array.isArray(sessionContext.tags) ? sessionContext.tags : []
-  );
-  return maybeEndWithHumanHandoff(
-    interactionRef,
-    sessionContext,
-    sessionId,
-    {
-      sessionContext,
-      intent: { type: "product_search" },
-      slots: {},
-      retrieval: {
-        tokenInferenceMatches: probeTokenMatches,
-        poolSize: probeRetrieval.candidates.length,
-        matchText: probeRetrieval.matchText,
-        candidates: probeRetrieval.candidates
-      },
-      pendingQuestion: sessionContext.pendingQuestion
-    },
-    gateOpts
-  );
-}
-
-function tryHandoffContinuationTurn(interactionRef, sessionContext, sessionId, userMessage) {
-  if (
-    sessionContext?.handoff?.state &&
-    shouldDeferHandoffContinuation(sessionContext, userMessage)
-  ) {
-    clearHandoffState(sessionContext);
-    saveSession(sessionId, sessionContext);
-    return null;
-  }
-  const turnCount = Array.isArray(sessionContext?.turnHistory)
-    ? sessionContext.turnHistory.length
-    : 0;
-  const cont = processHandoffContinuation({
-    sessionContext,
-    sessionId,
-    userMessage,
-    traceId: interactionRef?.traceId ?? null,
-    turnCount
-  });
-  if (!cont.handled) {
-    return null;
-  }
-  saveSession(sessionId, sessionContext);
-  const isQuestion = cont.outputType === "question";
-  return endInteraction(
-    interactionRef,
-    {
-      type: isQuestion ? "question" : "reply",
-      message: cont.reply,
-      reply: isQuestion ? undefined : cont.reply
-    },
-    {
-      decision: cont.decision,
-      outputType: cont.outputType
     }
   );
 }
@@ -8453,8 +8284,7 @@ const DECISION_PAYLOAD_ACTIONS = new Set([
   "dissatisfaction",
   "meta_question",
   "no_recommendations",
-  "greeting",
-  "human_handoff"
+  "greeting"
 ]);
 
 function defaultReasonCodeForAction(action, partial = {}) {
@@ -8483,10 +8313,6 @@ function defaultReasonCodeForAction(action, partial = {}) {
       return "routing.preferences.no_recommendations";
     case "greeting":
       return "routing.greeting";
-    case "human_handoff":
-      return partial.handoffReason
-        ? `routing.human_handoff.${partial.handoffReason}`
-        : "routing.human_handoff";
     default:
       return "routing.unspecified";
   }
@@ -9273,8 +9099,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       service: "chatService"
     },
     async () => {
+  let sessionContext = null;
   try {
-    let sessionContext = getSession(sessionId);    const clarificationPendingAtEntry =
+    sessionContext = getSession(sessionId);
+    const clarificationPendingAtEntry =
       Boolean(sessionContext?.pendingQuestion) ||
       (String(sessionContext?.state || "").startsWith("NEEDS_") &&
         sessionContext?.pendingClarification?.active === true);
@@ -9328,16 +9156,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     };
 
     logChatPipelineStage("interaction_ref");
-
-    const handoffContinuation = tryHandoffContinuationTurn(
-      interactionRef,
-      sessionContext,
-      sessionId,
-      userMessage
-    );
-    if (handoffContinuation) {
-      return handoffContinuation;
-    }
 
     if (
       sessionContext.pendingQuestion &&
@@ -9783,15 +9601,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    const pendingLowSignalIntentLevel =
-      sessionContext?.pendingQuestion?.slot === "intent_level" &&
-      sessionContext?.pendingQuestion?.source === "low_signal";
-    const allowLowSignalDeadEndGate =
-      !clarificationPendingAtEntry ||
-      (pendingLowSignalIntentLevel && lowSignalCheck.lowSignal);
-
     if (
-      allowLowSignalDeadEndGate &&
+      !clarificationPendingAtEntry &&
       !continuationGuardActive &&
       !safetyAwaitingFollowUp &&
       !selectionFollowupLowSignalBypass &&
@@ -9826,34 +9637,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (!lowSignalCheck.lowSignal) {
         // Fall through to normal routing (F11 retrieval matched).
       } else {
-      recordLowSignalDeadEnd(sessionContext, {
-        lowSignalDetected: true,
-        pendingCleared: !clarificationPendingAtEntry,
-        tokenMatchesEmpty: true
-      });
-      const handoffLowSignal = maybeEndWithHumanHandoff(
-        interactionRef,
-        sessionContext,
-        sessionId,
-        {
-          sessionContext,
-          intent: { type: lowSignalHl },
-          slots: sessionContext.slots || {},
-          retrieval: {
-            lowSignalDetected: true,
-            tokenInferenceMatches:
-              interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? []
-          },
-          pendingQuestion: sessionContext.pendingQuestion
-        },
-        buildHandoffGateOpts(sessionContext, userMessage, {
-          clarificationPendingAtEntry,
-          purpose: "t3_low_signal"
-        })
-      );
-      if (handoffLowSignal) {
-        return handoffLowSignal;
-      }
       sessionContext.slots = {};
       sessionContext.state = "IDLE";
       sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
@@ -10310,19 +10093,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     const wtLocale = normalizeResponseLocale(sessionContext.responseLocale || sessionContext.language || "ro");
-    if (!isSafetyEnforced) {
-      const nicheColdStartHandoff = maybeHandoffNicheBeforeWheelTire(
-        interactionRef,
-        sessionContext,
-        sessionId,
-        userMessage,
-        products,
-        intentCore
-      );
-      if (nicheColdStartHandoff) {
-        return nicheColdStartHandoff;
-      }
-    }
     const wheelTireAnalysis = analyzeWheelTireMessage(userMessage);
     if (
       wheelTireAnalysis.wheelTireIntent ||
@@ -10624,29 +10394,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
               }
             );
           } else if (!updated) {
-            const handoffPendingSlot = maybeEndWithHumanHandoff(
-              interactionRef,
-              sessionContext,
-              sessionId,
-              {
-                sessionContext,
-                intent: { type: inferHighLevelIntent(intentCore) },
-                slots: sessionContext.slots || {},
-                retrieval: {
-                  tokenInferenceMatches:
-                    interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? [],
-                  poolSize: 0,
-                  missingSlot: missingNow || pending.slot
-                },
-                pendingQuestion: pending
-              },
-              buildHandoffGateOpts(sessionContext, userMessage, {
-                purpose: "pre_clarification_emit"
-              })
-            );
-            if (handoffPendingSlot) {
-              return handoffPendingSlot;
-            }
             saveSession(sessionId, sessionContext);
             const normalQuestion = getClarificationQuestion(missingNow || pending.slot, sessionContext.slots || {}, sessionContext.responseLocale);
             return endInteraction(
@@ -10812,29 +10559,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             object: slotResult.slots?.object || null,
             surface: slotResult.slots?.surface || null
           };
-          const handoffSelectionReentry = maybeEndWithHumanHandoff(
-            interactionRef,
-            sessionContext,
-            sessionId,
-            {
-              sessionContext,
-              intent: { type: "selection" },
-              slots: reentrySelectionSlots,
-              retrieval: {
-                tokenInferenceMatches:
-                  interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? [],
-                poolSize: 0,
-                missingSlot: selectionDecision.missingSlot
-              },
-              pendingQuestion: sessionContext.pendingQuestion
-            },
-            buildHandoffGateOpts(sessionContext, userMessage, {
-              purpose: "pre_clarification_emit"
-            })
-          );
-          if (handoffSelectionReentry) {
-            return handoffSelectionReentry;
-          }
           if (selectionDecision.missingSlot === "context") {
             sessionContext.state = "NEEDS_CONTEXT";
             sessionContext.originalIntent = "selection";
@@ -10907,8 +10631,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const rawIntent = shouldBypassIntentClassifier
       ? (sessionContext.originalIntent || "product_guidance")
       : detectIntent(intentCore, sessionId);
-    sessionContext.lastDetectIntentType =
-      typeof rawIntent === "string" ? rawIntent : rawIntent?.type ?? null;
     let intentResult = shouldBypassIntentClassifier
       ? rawIntent
       : overrideIntent(intentCore, rawIntent);
@@ -11675,10 +11397,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const missing = selectionDecision.missingSlot;
         let retrievalCandidateCount = 0;
         let retrievalDecision = "fall_through_to_clarify";
-        let retrievalAttempt = null;
 
         if (highLevelIntent === "product_search" && tokenInferenceEmpty) {
-          retrievalAttempt = tryRetrieveBeforeClarifySelection(
+          const retrievalAttempt = tryRetrieveBeforeClarifySelection(
             userMessage,
             products,
             selectionTagsBeforeDecision
@@ -11706,33 +11427,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
 
         if (!selectionPreRetrievedCandidates) {
-          const handoffSelection = maybeEndWithHumanHandoff(
-            interactionRef,
-            sessionContext,
-            sessionId,
-            {
-              sessionContext,
-              intent: { type: highLevelIntent },
-              slots: currentSlots,
-              retrieval: {
-                tokenInferenceMatches,
-                poolSize: retrievalCandidateCount,
-                matchText: retrievalAttempt?.matchText,
-                candidates: retrievalAttempt?.candidates,
-                missingSlot: missing
-              },
-              pendingQuestion: sessionContext.pendingQuestion
-            },
-            buildHandoffGateOpts(sessionContext, userMessage, {
-              clarificationPendingAtEntry,
-              pendingSlotClarificationActive,
-              purpose: "pre_clarification_emit"
-            })
-          );
-          if (handoffSelection) {
-            return handoffSelection;
-          }
-
           sessionContext.slots = currentSlots;
           interactionRef.slots = currentSlots;
           sessionContext.state =
@@ -11743,9 +11437,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           sessionContext.originalIntent = "selection";
           sessionContext.pendingSelection = true;
           sessionContext.pendingSelectionMissingSlot = missing || null;
-          if (missing) {
-            recordClarificationAsk(sessionContext, missing);
-          }
           saveSession(sessionId, sessionContext);
 
           return endInteraction(interactionRef, {
@@ -11765,37 +11456,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           missingSlot: selectionDecision.missingSlot
         });
 
-        const handoffClarify = maybeEndWithHumanHandoff(
-          interactionRef,
-          sessionContext,
-          sessionId,
-          {
-            sessionContext,
-            intent: { type: highLevelIntent },
-            slots: currentSlots,
-            retrieval: {
-              tokenInferenceMatches,
-              poolSize: 0,
-              missingSlot: selectionDecision.missingSlot
-            },
-            pendingQuestion: sessionContext.pendingQuestion
-          },
-          buildHandoffGateOpts(sessionContext, userMessage, {
-            clarificationPendingAtEntry,
-            pendingSlotClarificationActive,
-            purpose: "pre_clarification_emit"
-          })
-        );
-        if (handoffClarify) {
-          return handoffClarify;
-        }
-
         sessionContext.originalIntent = "selection";
         sessionContext.pendingSelection = true;
         sessionContext.pendingSelectionMissingSlot = selectionDecision.missingSlot || null;
-        if (selectionDecision.missingSlot) {
-          recordClarificationAsk(sessionContext, selectionDecision.missingSlot);
-        }
         saveSession(sessionId, sessionContext);
 
         return endInteraction(interactionRef, {
@@ -13125,54 +12788,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         message: userMessage,
         slots: sessionContext.slots || {}
       });
-
-      const reply = resolvedAction.replyOverride || getSafeFallbackReply();
       updateSessionWithProducts(sessionId, [], "guidance");
       clearProblemType(sessionContext, sessionId);
-      emit("ai_response", { response: reply });
-      logResponseSummary("knowledge", { products: 0 });
-
-      return endInteraction(interactionRef, { reply, products: [] }, {
-        decision: {
-          action: "knowledge",
-          flowId: null,
-          missingSlot: null,
-          safeFallback: true,
-          replyOverride: resolvedAction.replyOverride || null
-        },
-        outputType: "reply"
-      });
-    }
-
-    if (
-      resolvedAction.action === "clarification" &&
-      shouldHandleClarification &&
-      ["context", "object", "surface"].includes(resolvedAction.missingSlot)
-    ) {
-      const handoffClarifyMain = maybeEndWithHumanHandoff(
-        interactionRef,
-        sessionContext,
-        sessionId,
-        {
-          sessionContext,
-          intent: { type: inferHighLevelIntent(intentCore) },
-          slots: sessionContext.slots || {},
-          retrieval: {
-            tokenInferenceMatches:
-              interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? [],
-            missingSlot: resolvedAction.missingSlot
-          },
-          pendingQuestion: sessionContext.pendingQuestion
-        },
-        buildHandoffGateOpts(sessionContext, userMessage, {
-          clarificationPendingAtEntry,
-          pendingSlotClarificationActive,
-          purpose: "pre_clarification_emit"
-        })
-      );
-      if (handoffClarifyMain) {
-        return handoffClarifyMain;
-      }
+      return endWithHandoff(interactionRef, sessionContext, sessionId, "safe_fallback");
     }
 
     if (resolvedAction.action === "clarification" && shouldHandleClarification && resolvedAction.missingSlot === "context") {
@@ -14006,7 +13624,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       stack: err.stack,
       stage: "execution"
     });
-
+    if (interactionRef && sessionContext) {
+      return endWithHandoff(interactionRef, sessionContext, sessionId, "error");
+    }
     throw err;
   }
     });
@@ -14089,8 +13709,7 @@ module.exports = {
     isInterrogativeFollowUpMessage,
     isDeclarativeProductRecommendationFollowUp,
     hasExplicitTopicShiftOnNewTurn,
-    evaluateHumanHandoffTrigger,
-    maybeEndWithHumanHandoff,
-    tryHandoffContinuationTurn
+    emitHandoff,
+    endWithHandoff
   }
 };
