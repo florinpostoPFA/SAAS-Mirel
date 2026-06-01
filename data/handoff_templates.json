@@ -1,0 +1,6 @@
+{
+  "TRIGGER_PROMPT": "Chiar daca am in spate procedurile complete si catalogul de produse, nu vreau sa iti ofer informatii eronate, asa ca lasa-mi te rog un numar de telefon sau o adresa de mail. Conversatia a fost deja trimisa catre reprezentantii nostri care o vor analiza. Un coleg te va contacta in timpul programului.",
+  "CONTACT_CONFIRMED": "Multumesc, am notat. Te contactam in cel mai scurt timp.",
+  "GRACEFUL_CLOSE": "Inteleg. Conversatia a fost trimisa colegilor mei. Te poti intoarce oricand sau ne poti suna direct.",
+  "RETRY_PROMPT": "Nu am putut identifica un numar de telefon sau o adresa de email valida. Te rog sa imi lasi un numar de telefon (ex. 0744123456) sau o adresa de email."
+}
