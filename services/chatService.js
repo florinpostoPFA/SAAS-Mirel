@@ -1442,6 +1442,52 @@ function buildSmartNoProductFallbackMessage(userMessage, slots) {
   return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
 }
 
+function needsNarrowingClarification(slots, retrievalCount) {
+  if (retrievalCount <= NARROWNESS_THRESHOLD) return false;
+  if (slots?.surface && slots?.object) return false;
+  return !slots?.surface || !slots?.object;
+}
+
+function buildNarrownessClarificationMessage(userMessage, slots) {
+  const userNoun = extractUserNounFromMessage(userMessage) || "acest subiect";
+  const axisOptions = !slots?.object
+    ? "zona exacta (ex: scaune, bord, geamuri, jante)"
+    : "tipul de suprafata (ex: textil, piele, plastic, vopsea)";
+  return `In catalog am multe produse pentru ${userNoun}. Te referi la ${axisOptions}?`;
+}
+
+function splitBroadeningTokens(products, tokenMatches) {
+  const tokens = [
+    ...new Set(
+      (Array.isArray(tokenMatches) ? tokenMatches : [])
+        .map((m) => String(m?.token || "").trim())
+        .filter(Boolean)
+    )
+  ];
+  const matched = [];
+  const unmatched = [];
+  for (const token of tokens) {
+    const t = token.toLowerCase();
+    const hits = findProductsByRoleConfig(
+      { matchText: [t], matchTags: [], requiredTags: [], optionalTags: [], excludeTags: [] },
+      products
+    ).length;
+    if (hits > 0) matched.push(token);
+    else unmatched.push(token);
+  }
+  return { matchedTokens: matched, unmatchedTokens: unmatched };
+}
+
+function stripUnmatchedTokensFromMessage(message, unmatchedTokens) {
+  let text = String(message || "");
+  for (const token of unmatchedTokens || []) {
+    const needle = String(token || "").trim();
+    if (!needle) continue;
+    text = text.replace(new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ");
+  }
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function buildSmartValidatorClarificationMessage(userMessage, slots, defaultQuestion) {
   const noun = extractUserNounFromMessage(userMessage);
   const ctx = formatSlotContextForSmartFallback(slots);
@@ -3597,7 +3643,9 @@ function enforceProductLimit(products, maxLimit) {
   return products;
 }
 
-const MAX_SELECTION_PRODUCTS = 3;
+const NARROWNESS_THRESHOLD = 3;
+const RECOMMEND_MAX_ALTERNATIVES = 2;
+const MAX_SELECTION_PRODUCTS = RECOMMEND_MAX_ALTERNATIVES;
 const ACCESSORY_TAGS = ["microfiber", "brush", "drying_towel", "tool", "wash_mitt", "bucket"];
 
 const ECHO_RECOVERY_REPLY = "Pare că ai trimis din nou răspunsul meu. Spune-mi cu cuvintele tale ce ai nevoie și te ajut.";
@@ -4034,6 +4082,42 @@ function buildNoProductFallbackResponse(selectionSlots = null, responseLocale = 
   };
 }
 
+function tryEmitBroadeningOffer(
+  interactionRef,
+  sessionId,
+  userMessage,
+  products,
+  selectionDecision,
+  selectionSlots
+) {
+  const tokenMatches = interactionRef?.tokenInferenceTelemetry?.tokenInferenceMatches ?? [];
+  if (!Array.isArray(tokenMatches) || tokenMatches.length === 0) return null;
+  const { matchedTokens, unmatchedTokens } = splitBroadeningTokens(
+    products,
+    tokenMatches
+  );
+  if (matchedTokens.length === 0 || unmatchedTokens.length === 0) return null;
+  const sessionContext = getSession(sessionId);
+  sessionContext.broadeningOffer = { matchedTokens, unmatchedTokens };
+  saveSession(sessionId, sessionContext);
+  const reply = `In catalog am produse pentru '${matchedTokens.join(", ")}' dar nu reusesc sa gasesc nimic pentru '${unmatchedTokens.join(", ")}'. Vrei sa iti spun ce am disponibil?`;
+  logInfo("ROUTING_BROADENING_OFFER", { matchedTokens, unmatchedTokens, userAffirmed: false });
+  return endInteraction(
+    interactionRef,
+    { type: "question", message: reply, reply },
+    {
+      decision: buildDecision({
+        action: "knowledge",
+        flowId: null,
+        missingSlot: null,
+        reasonCode: "routing.broadening_offer"
+      }),
+      outputType: "question",
+      slots: selectionSlots || {}
+    }
+  );
+}
+
 function returnSelectionFailSafe(
   interactionRef,
   sessionId,
@@ -4041,6 +4125,17 @@ function returnSelectionFailSafe(
   selectionSlots = null,
   options = {}
 ) {
+  const userMessage = String(interactionRef?.message || "");
+  const products = interactionRef?.productsCatalog || fallbackProductsCatalog;
+  const broadening = tryEmitBroadeningOffer(
+    interactionRef,
+    sessionId,
+    userMessage,
+    products,
+    selectionDecision,
+    selectionSlots
+  );
+  if (broadening) return broadening;
   const productsReason =
     options.productsReason != null && String(options.productsReason).trim() !== ""
       ? String(options.productsReason)
@@ -9037,7 +9132,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
   logChatPipelineStage("validate_input", { sessionId: String(sessionId) });
 
-  const routingMessage = normalizeMessage(userMessage);
+  let routingMessage = normalizeMessage(userMessage);
 
   // P1 - ENHANCED LOGGING: Track normalized message processing
   if (routingMessage !== String(userMessage).toLowerCase()) {
@@ -9048,9 +9143,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     });
   }
 
-  const slangRouting = applySlangNormalize(routingMessage);
+  let slangRouting = applySlangNormalize(routingMessage);
   const stripIntentResult = stripGreetingAndFillers(slangRouting);
-  const intentCore =
+  let intentCore =
     stripIntentResult.text.length > 0 ? stripIntentResult.text : slangRouting;
   const preprocessStrippedGreeting = stripIntentResult.strippedGreeting;
 
@@ -9102,6 +9197,26 @@ async function handleChat(message, clientId, products, sessionId = "default") {
   let sessionContext = null;
   try {
     sessionContext = getSession(sessionId);
+    const broadeningAffirm =
+      sessionContext?.broadeningOffer?.matchedTokens?.length &&
+      (isYes(userMessage) || ["da", "sigur", "ok"].includes(String(userMessage || "").toLowerCase().trim()));
+    if (broadeningAffirm) {
+      const offer = sessionContext.broadeningOffer;
+      logInfo("ROUTING_BROADENING_OFFER", {
+        matchedTokens: offer.matchedTokens,
+        unmatchedTokens: offer.unmatchedTokens,
+        userAffirmed: true
+      });
+      userMessage =
+        stripUnmatchedTokensFromMessage(userMessage, offer.unmatchedTokens) ||
+        offer.matchedTokens.join(" ");
+      delete sessionContext.broadeningOffer;
+      saveSession(sessionId, sessionContext);
+      routingMessage = normalizeMessage(userMessage);
+      slangRouting = applySlangNormalize(routingMessage);
+      const stripBroad = stripGreetingAndFillers(slangRouting);
+      intentCore = stripBroad.text.length > 0 ? stripBroad.text : slangRouting;
+    }
     const clarificationPendingAtEntry =
       Boolean(sessionContext?.pendingQuestion) ||
       (String(sessionContext?.state || "").startsWith("NEEDS_") &&
@@ -11774,6 +11889,33 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         return returnSelectionFailSafe(interactionRef, sessionId, selectionDecision, selectionSlots);
       }
+      if (needsNarrowingClarification(selectionSlots, selectionBundle.length)) {
+        const missingAxis =
+          getMissingSlot(selectionSlots) ||
+          (!selectionSlots?.surface ? "surface" : "object");
+        logInfo("ROUTING_NARROWNESS_CLARIFY", {
+          retrievalCandidateCount: selectionBundle.length,
+          threshold: NARROWNESS_THRESHOLD,
+          missingAxis,
+          userNoun: extractUserNounFromMessage(userMessage)
+        });
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = missingAxis;
+        saveSession(sessionId, sessionContext);
+        return endInteraction(interactionRef, {
+          type: "question",
+          message: buildNarrownessClarificationMessage(userMessage, selectionSlots)
+        }, {
+          decision: buildDecision({
+            action: "clarification",
+            flowId: null,
+            missingSlot: missingAxis,
+            reasonCode: "routing.narrowness_clarify"
+          }),
+          outputType: "question",
+          slots: selectionSlots
+        });
+      }
       let finalProducts = selectionBundle.slice(0, MAX_SELECTION_PRODUCTS);
       const preTierOneFinal = ensureApcProductIncluded(finalProducts, products, selectionTags).slice(
         0,
@@ -11824,6 +11966,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       if (finalProducts.length === 0) {
+        const broadeningEmpty = tryEmitBroadeningOffer(
+          interactionRef,
+          sessionId,
+          userMessage,
+          products,
+          selectionDecision,
+          selectionSlots
+        );
+        if (broadeningEmpty) return broadeningEmpty;
         const fallbackReply = role && COVERAGE_ROLE_SET.has(role)
           ? roleCoverageFallbackQuestion(role)
           : null;
@@ -13678,6 +13829,12 @@ module.exports = {
     buildSmartNoProductFallbackMessage,
     buildSmartValidatorClarificationMessage,
     extractUserNounFromMessage,
+    needsNarrowingClarification,
+    buildNarrownessClarificationMessage,
+    splitBroadeningTokens,
+    tryEmitBroadeningOffer,
+    NARROWNESS_THRESHOLD,
+    RECOMMEND_MAX_ALTERNATIVES,
     tryClearIntentLevelPendingForTokenSignal,
     resolveApplicabilityDeclineReason,
     excludeToolsForChemicalQuery,
