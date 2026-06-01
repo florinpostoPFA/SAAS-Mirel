@@ -407,12 +407,6 @@ function recordClarificationAsk(sessionContext, slot) {
   sessionContext.clarificationAskCounts[slot] =
     (sessionContext.clarificationAskCounts[slot] || 0) + 1;
   sessionContext.lastAskedClarificationSlot = slot;
-  try {
-    const { recordClarificationLoopAsk } = require("./handoff/humanHandoffTrigger");
-    recordClarificationLoopAsk(sessionContext, slot);
-  } catch (_e) {
-    /* handoff module optional in isolated tests */
-  }
 }
 
 function resetAskCountForSlot(sessionContext, slot) {
@@ -421,12 +415,6 @@ function resetAskCountForSlot(sessionContext, slot) {
     Object.prototype.hasOwnProperty.call(sessionContext.clarificationAskCounts, slot)
   ) {
     delete sessionContext.clarificationAskCounts[slot];
-  }
-  try {
-    const { resetClarificationLoopOnSlotFill } = require("./handoff/humanHandoffTrigger");
-    resetClarificationLoopOnSlotFill(sessionContext, slot);
-  } catch (_e) {
-    /* handoff module optional in isolated tests */
   }
 }
 
