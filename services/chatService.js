@@ -2670,6 +2670,15 @@ function endInteraction(interactionRef, result, patch = {}) {
     tokenInferenceMatches: interactionRef.tokenInferenceTelemetry?.tokenInferenceMatches ?? [],
     tokenInferenceSkippedReasons:
       interactionRef.tokenInferenceTelemetry?.tokenInferenceSkippedReasons ?? [],
+    tokenInferenceSkipExpectedGuards:
+      interactionRef.tokenInferenceTelemetry?.tokenInferenceSkipExpectedGuards ?? [],
+    tokenInferenceSkipAnomalous:
+      interactionRef.tokenInferenceTelemetry?.tokenInferenceSkipAnomalous ?? [],
+    tokenInferenceSkipCounts:
+      interactionRef.tokenInferenceTelemetry?.tokenInferenceSkipCounts ?? {
+        expected_guard: 0,
+        anomalous_skip: 0
+      },
     tokenInferenceActionMatch:
       interactionRef.tokenInferenceTelemetry?.tokenInferenceActionMatch ?? null,
     catalogVersion: interactionRef.artifactVersions?.catalogVersion || null,
@@ -5915,7 +5924,18 @@ function applyDeterministicSessionResetInPlace(
     });    return false;
   }
 
-  sessionContext.slots = {};
+  const shouldPreservePhysicalSlots = reasonCode === "reset.high_level_intent_shift";
+  const preservedPhysicalSlots = shouldPreservePhysicalSlots
+    ? {
+        surface: currentSlots.surface ?? null,
+        object: currentSlots.object ?? null
+      }
+    : null;
+  sessionContext.slots = shouldPreservePhysicalSlots
+    ? Object.fromEntries(
+        Object.entries(preservedPhysicalSlots).filter(([, v]) => v != null && String(v).trim() !== "")
+      )
+    : {};
   sessionContext.pendingQuestion = null;
   sessionContext.pendingContexts = [];
   sessionContext.pendingSelection = false;
@@ -5928,11 +5948,19 @@ function applyDeterministicSessionResetInPlace(
   sessionContext.originalIntent = null;
   sessionContext.intentFlags = {};
   delete sessionContext.selectionFollowupCarryover;
-  sessionContext.slotMeta = {
-    context: "unknown",
-    surface: "unknown",
-    object: "unknown"
-  };
+  const currentSlotMeta =
+    sessionContext?.slotMeta && typeof sessionContext.slotMeta === "object"
+      ? sessionContext.slotMeta
+      : { context: "unknown", surface: "unknown", object: "unknown" };
+  sessionContext.slotMeta = { context: "unknown", surface: "unknown", object: "unknown" };
+  if (shouldPreservePhysicalSlots) {
+    if (sessionContext.slots.surface != null) {
+      sessionContext.slotMeta.surface = currentSlotMeta.surface || "inferred";
+    }
+    if (sessionContext.slots.object != null) {
+      sessionContext.slotMeta.object = currentSlotMeta.object || "inferred";
+    }
+  }
   sessionContext.lastHighLevelIntent = null;
   logInfo("SESSION_RESET_APPLIED", {
     resetApplied: true,

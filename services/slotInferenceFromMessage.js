@@ -137,6 +137,27 @@ function canApplySlotUpdate(slotKey, currentSlots, slotMeta) {
   return { ok: false, reason: "stale_slot_present" };
 }
 
+const EXPECTED_GUARD_REASONS = new Set([
+  "stale_slot_present",
+  "slot_already_fresh",
+  "blocked_guard_surface_object",
+  "blocked_guard_all"
+]);
+
+function bucketSkipReasons(skippedReasons) {
+  const reasons = Array.isArray(skippedReasons) ? [...new Set(skippedReasons)] : [];
+  const tokenInferenceSkipExpectedGuards = reasons.filter((r) => EXPECTED_GUARD_REASONS.has(r));
+  const tokenInferenceSkipAnomalous = reasons.filter((r) => !EXPECTED_GUARD_REASONS.has(r));
+  return {
+    tokenInferenceSkipExpectedGuards,
+    tokenInferenceSkipAnomalous,
+    tokenInferenceSkipCounts: {
+      expected_guard: tokenInferenceSkipExpectedGuards.length,
+      anomalous_skip: tokenInferenceSkipAnomalous.length
+    }
+  };
+}
+
 function canonicalizeRuleSets(sets) {
   const out = {};
   if (!sets || typeof sets !== "object") return out;
@@ -289,6 +310,10 @@ function applyTokenInferenceToSessionSlots({
   const actionMatches = result.matches.filter((m) => m.slotKey === "action");
 
   if (interactionRef && typeof interactionRef === "object") {
+    const skipBuckets = bucketSkipReasons(result.skippedReasons);
+    result.tokenInferenceSkipExpectedGuards = skipBuckets.tokenInferenceSkipExpectedGuards;
+    result.tokenInferenceSkipAnomalous = skipBuckets.tokenInferenceSkipAnomalous;
+    result.tokenInferenceSkipCounts = skipBuckets.tokenInferenceSkipCounts;
     const prior = interactionRef.tokenInferenceTelemetry;
     const mergedMatches = [
       ...(Array.isArray(prior?.tokenInferenceMatches) ? prior.tokenInferenceMatches : []),
@@ -306,6 +331,34 @@ function applyTokenInferenceToSessionSlots({
           ...result.skippedReasons
         ])
       ],
+      tokenInferenceSkipExpectedGuards: [
+        ...new Set([
+          ...(Array.isArray(prior?.tokenInferenceSkipExpectedGuards)
+            ? prior.tokenInferenceSkipExpectedGuards
+            : []),
+          ...(Array.isArray(result.tokenInferenceSkipExpectedGuards)
+            ? result.tokenInferenceSkipExpectedGuards
+            : [])
+        ])
+      ],
+      tokenInferenceSkipAnomalous: [
+        ...new Set([
+          ...(Array.isArray(prior?.tokenInferenceSkipAnomalous)
+            ? prior.tokenInferenceSkipAnomalous
+            : []),
+          ...(Array.isArray(result.tokenInferenceSkipAnomalous)
+            ? result.tokenInferenceSkipAnomalous
+            : [])
+        ])
+      ],
+      tokenInferenceSkipCounts: {
+        expected_guard:
+          Number(prior?.tokenInferenceSkipCounts?.expected_guard || 0) +
+          Number(result?.tokenInferenceSkipCounts?.expected_guard || 0),
+        anomalous_skip:
+          Number(prior?.tokenInferenceSkipCounts?.anomalous_skip || 0) +
+          Number(result?.tokenInferenceSkipCounts?.anomalous_skip || 0)
+      },
       tokenInferenceActionMatch:
         actionMatches.length > 0
           ? actionMatches
@@ -320,6 +373,10 @@ function applyTokenInferenceToSessionSlots({
 
   if (blockAll) {
     result.skippedReasons = [...new Set([...(result.skippedReasons || []), "blocked_guard_all"])];
+    const skipBuckets = bucketSkipReasons(result.skippedReasons);
+    result.tokenInferenceSkipExpectedGuards = skipBuckets.tokenInferenceSkipExpectedGuards;
+    result.tokenInferenceSkipAnomalous = skipBuckets.tokenInferenceSkipAnomalous;
+    result.tokenInferenceSkipCounts = skipBuckets.tokenInferenceSkipCounts;
     return result;
   }
 
@@ -347,6 +404,11 @@ function applyTokenInferenceToSessionSlots({
       ...sessionContext.slots
     };
   }
+
+  const skipBuckets = bucketSkipReasons(result.skippedReasons);
+  result.tokenInferenceSkipExpectedGuards = skipBuckets.tokenInferenceSkipExpectedGuards;
+  result.tokenInferenceSkipAnomalous = skipBuckets.tokenInferenceSkipAnomalous;
+  result.tokenInferenceSkipCounts = skipBuckets.tokenInferenceSkipCounts;
 
   return result;
 }
