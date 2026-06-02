@@ -46,6 +46,7 @@
         "conversationHistory": [],
         "currentTopic": "apc",
         "language": "ro",
+        "lastBotReply": "E piele naturala sau piele ecologica (vinyl)?",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "reply",
@@ -63,6 +64,7 @@
           "type": null
         },
         "originalIntent": null,
+        "pendingContexts": [],
         "pendingQuestion": null,
         "pendingSlots": null,
         "previousAction": "safety",
@@ -92,6 +94,7 @@
         "conversationHistory": [],
         "currentTopic": "apc",
         "language": "ro",
+        "lastBotReply": "E piele naturala sau piele ecologica (vinyl)?",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "reply",
@@ -109,6 +112,7 @@
           "type": null
         },
         "originalIntent": null,
+        "pendingContexts": [],
         "pendingQuestion": null,
         "pendingSlots": null,
         "previousAction": "safety",

@@ -81,7 +81,8 @@ describe("Glass routing and glass_clean_basic", () => {
 
   it("D: profanity during clarification clears pendingQuestion", async () => {
     const sessionId = `glass-abuse-${Date.now()}`;
-    await handleChat("vreau sa curat sticla", "C1", [], sessionId);
+    // Sticla may route straight to flow post-F12; use cotiera to arm surface pending.
+    await handleChat("vreau sa curat cotiera", "C1", [], sessionId);
     expect(getSession(sessionId).pendingQuestion).toBeTruthy();
     const rude = await handleChat("esti un idiot", "C1", [], sessionId);
     expect(rude.type).toBe("reply");

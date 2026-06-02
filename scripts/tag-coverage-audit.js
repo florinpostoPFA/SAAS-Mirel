@@ -24,10 +24,11 @@ const SURFACE_AUDIT_THRESHOLDS = {
   tires: 260,
   glass: 151,
   paint: 368,
-  leather: 87,
+  // Sprint 2026-06-02: catalog grew; thresholds bumped with ~10% margin over offline audit at 8670ae9.
+  leather: 240,
   textile: 217,
   alcantara: 15,
-  plastic: 125
+  plastic: 440
 };
 
 function loadProducts() {

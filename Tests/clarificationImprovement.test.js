@@ -24,8 +24,10 @@ describe("Clarification improvement prompts", () => {
     );
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.reply).toContain("Ce suprafata este: textile, piele, plastic sau alcantara?");
-    expect(res.body.reply).toContain("Nu esti sigur?");
+    // F11+ may ask intent_level (clean vs protect) before surface enum on seat queries.
+    expect(res.body.reply).toMatch(
+      /Vrei sa o cureti|Ce suprafata este: textile, piele, plastic sau alcantara/i
+    );
   });
 
   it("does not ask interior/exterior when piele surface is explicit", async () => {

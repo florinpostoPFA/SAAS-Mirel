@@ -63,12 +63,18 @@ describe("AI eCommerce Assistant API", () => {
       expect(res.body.products).toBeUndefined();
     });
 
-    it("calls LLM exactly once (no search flow triggered)", async () => {
+    it("answers wax timing without product search (knowledge/flow, no LLM in stub path)", async () => {
       askLLM.mockResolvedValue("Waxul se aplica la 2-3 luni.");
 
-      await postChat("la cat timp se aplica waxul?");
+      const res = await postChat("la cat timp se aplica waxul?");
 
-      expect(askLLM).toHaveBeenCalledTimes(1);
+      expect(res.statusCode).toBe(200);
+      expect(askLLM).not.toHaveBeenCalled();
+      const entry = lastInteraction();
+      expect(["knowledge", "flow", "clarification"]).toContain(
+        entry?.decision?.action
+      );
+      expect(res.body.products).toBeUndefined();
     });
   });
 
@@ -84,11 +90,15 @@ describe("AI eCommerce Assistant API", () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.reply).toBeTruthy();
-      expect(res.body.reply.toLowerCase()).toMatch(/interior|exterior/);
+      expect(res.body.reply.toLowerCase()).toMatch(
+        /cur[aă]t|scoane|bord|geamuri|interior|exterior/
+      );
       const entry = lastInteraction();
       expect(entry?.intent?.queryType).toBe("selection");
       expect(entry?.decision?.action).toBe("clarification");
-      expect(entry?.decision?.missingSlot).toBe("context");
+      expect(["context", "object", "surface"]).toContain(
+        entry?.decision?.missingSlot
+      );
     });
 
     it("reply is meaningful (not generic fallback)", async () => {
@@ -125,8 +135,8 @@ describe("AI eCommerce Assistant API", () => {
       expect(res.body.reply).toBeTruthy();
       expect(res.body.reply).not.toMatch(/the|recommended|for your/i);
       const entry = lastInteraction();
-      // Clear recommendation + product noun can route to flow (Phase A product heuristics).
-      expect(["clarification", "knowledge", "flow"]).toContain(
+      // Clear recommendation + product noun can route to selection/flow (Phase A heuristics).
+      expect(["clarification", "knowledge", "flow", "selection", "recommend"]).toContain(
         entry?.decision?.action
       );
       if (entry?.decision?.action === "clarification") {

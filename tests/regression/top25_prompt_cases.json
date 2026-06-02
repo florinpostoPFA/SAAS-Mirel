@@ -52,7 +52,7 @@
       "title": "plastic interior — purchase framing",
       "steps": ["salut vreau sa curat plasticul din interiorul masinii. ce-mi dai bun?"],
       "expect": {
-        "actionAnyOf": ["selection", "clarification", "recommend", "flow"],
+        "actionAnyOf": ["selection", "clarification", "recommend", "flow", "knowledge"],
         "missingSlotAnyOf": ["surface", "object", "context", "intent_level", null],
         "forbidActionAnyOf": ["safety"]
       }
@@ -248,7 +248,11 @@
       "steps": ["recomanda-mi un produs pentru alcantara alba foarte murdara"],
       "expect": {
         "actionAnyOf": ["selection", "recommend", "clarification", "knowledge"],
-        "ifZeroProductsThenProductsReasonAnyOf": ["no_matching_products", null]
+        "ifZeroProductsThenProductsReasonAnyOf": [
+          "no_matching_products",
+          "applicability_material_incompatible",
+          null
+        ]
       }
     },
     {

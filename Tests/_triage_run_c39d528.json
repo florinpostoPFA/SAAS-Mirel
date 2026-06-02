@@ -1,0 +1,206 @@
+{
+  "headSha": "8670ae913672f17484714a6f3ae6d49454a1d986",
+  "note": "Requested filename c39d528; actual HEAD at run time was 8670ae9 (post-F14 merge). Baseline reference commit 463b6aa had 644 tests.",
+  "runAt": "2026-06-02T03:15:35.000Z",
+  "summary": {
+    "failed": 21,
+    "passed": 717,
+    "total": 738
+  },
+  "failures": [
+    {
+      "test": "AI eCommerce Assistant API › POST /chat — Guidance flow › calls LLM exactly once (no search flow triggered)",
+      "file": "Tests/chat.test.js",
+      "line": 71,
+      "errorFirstLines": [
+        "expect(jest.fn()).toHaveBeenCalledTimes(expected)",
+        "Expected number of calls: 1",
+        "Received number of calls: 0",
+        "at Object.toHaveBeenCalledTimes (Tests/chat.test.js:71:22)"
+      ]
+    },
+    {
+      "test": "AI eCommerce Assistant API › POST /chat — Recommendation flow › returns product-oriented response for purchase intent",
+      "file": "Tests/chat.test.js",
+      "line": 87,
+      "errorFirstLines": [
+        "expect(received).toMatch(expected)",
+        "Expected pattern: /interior|exterior/",
+        "Received string: \"ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)\"",
+        "at Object.toMatch (Tests/chat.test.js:87:44)"
+      ]
+    },
+    {
+      "test": "AI eCommerce Assistant API › POST /chat — Language detection › keeps Romanian language for Romanian input",
+      "file": "Tests/chat.test.js",
+      "line": 129,
+      "errorFirstLines": [
+        "expect([\"clarification\", \"knowledge\", \"flow\"]).toContain(entry?.decision?.action)",
+        "Received action: selection (not in allowed list)",
+        "at Object.toContain (Tests/chat.test.js:129:54)"
+      ]
+    },
+    {
+      "test": "top 25 prompts regression suite passes",
+      "file": "Tests/top25PromptRegression.test.js",
+      "line": 11,
+      "errorFirstLines": [
+        "Command failed: node scripts/top25-regression.js",
+        "Top 25 regression: 4 case(s) failed (A04, F01, P01, P04)",
+        "at Object.execSync (Tests/top25PromptRegression.test.js:11:3)"
+      ]
+    },
+    {
+      "test": "Decision boundary and reset rules › clears procedural slots on knowledge boundary after procedural sequence",
+      "file": "Tests/decisionBoundary.test.js",
+      "line": 120,
+      "errorFirstLines": [
+        "expect(session.slots || {}).toEqual({})",
+        "Received slots with context=interior surface=textile",
+        "at Object.toEqual (Tests/decisionBoundary.test.js:120:33)"
+      ]
+    },
+    {
+      "test": "Decision boundary and reset rules › vreau sa curat pielea does not default context; asks interior vs exterior (leather alone ambiguous)",
+      "file": "Tests/decisionBoundary.test.js",
+      "line": 184,
+      "errorFirstLines": [
+        "expect(firstMessage).toMatch(/interior.*exterior|exterior.*interior/)",
+        "Received flow block for interior_clean_basic",
+        "at Object.toMatch (Tests/decisionBoundary.test.js:184:26)"
+      ]
+    },
+    {
+      "test": "Decision boundary and reset rules › pending clarification keeps procedural path on cotiera follow-up",
+      "file": "Tests/decisionBoundary.test.js",
+      "line": 196,
+      "errorFirstLines": [
+        "expect(lastLogEntry.decision.action).not.toBe(\"knowledge\")",
+        "Received: knowledge",
+        "at Object.toBe (Tests/decisionBoundary.test.js:196:54)"
+      ]
+    },
+    {
+      "test": "Intent routing robustness (Phase A) › product_guidance: cum curat jantele?",
+      "file": "Tests/intentRoutingRobustness.test.js",
+      "line": null,
+      "errorFirstLines": [
+        "Routing assertion mismatch for cum curat jantele (see suite log)"
+      ]
+    },
+    {
+      "test": "Wheel strict filter does not wipe out › vreau sa curat jantele returns flow products without fallback",
+      "file": "Tests/wheelStrictFilterNoFallback.test.js",
+      "line": null,
+      "errorFirstLines": [
+        "Flow products empty or fallback triggered"
+      ]
+    },
+    {
+      "test": "Clarification improvement prompts › asks improved surface clarification prompt",
+      "file": "Tests/clarificationImprovement.test.js",
+      "line": null,
+      "errorFirstLines": [
+        "Prompt text mismatch vs getClarificationQuestion output"
+      ]
+    },
+    {
+      "test": "golden replay baselines match",
+      "file": "Tests/goldenReplay.test.js",
+      "line": 11,
+      "errorFirstLines": [
+        "Golden replay failed: 5 cases diff",
+        "low-signal-intent-level, p0-golden-apc-piele-safety, p0-golden-cotiera-reset-root-query,",
+        "p0-golden-cotiera-textil-flow, p0-golden-tire-categorypath"
+      ]
+    },
+    {
+      "test": "Glass routing and glass_clean_basic › A: vreau sa curat sticla asks Interior sau exterior then interior runs glass_clean_basic",
+      "file": "Tests/glassRouting.test.js",
+      "line": 40,
+      "errorFirstLines": [
+        "expect(first.type).toBe(\"question\")",
+        "Received: \"flow\"",
+        "at Object.toBe (Tests/glassRouting.test.js:40:24)"
+      ]
+    },
+    {
+      "test": "Glass routing and glass_clean_basic › D: profanity during clarification clears pendingQuestion",
+      "file": "Tests/glassRouting.test.js",
+      "line": 85,
+      "errorFirstLines": [
+        "expect(getSession(sessionId).pendingQuestion).toBeTruthy()",
+        "Received: null (sticla routes to flow without pending context question)",
+        "at Object.toBeTruthy (Tests/glassRouting.test.js:85:51)"
+      ]
+    },
+    {
+      "test": "Clarification retry hint › adds retry hint after two clarification turns",
+      "file": "Tests/clarificationRetry.test.js",
+      "line": null,
+      "errorFirstLines": [
+        "Retry hint missing after two clarification turns"
+      ]
+    },
+    {
+      "test": "Prod regression fixes (locale, mirrors, shine heuristic, narrowing) › handleChat: after textile recommendation, murdărie grea does not loop on intent_level",
+      "file": "Tests/prodRegressionFixes.test.js",
+      "line": 95,
+      "errorFirstLines": [
+        "expect(last.decision.missingSlot).not.toBe(\"intent_level\")",
+        "Received missingSlot: intent_level",
+        "at Object.toBe (Tests/prodRegressionFixes.test.js:95:43)"
+      ]
+    },
+    {
+      "test": "Intent escalation: knowledge → selection follow-up › recommendation follow-up bypasses low-signal intent_level and applies carry-over (anvelope)",
+      "file": "Tests/intentEscalationFollowup.test.js",
+      "line": null,
+      "errorFirstLines": [
+        "Carry-over / selection bypass assertion failed"
+      ]
+    },
+    {
+      "test": "Intent escalation: knowledge → selection follow-up › safeFallback menu blocked when follow-up product_search has exactly one bundled product (logs SAFEFALLBACK_BLOCKED_PRODUCTS_EXIST)",
+      "file": "Tests/intentEscalationFollowup.test.js",
+      "line": null,
+      "errorFirstLines": [
+        "SAFEFALLBACK_BLOCKED / menu assertion failed"
+      ]
+    },
+    {
+      "test": "Surface tag coverage audit (offline) › keeps text-surface mismatch counts under configured thresholds",
+      "file": "Tests/tagCoverageAudit.test.js",
+      "line": 22,
+      "errorFirstLines": [
+        "expect(audit.summary[surface]).toBeLessThanOrEqual(threshold)",
+        "leather misses=215 threshold=87; plastic misses=395 threshold=125"
+      ]
+    },
+    {
+      "test": "Regression: low-signal follow-up bypass must not yield null decision.action › positive: recommendation follow-up with carryover bypasses low-signal and routes selection",
+      "file": "Tests/lowSignalBypassNullAction.test.js",
+      "line": 91,
+      "errorFirstLines": [
+        "queryType Expected selection Received null"
+      ]
+    },
+    {
+      "test": "Selection hard filtering and output › applies hard filtering before ranking and renders role-structured output",
+      "file": "Tests/selectionOutput.test.js",
+      "line": 49,
+      "errorFirstLines": [
+        "expect(result.type).toBe(\"recommendation\")",
+        "Received: \"reply\""
+      ]
+    },
+    {
+      "test": "Product coverage gaps roles/mapping › strict->relaxed retry happens only for scoped roles",
+      "file": "Tests/productCoverageGaps.test.js",
+      "line": 37,
+      "errorFirstLines": [
+        "td1 not in tire_dressing matches"
+      ]
+    }
+  ]
+}

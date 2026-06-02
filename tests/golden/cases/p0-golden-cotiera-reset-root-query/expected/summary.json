@@ -46,7 +46,8 @@
           "escalationStep": null,
           "lastFailureReason": null,
           "lastUserAnswerNormalized": null,
-          "slot": "surface"
+          "slot": "surface",
+          "turnsSinceArmed": 0
         }
       },
       "sessionMutations": [],
@@ -63,6 +64,7 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "surface",
+        "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
         "lastFlow": null,
         "lastHighLevelIntent": "product_guidance",
         "lastIntent": "procedural",
@@ -83,7 +85,11 @@
         },
         "objective": {
           "needsCompletion": false,
-          "slots": {},
+          "slots": {
+            "action": "clean",
+            "context": "interior",
+            "surface": "textile"
+          },
           "type": null
         },
         "originalIntent": null,
@@ -100,6 +106,7 @@
           "responseLocale": "ro",
           "state": "NEEDS_SURFACE"
         },
+        "pendingContexts": [],
         "pendingQuestion": {
           "active": true,
           "attemptCount": 0,
@@ -107,7 +114,8 @@
           "escalationStep": null,
           "lastFailureReason": null,
           "lastUserAnswerNormalized": null,
-          "slot": "surface"
+          "slot": "surface",
+          "turnsSinceArmed": 0
         },
         "pendingSelection": false,
         "pendingSelectionMissingSlot": null,
@@ -126,11 +134,13 @@
         "routingTurnIndex": 0,
         "schemaVersion": 2,
         "slotMeta": {
-          "context": "unknown",
+          "action": "inferred",
+          "context": "inferred",
           "object": "unknown",
-          "surface": "unknown"
+          "surface": "inferred"
         },
         "slots": {
+          "action": "clean",
           "context": "interior",
           "object": "cotiera",
           "surface": null
@@ -158,6 +168,7 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "surface",
+        "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
         "lastFlow": null,
         "lastHighLevelIntent": "product_guidance",
         "lastIntent": "procedural",
@@ -178,7 +189,11 @@
         },
         "objective": {
           "needsCompletion": false,
-          "slots": {},
+          "slots": {
+            "action": "clean",
+            "context": "interior",
+            "surface": "textile"
+          },
           "type": null
         },
         "originalIntent": null,
@@ -195,6 +210,7 @@
           "responseLocale": "ro",
           "state": "NEEDS_SURFACE"
         },
+        "pendingContexts": [],
         "pendingQuestion": {
           "active": true,
           "attemptCount": 0,
@@ -202,7 +218,8 @@
           "escalationStep": null,
           "lastFailureReason": null,
           "lastUserAnswerNormalized": null,
-          "slot": "surface"
+          "slot": "surface",
+          "turnsSinceArmed": 0
         },
         "pendingSelection": false,
         "pendingSelectionMissingSlot": null,
@@ -221,11 +238,13 @@
         "routingTurnIndex": 0,
         "schemaVersion": 2,
         "slotMeta": {
-          "context": "unknown",
+          "action": "inferred",
+          "context": "inferred",
           "object": "unknown",
-          "surface": "unknown"
+          "surface": "inferred"
         },
         "slots": {
+          "action": "clean",
           "context": "interior",
           "object": "cotiera",
           "surface": null
@@ -265,6 +284,8 @@
           "queryType": "procedural",
           "tags": [
             "textile",
+            "carpet",
+            "headliner",
             "interior"
           ],
           "type": "product_guidance"
@@ -291,6 +312,7 @@
             "intentFlags": {},
             "language": "ro",
             "lastAskedClarificationSlot": "surface",
+            "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
             "lastFlow": null,
             "lastHighLevelIntent": "product_guidance",
             "lastIntent": "procedural",
@@ -311,7 +333,11 @@
             },
             "objective": {
               "needsCompletion": false,
-              "slots": {},
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "surface": "textile"
+              },
               "type": null
             },
             "originalIntent": null,
@@ -328,6 +354,7 @@
               "responseLocale": "ro",
               "state": "NEEDS_SURFACE"
             },
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSelection": false,
             "pendingSelectionMissingSlot": null,
@@ -346,11 +373,13 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
+              "action": "inferred",
+              "context": "inferred",
               "object": "unknown",
               "surface": "confirmed"
             },
             "slots": {
+              "action": "clean",
               "context": "interior",
               "object": "cotiera",
               "surface": "textile"
@@ -376,6 +405,7 @@
             "intentFlags": {},
             "language": "ro",
             "lastAskedClarificationSlot": "surface",
+            "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
             "lastFlow": null,
             "lastHighLevelIntent": "product_guidance",
             "lastIntent": "procedural",
@@ -396,7 +426,11 @@
             },
             "objective": {
               "needsCompletion": false,
-              "slots": {},
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "surface": "textile"
+              },
               "type": null
             },
             "originalIntent": null,
@@ -413,6 +447,7 @@
               "responseLocale": "ro",
               "state": "NEEDS_SURFACE"
             },
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSelection": false,
             "pendingSelectionMissingSlot": null,
@@ -431,11 +466,13 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
+              "action": "inferred",
+              "context": "inferred",
               "object": "unknown",
               "surface": "confirmed"
             },
             "slots": {
+              "action": "clean",
               "context": "interior",
               "object": "cotiera",
               "surface": "textile"
@@ -465,6 +502,7 @@
             "intentFlags": {},
             "language": "ro",
             "lastAskedClarificationSlot": "surface",
+            "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
             "lastFlow": null,
             "lastHighLevelIntent": "product_guidance",
             "lastIntent": "procedural",
@@ -485,7 +523,11 @@
             },
             "objective": {
               "needsCompletion": false,
-              "slots": {},
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "surface": "textile"
+              },
               "type": null
             },
             "originalIntent": null,
@@ -495,6 +537,7 @@
               "responseLocale": "ro",
               "state": null
             },
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSelection": false,
             "pendingSelectionMissingSlot": null,
@@ -506,11 +549,13 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
+              "action": "inferred",
+              "context": "inferred",
               "object": "unknown",
               "surface": "confirmed"
             },
             "slots": {
+              "action": "clean",
               "brand": null,
               "context": "interior",
               "object": "cotiera",
@@ -537,6 +582,7 @@
             "intentFlags": {},
             "language": "ro",
             "lastAskedClarificationSlot": "surface",
+            "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
             "lastFlow": null,
             "lastHighLevelIntent": "product_guidance",
             "lastIntent": "procedural",
@@ -557,7 +603,11 @@
             },
             "objective": {
               "needsCompletion": false,
-              "slots": {},
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "surface": "textile"
+              },
               "type": null
             },
             "originalIntent": null,
@@ -567,6 +617,7 @@
               "responseLocale": "ro",
               "state": null
             },
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSelection": false,
             "pendingSelectionMissingSlot": null,
@@ -578,11 +629,13 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
+              "action": "inferred",
+              "context": "inferred",
               "object": "unknown",
               "surface": "confirmed"
             },
             "slots": {
+              "action": "clean",
               "brand": null,
               "context": "interior",
               "object": "cotiera",
@@ -614,6 +667,7 @@
             "intentFlags": {},
             "language": "ro",
             "lastAskedClarificationSlot": "surface",
+            "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
             "lastFlow": null,
             "lastHighLevelIntent": "product_guidance",
             "lastIntent": "procedural",
@@ -635,6 +689,7 @@
             "objective": {
               "needsCompletion": false,
               "slots": {
+                "action": "clean",
                 "brand": null,
                 "context": "interior",
                 "object": "cotiera",
@@ -652,6 +707,7 @@
               "responseLocale": "ro",
               "state": null
             },
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSelection": false,
             "pendingSelectionMissingSlot": null,
@@ -663,11 +719,13 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
+              "action": "inferred",
+              "context": "inferred",
               "object": "unknown",
               "surface": "confirmed"
             },
             "slots": {
+              "action": "clean",
               "brand": null,
               "context": "interior",
               "object": "cotiera",
@@ -681,8 +739,9 @@
             "surfaceAssistShortlist": null,
             "surfaceUnknown": false,
             "tags": [
-              "interior",
-              "textile"
+              "textile",
+              "carpet",
+              "headliner"
             ],
             "vehicleFieldsRequested": false
           },
@@ -698,6 +757,7 @@
             "intentFlags": {},
             "language": "ro",
             "lastAskedClarificationSlot": "surface",
+            "lastBotReply": "Ce suprafata este: textile, piele, plastic sau alcantara?\n\nNu esti sigur? Spune-mi masina (producator, model, an de fabricatie) si te pot ajuta sa alegi.",
             "lastFlow": null,
             "lastHighLevelIntent": "product_guidance",
             "lastIntent": "procedural",
@@ -719,6 +779,7 @@
             "objective": {
               "needsCompletion": false,
               "slots": {
+                "action": "clean",
                 "brand": null,
                 "context": "interior",
                 "object": "cotiera",
@@ -736,6 +797,7 @@
               "responseLocale": "ro",
               "state": null
             },
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSelection": false,
             "pendingSelectionMissingSlot": null,
@@ -747,11 +809,13 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
+              "action": "inferred",
+              "context": "inferred",
               "object": "unknown",
               "surface": "confirmed"
             },
             "slots": {
+              "action": "clean",
               "brand": null,
               "context": "interior",
               "object": "cotiera",
@@ -765,8 +829,9 @@
             "surfaceAssistShortlist": null,
             "surfaceUnknown": false,
             "tags": [
-              "interior",
-              "textile"
+              "textile",
+              "carpet",
+              "headliner"
             ],
             "vehicleFieldsRequested": false
           },
@@ -793,7 +858,8 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "surface",
-        "lastFlow": null,
+        "lastBotReply": "— Flux recomandat —\nSubiect: Curatare interior masina (ghid rapid)\n\nIata pasii pentru Curatare interior masina (ghid rapid):\n1. Aspirare\n2. Curatare suprafete\n3. Finisare\n\nSfat: urmează eticheta produsului; dacă observi efecte nedorite, clătește imediat.",
+        "lastFlow": "interior_clean_basic",
         "lastHighLevelIntent": "product_search",
         "lastIntent": "procedural",
         "lastNonNullSlots": {
@@ -814,6 +880,7 @@
         "objective": {
           "needsCompletion": false,
           "slots": {
+            "action": "clean",
             "brand": null,
             "context": "interior",
             "object": "cotiera",
@@ -831,6 +898,7 @@
           "responseLocale": "ro",
           "state": null
         },
+        "pendingContexts": [],
         "pendingQuestion": null,
         "pendingSelection": false,
         "pendingSelectionMissingSlot": null,
@@ -842,11 +910,13 @@
         "routingTurnIndex": 1,
         "schemaVersion": 2,
         "slotMeta": {
-          "context": "unknown",
+          "action": "inferred",
+          "context": "inferred",
           "object": "unknown",
           "surface": "confirmed"
         },
         "slots": {
+          "action": "clean",
           "brand": null,
           "context": "interior",
           "object": "cotiera",
@@ -861,6 +931,8 @@
         "surfaceUnknown": false,
         "tags": [
           "textile",
+          "carpet",
+          "headliner",
           "interior"
         ],
         "vehicleFieldsRequested": false
@@ -884,7 +956,8 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "surface",
-        "lastFlow": null,
+        "lastBotReply": "— Flux recomandat —\nSubiect: Curatare interior masina (ghid rapid)\n\nIata pasii pentru Curatare interior masina (ghid rapid):\n1. Aspirare\n2. Curatare suprafete\n3. Finisare\n\nSfat: urmează eticheta produsului; dacă observi efecte nedorite, clătește imediat.",
+        "lastFlow": "interior_clean_basic",
         "lastHighLevelIntent": "product_search",
         "lastIntent": "procedural",
         "lastNonNullSlots": {
@@ -905,6 +978,7 @@
         "objective": {
           "needsCompletion": false,
           "slots": {
+            "action": "clean",
             "brand": null,
             "context": "interior",
             "object": "cotiera",
@@ -922,6 +996,7 @@
           "responseLocale": "ro",
           "state": null
         },
+        "pendingContexts": [],
         "pendingQuestion": null,
         "pendingSelection": false,
         "pendingSelectionMissingSlot": null,
@@ -933,11 +1008,13 @@
         "routingTurnIndex": 1,
         "schemaVersion": 2,
         "slotMeta": {
-          "context": "unknown",
+          "action": "inferred",
+          "context": "inferred",
           "object": "unknown",
           "surface": "confirmed"
         },
         "slots": {
+          "action": "clean",
           "brand": null,
           "context": "interior",
           "object": "cotiera",
@@ -952,6 +1029,8 @@
         "surfaceUnknown": false,
         "tags": [
           "textile",
+          "carpet",
+          "headliner",
           "interior"
         ],
         "vehicleFieldsRequested": false
@@ -1000,7 +1079,8 @@
           "lastFailureReason": null,
           "lastUserAnswerNormalized": null,
           "object": null,
-          "slot": "object"
+          "slot": "object",
+          "turnsSinceArmed": 0
         }
       },
       "sessionMutations": [],
@@ -1025,6 +1105,7 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "object",
+        "lastBotReply": "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)",
         "lastFlow": null,
         "lastHighLevelIntent": "product_guidance",
         "lastIntent": "procedural",
@@ -1046,6 +1127,7 @@
         "objective": {
           "needsCompletion": false,
           "slots": {
+            "action": "clean",
             "brand": null,
             "context": "interior",
             "object": "cotiera",
@@ -1070,6 +1152,7 @@
           "responseLocale": "ro",
           "state": "NEEDS_OBJECT"
         },
+        "pendingContexts": [],
         "pendingQuestion": {
           "active": true,
           "attemptCount": 0,
@@ -1079,7 +1162,8 @@
           "lastFailureReason": null,
           "lastUserAnswerNormalized": null,
           "object": null,
-          "slot": "object"
+          "slot": "object",
+          "turnsSinceArmed": 0
         },
         "pendingSelection": false,
         "pendingSelectionMissingSlot": null,
@@ -1098,11 +1182,13 @@
         "routingTurnIndex": 1,
         "schemaVersion": 2,
         "slotMeta": {
+          "action": "inferred",
           "context": "unknown",
           "object": "unknown",
           "surface": "unknown"
         },
         "slots": {
+          "action": "clean",
           "brand": null,
           "context": "exterior",
           "object": null,
@@ -1141,6 +1227,7 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "object",
+        "lastBotReply": "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)",
         "lastFlow": null,
         "lastHighLevelIntent": "product_guidance",
         "lastIntent": "procedural",
@@ -1162,6 +1249,7 @@
         "objective": {
           "needsCompletion": false,
           "slots": {
+            "action": "clean",
             "brand": null,
             "context": "interior",
             "object": "cotiera",
@@ -1186,6 +1274,7 @@
           "responseLocale": "ro",
           "state": "NEEDS_OBJECT"
         },
+        "pendingContexts": [],
         "pendingQuestion": {
           "active": true,
           "attemptCount": 0,
@@ -1195,7 +1284,8 @@
           "lastFailureReason": null,
           "lastUserAnswerNormalized": null,
           "object": null,
-          "slot": "object"
+          "slot": "object",
+          "turnsSinceArmed": 0
         },
         "pendingSelection": false,
         "pendingSelectionMissingSlot": null,
@@ -1214,11 +1304,13 @@
         "routingTurnIndex": 1,
         "schemaVersion": 2,
         "slotMeta": {
+          "action": "inferred",
           "context": "unknown",
           "object": "unknown",
           "surface": "unknown"
         },
         "slots": {
+          "action": "clean",
           "brand": null,
           "context": "exterior",
           "object": null,

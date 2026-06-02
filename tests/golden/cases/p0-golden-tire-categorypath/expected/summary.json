@@ -28,8 +28,8 @@
           "queryType": "selection",
           "tags": [
             "exterior",
-            "shine",
             "tires",
+            "shine",
             "rubber",
             "dressing"
           ],
@@ -81,10 +81,20 @@
             },
             "objective": {
               "needsCompletion": false,
-              "slots": {},
+              "slots": {
+                "action": null,
+                "brand": null,
+                "context": "exterior",
+                "object": "anvelope",
+                "surface": "tires",
+                "vehicleMake": null,
+                "vehicleModel": null,
+                "vehicleYear": null
+              },
               "type": "selection"
             },
             "originalIntent": null,
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSlots": null,
             "questionCount": 0,
@@ -93,11 +103,12 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
-              "object": "unknown",
-              "surface": "unknown"
+              "context": "inferred",
+              "object": "stale",
+              "surface": "inferred"
             },
             "slots": {
+              "action": null,
               "brand": null,
               "context": "exterior",
               "object": "anvelope",
@@ -111,9 +122,9 @@
             "surfaceAssistShortlist": null,
             "surfaceUnknown": false,
             "tags": [
+              "tires",
               "shine",
               "exterior",
-              "tires",
               "rubber",
               "dressing"
             ],
@@ -146,10 +157,20 @@
             },
             "objective": {
               "needsCompletion": false,
-              "slots": {},
+              "slots": {
+                "action": null,
+                "brand": null,
+                "context": "exterior",
+                "object": "anvelope",
+                "surface": "tires",
+                "vehicleMake": null,
+                "vehicleModel": null,
+                "vehicleYear": null
+              },
               "type": "selection"
             },
             "originalIntent": null,
+            "pendingContexts": [],
             "pendingQuestion": null,
             "pendingSlots": null,
             "questionCount": 0,
@@ -158,11 +179,12 @@
             "routingTurnIndex": 0,
             "schemaVersion": 2,
             "slotMeta": {
-              "context": "unknown",
-              "object": "unknown",
-              "surface": "unknown"
+              "context": "inferred",
+              "object": "stale",
+              "surface": "inferred"
             },
             "slots": {
+              "action": null,
               "brand": null,
               "context": "exterior",
               "object": "anvelope",
@@ -176,9 +198,9 @@
             "surfaceAssistShortlist": null,
             "surfaceUnknown": false,
             "tags": [
+              "tires",
               "shine",
               "exterior",
-              "tires",
               "rubber",
               "dressing"
             ],
@@ -218,6 +240,7 @@
         "informationalCarryoverEligibleForProductFollowup": true,
         "intentFlags": {},
         "language": "ro",
+        "lastBotReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml\n\nClarificare:\nUn detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?",
         "lastFlow": null,
         "lastHighLevelIntent": "product_search",
         "lastIntent": "selection",
@@ -238,10 +261,20 @@
         },
         "objective": {
           "needsCompletion": true,
-          "slots": {},
+          "slots": {
+            "action": null,
+            "brand": null,
+            "context": "exterior",
+            "object": "anvelope",
+            "surface": "tires",
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
           "type": "selection"
         },
         "originalIntent": null,
+        "pendingContexts": [],
         "pendingQuestion": null,
         "pendingSlots": null,
         "previousAction": "recommend",
@@ -262,11 +295,12 @@
           "source": "selection_or_recommendation"
         },
         "slotMeta": {
-          "context": "unknown",
-          "object": "unknown",
-          "surface": "unknown"
+          "context": "inferred",
+          "object": "stale",
+          "surface": "inferred"
         },
         "slots": {
+          "action": null,
           "brand": null,
           "context": "exterior",
           "object": "anvelope",
@@ -280,9 +314,9 @@
         "surfaceAssistShortlist": null,
         "surfaceUnknown": false,
         "tags": [
+          "tires",
           "shine",
           "exterior",
-          "tires",
           "rubber",
           "dressing"
         ],
@@ -318,6 +352,7 @@
         "informationalCarryoverEligibleForProductFollowup": true,
         "intentFlags": {},
         "language": "ro",
+        "lastBotReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml\n\nClarificare:\nUn detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?",
         "lastFlow": null,
         "lastHighLevelIntent": "product_search",
         "lastIntent": "selection",
@@ -338,10 +373,20 @@
         },
         "objective": {
           "needsCompletion": true,
-          "slots": {},
+          "slots": {
+            "action": null,
+            "brand": null,
+            "context": "exterior",
+            "object": "anvelope",
+            "surface": "tires",
+            "vehicleMake": null,
+            "vehicleModel": null,
+            "vehicleYear": null
+          },
           "type": "selection"
         },
         "originalIntent": null,
+        "pendingContexts": [],
         "pendingQuestion": null,
         "pendingSlots": null,
         "previousAction": "recommend",
@@ -362,11 +407,12 @@
           "source": "selection_or_recommendation"
         },
         "slotMeta": {
-          "context": "unknown",
-          "object": "unknown",
-          "surface": "unknown"
+          "context": "inferred",
+          "object": "stale",
+          "surface": "inferred"
         },
         "slots": {
+          "action": null,
           "brand": null,
           "context": "exterior",
           "object": "anvelope",
@@ -380,9 +426,9 @@
         "surfaceAssistShortlist": null,
         "surfaceUnknown": false,
         "tags": [
+          "tires",
           "shine",
           "exterior",
-          "tires",
           "rubber",
           "dressing"
         ],
