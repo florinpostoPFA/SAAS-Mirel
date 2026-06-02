@@ -49,6 +49,34 @@ const CANONICAL_OBJECT_VALUES = Object.freeze([
 
 const SLOT_KEYS = Object.freeze(["context", "surface", "object", "action", "domain"]);
 
+const TEXTILE_SURFACE_MARKER = /\b(textil\w*|tapiterie|tapiteria|stofa|stofe)\b/i;
+const OBJECT_SURFACE_GUARD_TOKENS = new Set([
+  "scaun",
+  "scaune",
+  "bancheta",
+  "banchete",
+  "cotiera",
+  "cotiere"
+]);
+const WORKFLOW_ACTION_ORDER = Object.freeze([
+  "decontaminate",
+  "clean",
+  "polish",
+  "restore",
+  "maintain",
+  "protect",
+  "dress"
+]);
+const CLEANLINESS_INTENSITY_DEEP =
+  /\b(noroi|mizerie\s+grea|murdar\w*\s+grea|pata\s+adanca|pete\s+grele)\b/i;
+const CLEANLINESS_INTENSITY_NORMAL = /\b(murdar\w*|mizerie|pata|pete|praf)\b/i;
+
+const INTENT_TAG_ACTION_MAP = Object.freeze([
+  { tag: "cleaning", action: "clean" },
+  { tag: "polish", action: "polish" },
+  { tag: "protection", action: "protect" }
+]);
+
 function normalizeMessageText(text) {
   return String(text || "")
     .toLowerCase()
@@ -141,7 +169,8 @@ const EXPECTED_GUARD_REASONS = new Set([
   "stale_slot_present",
   "slot_already_fresh",
   "blocked_guard_surface_object",
-  "blocked_guard_all"
+  "blocked_guard_all",
+  "session_slots_established"
 ]);
 
 function bucketSkipReasons(skippedReasons) {
@@ -156,6 +185,79 @@ function bucketSkipReasons(skippedReasons) {
       anomalous_skip: tokenInferenceSkipAnomalous.length
     }
   };
+}
+
+function normalizeRuleTokenLabel(tokenLabel) {
+  return String(tokenLabel || "")
+    .replace(/^\/\\b/, "")
+    .replace(/\\b\/[a-z]*$/i, "")
+    .trim();
+}
+
+function shouldSkipGuardedTextileSurface(tokenLabel, surfaceValue, normalizedMessage) {
+  if (surfaceValue !== "textile") return false;
+  const token = normalizeRuleTokenLabel(tokenLabel);
+  if (!OBJECT_SURFACE_GUARD_TOKENS.has(token)) return false;
+  return !TEXTILE_SURFACE_MARKER.test(normalizedMessage);
+}
+
+function pickWorkflowAction(actionValues) {
+  const set = new Set(actionValues);
+  for (const action of WORKFLOW_ACTION_ORDER) {
+    if (set.has(action)) return action;
+  }
+  return actionValues.length ? actionValues[actionValues.length - 1] : null;
+}
+
+function inferCleanlinessIntensity(normalizedMessage) {
+  if (!CLEANLINESS_INTENSITY_NORMAL.test(normalizedMessage)) {
+    return null;
+  }
+  return {
+    action: "clean",
+    intensity: CLEANLINESS_INTENSITY_DEEP.test(normalizedMessage) ? "deep" : "normal"
+  };
+}
+
+function syncActionIntensityOnSlots(slots) {
+  if (!slots || typeof slots !== "object") return;
+  if (!slots.action) {
+    delete slots.actionIntensity;
+    return;
+  }
+  if (slots.action !== "clean") {
+    delete slots.actionIntensity;
+  }
+}
+
+function shouldSkipSessionSlotWrites(slotMeta) {
+  const meta = slotMeta && typeof slotMeta === "object" ? slotMeta : {};
+  const primaries = ["context", "surface", "object"];
+  if (!primaries.every((k) => meta[k] === "confirmed")) {
+    return false;
+  }
+  return meta.action !== "unknown";
+}
+
+function reconcileActionFromIntentTags(sessionContext, interactionRef) {
+  const slots = sessionContext.slots || {};
+  if (slots.action) {
+    syncActionIntensityOnSlots(slots);
+    return;
+  }
+  const tags = [
+    ...(Array.isArray(interactionRef?.tags) ? interactionRef.tags : []),
+    ...(Array.isArray(sessionContext?.tags) ? sessionContext.tags : [])
+  ];
+  for (const { tag, action } of INTENT_TAG_ACTION_MAP) {
+    if (tags.includes(tag)) {
+      slots.action = action;
+      sessionContext.slots = slots;
+      syncActionIntensityOnSlots(slots);
+      return;
+    }
+  }
+  syncActionIntensityOnSlots(slots);
 }
 
 function canonicalizeRuleSets(sets) {
@@ -204,6 +306,7 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
 
   const rules = sortedRules();
   let oodMatched = false;
+  const actionCandidates = [];
 
   for (const rule of rules) {
     if (!ruleMatches(rule, normalized)) continue;
@@ -238,6 +341,13 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
       const value = canonicalSets[slotKey];
       if (value == null) continue;
 
+      if (
+        slotKey === "surface" &&
+        shouldSkipGuardedTextileSurface(tokenLabel, value, normalized)
+      ) {
+        continue;
+      }
+
       const applyCheck = canApplySlotUpdate(slotKey, currentSlots, slotMeta);
       if (!applyCheck.ok) {
         if (applyCheck.reason && !skippedReasons.includes(applyCheck.reason)) {
@@ -246,8 +356,28 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
         continue;
       }
 
+      if (slotKey === "action") {
+        actionCandidates.push(value);
+        matches.push({ token: tokenLabel, slotKey, slotValue: value });
+        continue;
+      }
+
       slotUpdates[slotKey] = value;
       matches.push({ token: tokenLabel, slotKey, slotValue: value });
+    }
+  }
+
+  if (actionCandidates.length > 0) {
+    slotUpdates.action = pickWorkflowAction(actionCandidates);
+  }
+
+  const cleanliness = inferCleanlinessIntensity(normalized);
+  if (cleanliness) {
+    if (!slotUpdates.action) {
+      slotUpdates.action = cleanliness.action;
+    }
+    if (slotUpdates.action === "clean") {
+      slotUpdates.actionIntensity = cleanliness.intensity;
     }
   }
 
@@ -265,12 +395,17 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
     skippedReasons.push("no_token_match");
   }
 
-  return {
+  const result = {
     slotUpdates,
     matches,
     skippedReasons: [...new Set(skippedReasons)],
-    tokenInferenceApplied: matches.length > 0
+    tokenInferenceApplied: matches.length > 0,
+    actionIntensity: slotUpdates.actionIntensity ?? null
   };
+  if (result.slotUpdates.actionIntensity != null) {
+    delete result.slotUpdates.actionIntensity;
+  }
+  return result;
 }
 
 /**
@@ -307,7 +442,46 @@ function applyTokenInferenceToSessionSlots({
   const blockAll = options && options.blockAll === true;
   const blockSurfaceObject = options && options.blockSurfaceObject === true;
 
-  const actionMatches = result.matches.filter((m) => m.slotKey === "action");
+  if (shouldSkipSessionSlotWrites(sessionContext.slotMeta)) {
+    result.tokenInferenceApplied = false;
+    const establishedSkipReason =
+      result.matches.length === 0 ? "no_token_match" : "session_slots_established";
+    result.skippedReasons = [...new Set([...result.skippedReasons, establishedSkipReason])];
+    const skipBuckets = bucketSkipReasons(result.skippedReasons);
+    result.tokenInferenceSkipExpectedGuards = skipBuckets.tokenInferenceSkipExpectedGuards;
+    result.tokenInferenceSkipAnomalous = skipBuckets.tokenInferenceSkipAnomalous;
+    result.tokenInferenceSkipCounts = skipBuckets.tokenInferenceSkipCounts;
+    if (interactionRef && typeof interactionRef === "object") {
+      const prior = interactionRef.tokenInferenceTelemetry;
+      interactionRef.tokenInferenceTelemetry = {
+        tokenInferenceApplied: Boolean(prior?.tokenInferenceApplied),
+        tokenInferenceMatches: Array.isArray(prior?.tokenInferenceMatches)
+          ? prior.tokenInferenceMatches
+          : [],
+        tokenInferenceSkippedReasons: [
+          ...new Set([
+            ...(Array.isArray(prior?.tokenInferenceSkippedReasons)
+              ? prior.tokenInferenceSkippedReasons
+              : []),
+            establishedSkipReason
+          ])
+        ],
+        tokenInferenceSkipExpectedGuards: result.tokenInferenceSkipExpectedGuards,
+        tokenInferenceSkipAnomalous: result.tokenInferenceSkipAnomalous,
+        tokenInferenceSkipCounts: result.tokenInferenceSkipCounts,
+        tokenInferenceActionMatch: prior?.tokenInferenceActionMatch ?? null
+      };
+    }
+    return result;
+  }
+
+  let actionMatches = result.matches.filter((m) => m.slotKey === "action");
+  if (result.slotUpdates.action) {
+    actionMatches = actionMatches.filter((m) => m.slotValue === result.slotUpdates.action);
+    if (actionMatches.length === 0) {
+      actionMatches = [{ token: "workflow", slotKey: "action", slotValue: result.slotUpdates.action }];
+    }
+  }
 
   if (interactionRef && typeof interactionRef === "object") {
     const skipBuckets = bucketSkipReasons(result.skippedReasons);
@@ -380,6 +554,9 @@ function applyTokenInferenceToSessionSlots({
     return result;
   }
 
+  const actionIntensity = result.actionIntensity ?? null;
+  const slotsBeforeApply = JSON.stringify(sessionContext.slots);
+
   for (const [slotKey, value] of Object.entries(result.slotUpdates)) {
     if (slotKey === "domain" || value == null) continue;
     if (blockSurfaceObject && (slotKey === "surface" || slotKey === "object")) {
@@ -398,6 +575,12 @@ function applyTokenInferenceToSessionSlots({
     }
   }
 
+  if (actionIntensity != null && sessionContext.slots.action === "clean") {
+    sessionContext.slots.actionIntensity = actionIntensity;
+  }
+  syncActionIntensityOnSlots(sessionContext.slots);
+  reconcileActionFromIntentTags(sessionContext, interactionRef);
+
   if (sessionContext.objective && typeof sessionContext.objective === "object") {
     sessionContext.objective.slots = {
       ...(sessionContext.objective.slots || {}),
@@ -410,6 +593,13 @@ function applyTokenInferenceToSessionSlots({
   result.tokenInferenceSkipAnomalous = skipBuckets.tokenInferenceSkipAnomalous;
   result.tokenInferenceSkipCounts = skipBuckets.tokenInferenceSkipCounts;
 
+  const slotsMutated = slotsBeforeApply !== JSON.stringify(sessionContext.slots);
+  result.tokenInferenceApplied = slotsMutated;
+  if (interactionRef && typeof interactionRef === "object" && interactionRef.tokenInferenceTelemetry) {
+    interactionRef.tokenInferenceTelemetry.tokenInferenceApplied =
+      slotsMutated || Boolean(interactionRef.tokenInferenceTelemetry.tokenInferenceApplied);
+  }
+
   return result;
 }
 
@@ -417,6 +607,8 @@ module.exports = {
   inferSlotsFromMessage,
   applyTokenInferenceToSessionSlots,
   normalizeMessageText,
+  pickWorkflowAction,
+  shouldSkipGuardedTextileSurface,
   CANONICAL_SURFACE_VALUES,
   CANONICAL_ACTION_VALUES
 };

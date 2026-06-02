@@ -88,8 +88,7 @@
           "needsCompletion": false,
           "slots": {
             "action": "clean",
-            "context": "interior",
-            "surface": "textile"
+            "context": "interior"
           },
           "type": null
         },
@@ -138,7 +137,7 @@
           "action": "inferred",
           "context": "inferred",
           "object": "unknown",
-          "surface": "inferred"
+          "surface": "unknown"
         },
         "slots": {
           "action": "clean",
@@ -193,8 +192,7 @@
           "needsCompletion": false,
           "slots": {
             "action": "clean",
-            "context": "interior",
-            "surface": "textile"
+            "context": "interior"
           },
           "type": null
         },
@@ -243,7 +241,7 @@
           "action": "inferred",
           "context": "inferred",
           "object": "unknown",
-          "surface": "inferred"
+          "surface": "unknown"
         },
         "slots": {
           "action": "clean",
@@ -338,8 +336,7 @@
               "needsCompletion": false,
               "slots": {
                 "action": "clean",
-                "context": "interior",
-                "surface": "textile"
+                "context": "interior"
               },
               "type": null
             },
@@ -432,8 +429,7 @@
               "needsCompletion": false,
               "slots": {
                 "action": "clean",
-                "context": "interior",
-                "surface": "textile"
+                "context": "interior"
               },
               "type": null
             },
@@ -530,8 +526,7 @@
               "needsCompletion": false,
               "slots": {
                 "action": "clean",
-                "context": "interior",
-                "surface": "textile"
+                "context": "interior"
               },
               "type": null
             },
@@ -611,8 +606,7 @@
               "needsCompletion": false,
               "slots": {
                 "action": "clean",
-                "context": "interior",
-                "surface": "textile"
+                "context": "interior"
               },
               "type": null
             },

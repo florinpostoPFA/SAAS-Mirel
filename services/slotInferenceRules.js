@@ -187,14 +187,14 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     raw: "scaun",
     family: "surface",
     priority: 130,
-    sets: { surface: "textile", context: "interior" }
+    sets: { context: "interior" }
   },
   {
     token: "scaune",
     raw: "scaune",
     family: "surface",
     priority: 131,
-    sets: { surface: "textile", context: "interior" }
+    sets: { context: "interior" }
   },
   {
     token: "bancheta",
@@ -243,14 +243,21 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     raw: "planșă",
     family: "surface",
     priority: 138,
-    sets: { surface: "plastic", context: "interior" },
-    notes: "Only when phrase context is dashboard (plansa de bord); Run B may gate."
+    sets: { context: "interior" },
+    notes: "Surface plastic only via plansa de bord phrase rule."
+  },
+  {
+    token: "textil",
+    raw: "textil",
+    family: "surface",
+    priority: 139,
+    sets: { surface: "textile", context: "interior" }
   },
   {
     token: "mocheta",
     raw: "mochetă",
     family: "surface",
-    priority: 139,
+    priority: 140,
     sets: { surface: "textile", context: "interior" }
   },
   {
@@ -471,6 +478,62 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     sets: { action: "clean" }
   },
   {
+    token: "murdar",
+    raw: "murdar",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
+    token: "murdara",
+    raw: "murdara",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
+    token: "murdarie",
+    raw: "murdarie",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
+    token: "mizerie",
+    raw: "mizerie",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
+    token: "pata",
+    raw: "pata",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
+    token: "pete",
+    raw: "pete",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
+    token: "noroi",
+    raw: "noroi",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
+    token: "praf",
+    raw: "praf",
+    family: "action",
+    priority: 305,
+    sets: { action: "clean" }
+  },
+  {
     token: "spuma activa",
     raw: "spumă activă",
     family: "action",
@@ -580,6 +643,20 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     notes: "Diagonal: also context=exterior via context family rule."
   },
   {
+    token: "lustrui",
+    raw: "lustrui",
+    family: "action",
+    priority: 329,
+    sets: { action: "polish" }
+  },
+  {
+    token: "decolora",
+    raw: "decolora",
+    family: "action",
+    priority: 329,
+    sets: { action: "polish" }
+  },
+  {
     token: "lustruiesc",
     raw: "lustruiesc",
     family: "action",
@@ -641,6 +718,27 @@ const SLOT_INFERENCE_RULES = Object.freeze([
     family: "action",
     priority: 338,
     sets: { action: "polish" }
+  },
+  {
+    token: "protejat",
+    raw: "protejat",
+    family: "action",
+    priority: 339,
+    sets: { action: "protect" }
+  },
+  {
+    token: "hidratat",
+    raw: "hidratat",
+    family: "action",
+    priority: 339,
+    sets: { action: "protect" }
+  },
+  {
+    token: "conditionat",
+    raw: "conditionat",
+    family: "action",
+    priority: 339,
+    sets: { action: "protect" }
   },
   {
     token: "protejez",
@@ -724,6 +822,13 @@ const SLOT_INFERENCE_RULES = Object.freeze([
   {
     token: "sigilez",
     raw: "sigilez",
+    family: "action",
+    priority: 347,
+    sets: { action: "protect" }
+  },
+  {
+    token: "sigilat",
+    raw: "sigilat",
     family: "action",
     priority: 347,
     sets: { action: "protect" }

@@ -34,9 +34,9 @@ describe("slotInferenceFromMessage — unit (token categories)", () => {
     expect(r.slotUpdates.action).toBe("protect");
   });
 
-  test("scaun → textile + interior", () => {
+  test("scaun → interior without default textile (F35 AC1)", () => {
     const r = infer("curat scaunele");
-    expect(r.slotUpdates.surface).toBe("textile");
+    expect(r.slotUpdates.surface).toBeUndefined();
     expect(r.slotUpdates.context).toBe("interior");
     expect(r.slotUpdates.action).toBe("clean");
   });
