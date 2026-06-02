@@ -41,6 +41,7 @@ describe("Intent escalation: knowledge → selection follow-up", () => {
     const products = [
       {
         id: "td1",
+        manufacturerId: 70,
         name: "Dressing Anvelope Black",
         description: "Finisaj satin pentru anvelope.",
         short_description: "Dressing anvelope.",
@@ -48,6 +49,7 @@ describe("Intent escalation: knowledge → selection follow-up", () => {
       },
       {
         id: "td2",
+        manufacturerId: 70,
         name: "Perie Anvelope",
         description: "Aplicare uniformă.",
         short_description: "Perie.",
@@ -87,6 +89,7 @@ describe("Intent escalation: knowledge → selection follow-up", () => {
     const products = [
       {
         id: "td1",
+        manufacturerId: 70,
         name: "Dressing Anvelope Black",
         description: "Finisaj satin pentru anvelope.",
         short_description: "Dressing anvelope.",
@@ -119,6 +122,7 @@ describe("Intent escalation: knowledge → selection follow-up", () => {
     const products = [
       {
         id: "td1",
+        manufacturerId: 70,
         name: "Dressing Anvelope Black",
         description: "Finisaj satin pentru anvelope.",
         short_description: "Dressing anvelope.",
@@ -140,6 +144,7 @@ describe("Intent escalation: knowledge → selection follow-up", () => {
     const products = [
       {
         id: "td1",
+        manufacturerId: 70,
         name: "Dressing Anvelope Black",
         description: "Finisaj satin pentru anvelope.",
         short_description: "Dressing anvelope.",
@@ -147,6 +152,7 @@ describe("Intent escalation: knowledge → selection follow-up", () => {
       },
       {
         id: "td2",
+        manufacturerId: 70,
         name: "Cleaner Jante",
         description: "Curatare jante.",
         short_description: "Cleaner jante.",

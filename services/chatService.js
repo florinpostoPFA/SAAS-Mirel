@@ -2436,10 +2436,19 @@ function endInteraction(interactionRef, result, patch = {}) {
   console.log("FINAL_DECISION", interactionRef.decision);
 
   if (sessionContext) {
+    const missingSlotForRetry = String(interactionRef?.decision?.missingSlot || "").toLowerCase();
+    const pendingClarifSlot = String(
+      sessionContext?.pendingQuestion?.slot ||
+        sessionContext?.pendingSelectionMissingSlot ||
+        ""
+    ).toLowerCase();
+    const retrySlot = missingSlotForRetry || pendingClarifSlot;
+    const retryableSlots = ["context", "object", "surface", "intent_level"];
     const isSlotClarificationQuestion =
-      interactionRef?.decision?.action === "clarification" &&
+      retryableSlots.includes(retrySlot) &&
       finalOutputType === "question" &&
-      ["context", "object", "surface"].includes(String(interactionRef?.decision?.missingSlot || "").toLowerCase());
+      (interactionRef?.decision?.action === "clarification" ||
+        (interactionRef?.decision?.action === "recommend" && Boolean(retrySlot)));
     if (isSlotClarificationQuestion) {
       const currentCount = Number(sessionContext.clarificationCountIncrement) || 0;
       const nextCount = currentCount + 1;
@@ -2455,7 +2464,10 @@ function endInteraction(interactionRef, result, patch = {}) {
         message: patchedReply,
         reply: patchedReply
       };
-    } else if (interactionRef?.decision?.action !== "clarification") {
+    } else if (
+      interactionRef?.decision?.action !== "clarification" &&
+      finalOutputType !== "question"
+    ) {
       sessionContext.clarificationCountIncrement = 0;
     }
 
@@ -5994,7 +6006,12 @@ function getSelectionCarryoverActivationState(sessionContext) {
     prevAction === "recommend" ||
     prevAction === "product_search" ||
     String(sc?.lastResponseType || "").toLowerCase() === "recommendation";
-  const allowExplicitCarryover = hasExplicitCarryoverContext && prevWasRecommendationExperience;
+  const hasAnchoredCarryoverSlots = hasCarryoverSelectionContext(sc);
+  const hadRecentProducts =
+    Array.isArray(sc.activeProducts) && sc.activeProducts.length > 0;
+  const allowExplicitCarryover =
+    hasExplicitCarryoverContext &&
+    (prevWasRecommendationExperience || hasAnchoredCarryoverSlots);
 
   return {
     hasPendingQuestion,
@@ -6002,7 +6019,13 @@ function getSelectionCarryoverActivationState(sessionContext) {
     hasExplicitCarryoverContext,
     prevAction,
     allowExplicitCarryover,
-    carryoverAllowed: hasPendingQuestion || hasPendingSelection || allowExplicitCarryover
+    carryoverAllowed:
+      hasPendingQuestion ||
+      hasPendingSelection ||
+      allowExplicitCarryover ||
+      (prevWasRecommendationExperience && hasAnchoredCarryoverSlots) ||
+      (hadRecentProducts && hasAnchoredCarryoverSlots) ||
+      (hasExplicitCarryoverContext && hasAnchoredCarryoverSlots)
   };
 }
 
@@ -7902,8 +7925,10 @@ function isWheelsTiresProductFramingAsk(intentCore) {
   ) {
     return false;
   }
-  return /\b(solutie|produs|recomand|recomanda|recomandă|ce\s+imi|ce\s+mi|dressing|gel|spray|aplic)\b/.test(
-    gate
+  return (
+    /\b(solutie|produs|recomand|recomanda|recomandă|ce\s+imi|ce\s+mi|dressing|gel|spray|aplic|curat|curăț|curăţ|spal|spăl)\b/.test(
+      gate
+    ) || /\b(vreau|doresc)\s+(sa\s+)?(curat|spal|curăț|curăţ|spăl)\b/.test(gate)
   );
 }
 
@@ -7937,8 +7962,10 @@ function applyIntentHeuristicToQueryType(interactionRef, queryType, intentCore, 
   if (queryType === "procedural" && hl === "product_guidance") {
     const wt = analyzeWheelTireMessage(intentCore);
     const gate = normalizeRomanianTextForGate(intentCore);
+    const isWheelCleaningProductAsk = isWheelsTiresProductFramingAsk(intentCore);
     if (
       wt.wheelTireIntent === "wheel_cleaning" &&
+      !isWheelCleaningProductAsk &&
       /\b(cum\s+curat|cum\s+curăț|cum\s+spal|cum\s+spăl|ce\s+produs|recomand|recomanda|recomandă)\b/.test(
         gate
       )
@@ -8991,6 +9018,7 @@ function handleSafetyTrustTurn({
         decision: { action: "safety", flowId: null, missingSlot: null },
         outputType: "reply",
         products: [],
+        slots: {},
         safetyTelemetry: buildSafetyTelemetry(telem)
       }
     };
@@ -9050,6 +9078,7 @@ function handleSafetyTrustTurn({
         decision: { action: "safety", flowId: null, missingSlot: null },
         outputType: "reply",
         products: [],
+        slots: {},
         safetyTelemetry: buildSafetyTelemetry(telemAsk)
       }
     };
@@ -9075,6 +9104,7 @@ function handleSafetyTrustTurn({
         decision: { action: "safety", flowId: null, missingSlot: null },
         outputType: "reply",
         products: [],
+        slots: {},
         safetyTelemetry: buildSafetyTelemetry(telemSecond)
       }
     };
@@ -9099,6 +9129,7 @@ function handleSafetyTrustTurn({
       decision: { action: "safety", flowId: null, missingSlot: null },
       outputType: "reply",
       products: [],
+      slots: {},
       safetyTelemetry: buildSafetyTelemetry(telemAns)
     }
   };
@@ -9448,8 +9479,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
       loggingV2.endRoutingStage({ queryType: "safety", safetyHardGate: true });
       interactionRef.queryType = "safety";
+      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId, null);
       interactionRef.slots = {};
-      interactionRef.tags = [];
+      interactionRef.tags = sessionContext.tags || [];
       saveSession(sessionId, sessionContext);
       const safetyTurnEarly = handleSafetyTrustTurn({
         userMessage,
@@ -10192,7 +10224,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         message: userMessage,
         sessionSlotsBefore: { ...(sessionContext.slots || {}) }
       });
-      interactionRef.slots = { ...(sessionContext.slots || {}) };
+      // F19 — knowledge/safety boundary must clear procedural slots (no interrogative preserve).
+      sessionContext = clearProceduralStateForKnowledgeBoundary(sessionContext, sessionId, null);
+      interactionRef.slots = {};
       interactionRef.tags = sessionContext.tags || [];
       saveSession(sessionId, sessionContext);
       const safetyTurn = handleSafetyTrustTurn({
@@ -12880,7 +12914,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       sessionContext = clearProceduralStateForKnowledgeBoundary(
         sessionContext,
         sessionId,
-        userMessage
+        resolvedAction.action === "safety" ? null : userMessage
       );
     }
 
