@@ -1514,7 +1514,7 @@ function getClarificationQuestion(missingSlot, slots, _responseLocale = "ro") {
   }
 
   if (missingSlot === "intent_level") {
-    return buildLowSignalClarificationQuestion("", "", "ro");
+    return buildLowSignalClarificationQuestion("", "", _responseLocale);
   }
 
   return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
@@ -9645,9 +9645,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     );
 
     logChatPipelineStage("low_signal_gate");
+    const lowSignalNormalizedEarly = normalizeLowSignalText(intentCore);
+    const soilNarrowingFollowupActive =
+      isSelectionNarrowingFollowupReply(userMessage, lowSignalNormalizedEarly) &&
+      hasCarryoverSelectionContext(sessionContext);
+
     const continuationGuardActive =
       sessionContext?.pendingSelection === true ||
       Boolean(sessionContext?.pendingQuestion) ||
+      soilNarrowingFollowupActive ||
       (String(sessionContext?.state || "").startsWith("NEEDS_") &&
         sessionContext?.pendingClarification?.active === true);
 
@@ -9657,7 +9663,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const lowSignalSlots = extractSlotsFromMessage(userMessage);
     rememberLastNonNullSlots(sessionContext, lowSignalSlots);
 
-    const lowSignalNormalized = normalizeLowSignalText(intentCore);
+    const lowSignalNormalized = lowSignalNormalizedEarly;
     let lowSignalCheck = !continuationGuardActive
       ? isLowSignalMessage(
           userMessage,
@@ -9734,9 +9740,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
+    const lastResponseTypeNorm = String(sessionContext?.lastResponseType || "").toLowerCase();
     const narrowingReplyBypass =
       isSelectionNarrowingFollowupReply(userMessage, lowSignalNormalized) &&
-      String(sessionContext?.lastResponseType || "").toLowerCase() === "recommendation";
+      (lastResponseTypeNorm === "recommendation" ||
+        lastResponseTypeNorm === "question" ||
+        hasCarryoverSelectionContext(sessionContext));
     if (narrowingReplyBypass && lowSignalCheck.lowSignal) {
       lowSignalCheck = { lowSignal: false, reason: "selection_narrowing_followup" };
       lowSignalTelemetryFirst.lowSignalDetected = false;
@@ -10189,7 +10198,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     const narrowingSelectionFollowup =
       !pendingSlotClarificationActive &&
       isSelectionNarrowingFollowupReply(userMessage, normalizeLowSignalText(intentCore)) &&
-      String(sessionContext?.lastResponseType || "").toLowerCase() === "recommendation";
+      (lastResponseTypeNorm === "recommendation" ||
+        lastResponseTypeNorm === "question" ||
+        hasCarryoverSelectionContext(sessionContext));
     if (narrowingSelectionFollowup) {
       queryType = "selection";
       logInfo("QUERY_TYPE_OVERRIDE", {
