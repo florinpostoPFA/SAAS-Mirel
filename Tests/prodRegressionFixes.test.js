@@ -45,15 +45,15 @@ describe("Prod regression fixes (locale, mirrors, shine heuristic, narrowing)", 
     expect(inferHighLevelIntent("bmw negru mat vreau sa luceasca")).toBe("product_search");
   });
 
-  it("handleChat: EN opener then low-signal follow-up → English intent_level question (F27)", async () => {
+  it("handleChat: EN opener then low-signal follow-up → Romanian intent_level question (F32)", async () => {
     const sessionId = `prod-reg-en-intent-${Date.now()}`;
     await handleChat("Hello I need help cleaning my car exterior", "C1", [], sessionId);
     const r2 = await handleChat("x", "C1", [], sessionId);
     const msg = String(r2.message || r2.reply || "");
     expect(r2.type).toBe("question");
-    expect(msg).toMatch(/steps|product/i);
-    expect(msg).not.toMatch(/recomandare de produse|vrei pași/i);
+    expect(msg).toMatch(/recomandare de produse|vrei pași/i);
     expect(msg).not.toMatch(/\bDo you want steps\b/i);
+    expect(msg).not.toMatch(/\bsteps or product recommendation\b/i);
   });
 
   it("handleChat: oglinzile → glass_clean_basic flow", async () => {

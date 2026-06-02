@@ -59,6 +59,7 @@
             "activeProducts": [],
             "conversationContextMvp": null,
             "conversationHistory": [],
+            "detectedInputLanguage": "ro",
             "glassFlowContextLocked": false,
             "informationalCarryoverEligibleForProductFollowup": true,
             "intentFlags": {},
@@ -135,6 +136,7 @@
             "activeProducts": [],
             "conversationContextMvp": null,
             "conversationHistory": [],
+            "detectedInputLanguage": "ro",
             "glassFlowContextLocked": false,
             "informationalCarryoverEligibleForProductFollowup": true,
             "intentFlags": {},
@@ -236,6 +238,7 @@
             "type": "recommendation"
           }
         ],
+        "detectedInputLanguage": "ro",
         "glassFlowContextLocked": false,
         "informationalCarryoverEligibleForProductFollowup": true,
         "intentFlags": {},
@@ -348,6 +351,7 @@
             "type": "recommendation"
           }
         ],
+        "detectedInputLanguage": "ro",
         "glassFlowContextLocked": false,
         "informationalCarryoverEligibleForProductFollowup": true,
         "intentFlags": {},

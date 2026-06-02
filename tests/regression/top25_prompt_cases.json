@@ -278,7 +278,7 @@
     {
       "id": "P01",
       "source": "Prod locale",
-      "title": "EN session — intent_level clarification in English",
+      "title": "EN session — intent_level clarification in Romanian (F32)",
       "steps": [
         "Hello I need help cleaning my car exterior",
         "x"
@@ -286,8 +286,8 @@
       "expect": {
         "actionMustBe": "clarification",
         "missingSlotAnyOf": ["intent_level"],
-        "assistantReplyIncludes": ["steps", "product"],
-        "assistantReplyNotIncludes": ["recomandare de produse", "vrei pași"]
+        "assistantReplyIncludes": ["recomandare de produse", "vrei pași"],
+        "assistantReplyNotIncludes": ["steps or product", "Do you want steps"]
       }
     },
     {

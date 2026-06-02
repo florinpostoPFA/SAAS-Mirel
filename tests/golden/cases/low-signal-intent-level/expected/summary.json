@@ -11,7 +11,7 @@
         "message": "test"
       },
       "outcome": {
-        "assistantReply": "Vrei pași (cum se face) sau vrei recomandare de produse?",
+        "assistantReply": "Vorbesc doar românește, dar te înțeleg. Continuăm în română. 🙂\nVrei pași (cum se face) sau vrei recomandare de produse?",
         "decision": {
           "action": "clarification",
           "flowId": null,
@@ -48,12 +48,14 @@
         "clarificationCountIncrement": 1,
         "conversationContextMvp": null,
         "conversationHistory": [],
+        "detectedInputLanguage": "en",
         "language": "ro",
-        "lastBotReply": "Vrei pași (cum se face) sau vrei recomandare de produse?",
+        "lastBotReply": "Vorbesc doar românește, dar te înțeleg. Continuăm în română. 🙂\nVrei pași (cum se face) sau vrei recomandare de produse?",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "question",
         "lastUserMessage": "test",
+        "localeAckSent": true,
         "messageCount": 0,
         "meta": {
           "clientId": null,
@@ -94,12 +96,14 @@
         "clarificationCountIncrement": 1,
         "conversationContextMvp": null,
         "conversationHistory": [],
+        "detectedInputLanguage": "en",
         "language": "ro",
-        "lastBotReply": "Vrei pași (cum se face) sau vrei recomandare de produse?",
+        "lastBotReply": "Vorbesc doar românește, dar te înțeleg. Continuăm în română. 🙂\nVrei pași (cum se face) sau vrei recomandare de produse?",
         "lastHighLevelIntent": "unknown",
         "lastResponse": null,
         "lastResponseType": "question",
         "lastUserMessage": "test",
+        "localeAckSent": true,
         "messageCount": 0,
         "meta": {
           "clientId": null,

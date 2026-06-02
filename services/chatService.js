@@ -197,6 +197,21 @@ function normalizeResponseLocale(locale) {
   return s.startsWith("en") ? "en" : "ro";
 }
 
+/** F32 — RO-only output; one-time ack when detected input is not Romanian. */
+const LOCALE_POLICY_RO_ACK =
+  "Vorbesc doar românește, dar te înțeleg. Continuăm în română. 🙂";
+
+function applyLocalePolicyAck(sessionContext, finalResult, interactionRef) {
+  if (!sessionContext || !finalResult || typeof finalResult !== "object") return finalResult;
+  if (interactionRef?.decision?.action === "safety") return finalResult;
+  const detected = normalizeResponseLocale(sessionContext.detectedInputLanguage || "ro");
+  if (detected === "ro" || sessionContext.localeAckSent === true) return finalResult;
+  const base = String(finalResult.reply ?? finalResult.message ?? "").trim();
+  const patched = base ? `${LOCALE_POLICY_RO_ACK}\n${base}` : LOCALE_POLICY_RO_ACK;
+  sessionContext.localeAckSent = true;
+  return { ...finalResult, message: patched, reply: patched };
+}
+
 function containsEnglishPhrases(text) {
   const s = String(text || "").toLowerCase().trim();
   if (!s) return false;
@@ -2449,6 +2464,8 @@ function endInteraction(interactionRef, result, patch = {}) {
       finalOutputType === "question" &&
       (interactionRef?.decision?.action === "clarification" ||
         (interactionRef?.decision?.action === "recommend" && Boolean(retrySlot)));
+    finalResult = applyLocalePolicyAck(sessionContext, finalResult, interactionRef);
+
     if (isSlotClarificationQuestion) {
       const currentCount = Number(sessionContext.clarificationCountIncrement) || 0;
       const nextCount = currentCount + 1;
@@ -9260,14 +9277,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     logChatPipelineStage("load_session", { clarificationPendingAtEntry });
 
+    sessionContext.detectedInputLanguage = normalizeResponseLocale(detectLanguage(userMessage));
     if (sessionContext.responseLocale == null && sessionContext.language == null) {
-      const seeded = normalizeResponseLocale(
-        shouldUseDetectorLocaleForLowSignalMessage(userMessage)
-          ? detectLanguage(userMessage)
-          : "ro"
-      );
-      sessionContext.responseLocale = seeded;
-      sessionContext.language = seeded;
+      sessionContext.responseLocale = "ro";
+      sessionContext.language = "ro";
       saveSession(sessionId, sessionContext);
     }
 
@@ -9634,15 +9647,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
-    // Low-signal intent_level can emit before LOCALE_SET; prefer persisted session locale, then cautious EN detection.
-    const responseLocaleForLowSignal = normalizeResponseLocale(
-      sessionContext.responseLocale ??
-        sessionContext.language ??
-        sessionContext.pendingClarification?.responseLocale ??
-        (shouldUseDetectorLocaleForLowSignalMessage(userMessage)
-          ? detectLanguage(userMessage)
-          : "ro")
-    );
+    // F32: template locale is always RO; detection is stored on sessionContext.detectedInputLanguage.
+    const responseLocaleForLowSignal = "ro";
 
     logChatPipelineStage("low_signal_gate");
     const lowSignalNormalizedEarly = normalizeLowSignalText(intentCore);
@@ -9914,36 +9920,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     sessionContext.questionsAsked = sessionContext.questionsAsked || 0;
     const detectedLocale = detectLanguage(userMessage);
-    let responseLocaleUsed;
-    let localeSource;
-    if (didContextResetForLocale) {
-      responseLocaleUsed = normalizeResponseLocale(detectedLocale);
-      localeSource = "detector";
-    } else if (pendingClarificationActive) {
-      responseLocaleUsed = normalizeResponseLocale(
-        sessionContext.pendingClarification?.responseLocale ??
-          sessionContext.responseLocale ??
-          sessionContext.language ??
-          detectedLocale
-      );
-      localeSource = sessionContext.pendingClarification?.responseLocale
-        ? "pendingClarification"
-        : (sessionContext.responseLocale || sessionContext.language)
-          ? "session"
-          : "detector";
-    } else {
-      responseLocaleUsed = normalizeResponseLocale(
-        sessionContext.responseLocale ?? sessionContext.language ?? detectedLocale
-      );
-      localeSource = (sessionContext.responseLocale || sessionContext.language) ? "session" : "detector";
-    }
+    sessionContext.detectedInputLanguage = normalizeResponseLocale(detectedLocale);
+    const responseLocaleUsed = "ro";
     sessionContext.responseLocale = responseLocaleUsed;
     sessionContext.language = responseLocaleUsed;
     const language = responseLocaleUsed;
 
     logInfo("LOCALE_SET", {
       responseLocale: responseLocaleUsed,
-      source: localeSource,
+      detectedInputLanguage: sessionContext.detectedInputLanguage,
+      source: "policy_ro_only",
       didContextReset: didContextResetForLocale
     });
 
@@ -13901,6 +13887,7 @@ module.exports = {
     isCleaningProduct,
     buildNoProductFallbackResponse,
     getClarificationQuestion,
+    LOCALE_POLICY_RO_ACK,
     tryRetrieveBeforeClarifySelection,
     extractRetrievalMatchPhrasesFromMessage,
     hasExplicitSelectionIntent,
