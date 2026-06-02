@@ -45,6 +45,7 @@
       "sessionMutations": [],
       "sessionServiceAfter": {
         "activeProducts": [],
+        "clarificationCountIncrement": 1,
         "conversationContextMvp": null,
         "conversationHistory": [],
         "language": "ro",
@@ -90,6 +91,7 @@
       },
       "sessionStoreAfter": {
         "activeProducts": [],
+        "clarificationCountIncrement": 1,
         "conversationContextMvp": null,
         "conversationHistory": [],
         "language": "ro",

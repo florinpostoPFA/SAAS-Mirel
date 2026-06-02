@@ -34,21 +34,16 @@ describe("Glass routing and glass_clean_basic", () => {
     }));
   });
 
-  it("A: vreau sa curat sticla asks Interior sau exterior then interior runs glass_clean_basic", async () => {
+  it("A: vreau sa curat sticla runs glass_clean_basic directly (post-F12 glass inference)", async () => {
     const sessionId = `glass-a-${Date.now()}`;
     const first = await handleChat("vreau sa curat sticla", "C1", [], sessionId);
-    expect(first.type).toBe("question");
-    expect(String(first.message || "")).toMatch(/interior\w*\s+sau\s+exterior\w*/i);
-
-    const s1 = getSession(sessionId);
-    expect(s1.pendingQuestion?.slot).toBe("context");
-
-    const second = await handleChat("interior", "C1", [], sessionId);
-    expect(second.type).toBe("flow");
+    expect(first.type).toBe("flow");
     expect(executeFlow).toHaveBeenCalled();
     expect(executeFlow.mock.calls[executeFlow.mock.calls.length - 1][0].flowId).toBe("glass_clean_basic");
     const log = lastLog();
     expect(log.decision.flowId).toBe("glass_clean_basic");
+    const s1 = getSession(sessionId);
+    expect(s1.slots?.object).toBe("glass");
   });
 
   it("A: geamuri / parbriz in message map to canonical object glass", async () => {

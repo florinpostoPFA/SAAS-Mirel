@@ -8,7 +8,12 @@ const productRoles = require("../data/product_roles.json");
 const catalog = [
   { id: "lc1", name: "Leather cleaner", tags: ["leather", "cleaner", "cleaning", "interior"] },
   { id: "lp1", name: "Leather protectant", tags: ["leather", "protectant", "protection", "dressing", "interior"] },
-  { id: "td1", name: "Tire dressing", tags: ["dressing", "tires", "rubber", "protection", "exterior"] },
+  {
+    id: "td1",
+    manufacturerId: 70,
+    name: "Tire dressing",
+    tags: ["tire_dressing", "dressing", "tires", "rubber", "protection", "exterior"]
+  },
   { id: "gc1", name: "Glass cleaner", tags: ["glass", "cleaner", "cleaning", "exterior"] },
   { id: "gr1", name: "Rain repellent", tags: ["glass", "sealant", "protection", "rain_repellent", "exterior"] },
   { id: "rs1", name: "Seal protectant", tags: ["rubber", "protectant", "protection", "sealant", "exterior"] },

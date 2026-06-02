@@ -14,6 +14,7 @@ describe("Selection hard filtering and output", () => {
     const products = [
       {
         id: "t1",
+        manufacturerId: 70,
         name: "Cleaner Textil Interior",
         description: "Curata sigur textilele din interior si indeparteaza murdaria persistenta.",
         short_description: "Curata sigur textilele din interior.",
@@ -21,6 +22,7 @@ describe("Selection hard filtering and output", () => {
       },
       {
         id: "t2",
+        manufacturerId: 70,
         name: "Perie pentru textile",
         description: "Ajuta la desprinderea murdariei din fibre fara agresivitate.",
         short_description: "Perie moale pentru textile.",
@@ -28,6 +30,7 @@ describe("Selection hard filtering and output", () => {
       },
       {
         id: "t3",
+        manufacturerId: 70,
         name: "Laveta Microfibra Premium",
         description: "Pentru stergere fara scame si fara zgarieturi.",
         short_description: "Laveta premium din microfibra.",

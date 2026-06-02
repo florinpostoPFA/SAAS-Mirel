@@ -45,9 +45,11 @@
         "conversationContextMvp": null,
         "conversationHistory": [],
         "currentTopic": "apc",
+        "glassFlowContextLocked": false,
         "language": "ro",
         "lastBotReply": "E piele naturala sau piele ecologica (vinyl)?",
         "lastHighLevelIntent": "unknown",
+        "lastProceduralSlots": {},
         "lastResponse": null,
         "lastResponseType": "reply",
         "lastUserMessage": "pot folosi apc pe piele",
@@ -68,6 +70,7 @@
         "pendingQuestion": null,
         "pendingSlots": null,
         "previousAction": "safety",
+        "proceduralSlots": {},
         "questionCount": 0,
         "responseLocale": "ro",
         "routingTurnIndex": 0,
@@ -85,7 +88,11 @@
         },
         "slots": {},
         "state": "IDLE",
-        "tags": []
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [],
+        "vehicleFieldsRequested": false
       },
       "sessionStoreAfter": {
         "activeProducts": [],
@@ -93,9 +100,11 @@
         "conversationContextMvp": null,
         "conversationHistory": [],
         "currentTopic": "apc",
+        "glassFlowContextLocked": false,
         "language": "ro",
         "lastBotReply": "E piele naturala sau piele ecologica (vinyl)?",
         "lastHighLevelIntent": "unknown",
+        "lastProceduralSlots": {},
         "lastResponse": null,
         "lastResponseType": "reply",
         "lastUserMessage": "pot folosi apc pe piele",
@@ -116,6 +125,7 @@
         "pendingQuestion": null,
         "pendingSlots": null,
         "previousAction": "safety",
+        "proceduralSlots": {},
         "questionCount": 0,
         "responseLocale": "ro",
         "routingTurnIndex": 0,
@@ -133,7 +143,11 @@
         },
         "slots": {},
         "state": "IDLE",
-        "tags": []
+        "surfaceAssistPhase": null,
+        "surfaceAssistShortlist": null,
+        "surfaceUnknown": false,
+        "tags": [],
+        "vehicleFieldsRequested": false
       }
     }
   ],
