@@ -212,6 +212,8 @@ function applyLocalePolicyAck(sessionContext, finalResult, interactionRef) {
   if (!sessionContext || !finalResult || typeof finalResult !== "object") return finalResult;
   if (interactionRef?.decision?.action === "safety") return finalResult;
   if (sessionContext?.pendingQuestion?.slot) return finalResult;
+  if (interactionRef?.handledPendingQuestionAnswerEarly) return finalResult;
+  if (String(sessionContext?.state || "").startsWith("NEEDS_")) return finalResult;
   const detected = normalizeResponseLocale(sessionContext.detectedInputLanguage || "ro");
   if (detected === "ro" || sessionContext.localeAckSent === true) return finalResult;
   const base = String(finalResult.reply ?? finalResult.message ?? "").trim();
@@ -2617,6 +2619,9 @@ function endInteraction(interactionRef, result, patch = {}) {
     pendingQuestion: sessionContext?.pendingQuestion || null,
     clarificationAttemptCount:
       interactionRef.clarificationEscalationTelemetry?.clarificationAttemptCount ??
+      (Number(sessionContext?.clarificationCountIncrement) > 0
+        ? Number(sessionContext.clarificationCountIncrement)
+        : null) ??
       sessionContext?.pendingQuestion?.attemptCount ??
       null,
     clarificationEscalated: Boolean(
@@ -6599,10 +6604,13 @@ const RO_WORDS = [
 function detectLanguage(message) {
   if (!message) return "en";
 
-  const text = String(message).toLowerCase();
+  const text = String(message).toLowerCase().trim();
 
   // Romanian keyword override — checked before any other logic
   if (RO_WORDS.some(word => text.includes(word))) {
+    return "ro";
+  }
+  if (/^(textil|textile|piele|plastic|alcantara|alcantará)$/i.test(text)) {
     return "ro";
   }
 
@@ -9781,6 +9789,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const earlyPendingResolution = resolvePendingQuestionFirst(sessionContext, userMessage);
       if (earlyPendingResolution.resolved) {
         handledPendingQuestionAnswerEarly = true;
+        interactionRef.handledPendingQuestionAnswerEarly = true;
         saveSession(sessionId, sessionContext);
         logInfo("PENDING_SLOT_RESOLVED_EARLY", {
           slot: earlyPendingResolution.binding?.slot || null,
@@ -10933,7 +10942,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             sessionContext.originalIntent = "selection";
             sessionContext.pendingSelection = true;
             sessionContext.pendingSelectionMissingSlot = "surface";
+            sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+              slot: "surface",
+              object: slotSnapshot?.object || null,
+              context: slotSnapshot?.context || null
+            });
             seedPendingClarificationAtEmission(sessionContext, "surface");
+            recordClarificationAsk(sessionContext, "surface");
             saveSession(sessionId, sessionContext);
             const selQuestion = buildSurfaceClarificationQuestionWithAssist(
               slotResult.slots,

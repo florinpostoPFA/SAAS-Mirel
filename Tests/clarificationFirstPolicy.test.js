@@ -95,6 +95,22 @@ describe("clarificationFirstPolicy E2E", () => {
     expect(msg).not.toMatch(/fallback sigur|All Purpose Cleaner/i);
   });
 
+  it("hotfix: turn1 surface clarify arms pendingQuestion", async () => {
+    const sid = `f39-hf-pq-${Date.now()}`;
+    await handleChat("am cotiera foarte murdara", "C1", [TEXTILE_PRODUCT], sid);
+    const log = lastLog();
+    expect(log.pendingQuestion?.slot).toBe("surface");
+    expect(log.clarificationAttemptCount).toBe(1);
+  });
+
+  it("hotfix: turn2 piele answer has no F32 RO-ack", async () => {
+    const sid = `f39-hf-piele-${Date.now()}`;
+    await handleChat("am cotiera foarte murdara", "C1", [TEXTILE_PRODUCT, LEATHER_PRODUCT], sid);
+    const reply = await handleChat("piele", "C1", [TEXTILE_PRODUCT, LEATHER_PRODUCT], sid);
+    const msg = String(reply.message || reply.reply || "");
+    expect(msg).not.toMatch(/Vorbesc doar românește|Continuăm în română/i);
+  });
+
   it("AC5#2 turn2 textil binds surface → forward, not F22", async () => {
     const sid = `f39-t2-${Date.now()}`;
     await handleChat("am cotiera foarte murdara", "C1", [TEXTILE_PRODUCT], sid);
