@@ -57,13 +57,17 @@ describe("Recommend decision consistency", () => {
     const log3 = lastLogEntry();
 
     expect(turn3Text).toMatch(/cureti|protejezi|hidratezi/);
-    expect(log3.decision.missingSlot).not.toBe("intent_level");
+    expect(log3.decision.action).toBe("clarification");
+    expect(log3.decision.missingSlot).toBe("intent_level");
+    expect(log3.decision.reasonCode).toBe("routing.coverage_role_goal");
+    expect(log3.output?.type).toBe("question");
 
     const turn4 = await handleChat("curatare", "C1", [], sessionId);
     const turn4Text = String(turn4.reply || turn4.message || "").toLowerCase();
     const log4 = lastLogEntry();
 
     expect(log4.decision.missingSlot).not.toBe("intent_level");
+    expect(log4.decision.action).not.toBe("clarification");
     expect(Boolean(log4.lowSignalDetected)).toBe(false);
     expect(log4.slots.context).toBe("interior");
     expect(log4.slots.object).toBe("scaun");

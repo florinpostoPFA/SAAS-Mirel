@@ -40,14 +40,22 @@ describe("P1.9 response format templates", () => {
     expect(flow).toContain("Subiect: Test flow");
     expect(flow).toContain("1. Pas unu");
 
-    const sel = formatSelectionReply({
+    const selPlain = formatSelectionReply({
       body: "• Soluție:\n- Cleaner",
+      locale: "ro"
+    });
+    expect(selPlain).toMatch(/^— Recomandări produse —/);
+    expect(selPlain).toContain("• Soluție:");
+    expect(selPlain).not.toContain("Clarificare:");
+
+    const selNarrow = formatSelectionReply({
+      body: "• Soluție:\n- Cleaner",
+      includeNarrowing: true,
       narrowingQuestion: "Murdărie ușoară sau grea?",
       locale: "ro"
     });
-    expect(sel).toMatch(/^— Recomandări produse —/);
-    expect(sel).toContain("• Soluție:");
-    expect(sel).toContain("Murdărie ușoară sau grea?");
+    expect(selNarrow).toContain("Clarificare:");
+    expect(selNarrow).toContain("Murdărie ușoară sau grea?");
 
     const safety = formatSafetyReplyRo("DA.\nLinia unu.");
     expect(safety).toMatch(/^— Siguranță —/);

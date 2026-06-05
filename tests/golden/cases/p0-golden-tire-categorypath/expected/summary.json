@@ -11,7 +11,7 @@
         "message": "recomanda-mi un produs pentru luciu anvelope"
       },
       "outcome": {
-        "assistantReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml\n\nClarificare:\nUn detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?",
+        "assistantReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml",
         "decision": {
           "action": "recommend",
           "flowId": null,
@@ -243,7 +243,7 @@
         "informationalCarryoverEligibleForProductFollowup": true,
         "intentFlags": {},
         "language": "ro",
-        "lastBotReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml\n\nClarificare:\nUn detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?",
+        "lastBotReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml",
         "lastFlow": null,
         "lastHighLevelIntent": "product_search",
         "lastIntent": "selection",
@@ -356,7 +356,7 @@
         "informationalCarryoverEligibleForProductFollowup": true,
         "intentFlags": {},
         "language": "ro",
-        "lastBotReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml\n\nClarificare:\nUn detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?",
+        "lastBotReply": "— Recomandări produse —\n• Soluție:\n- Dressing luciu anvelope ADBL Black Water, 500ml",
         "lastFlow": null,
         "lastHighLevelIntent": "product_search",
         "lastIntent": "selection",

@@ -36,6 +36,14 @@ describe("Selection response clarity", () => {
     );
   });
 
+  it("does not append Clarificare block on default product recommendations", () => {
+    const text = formatSelectionResponse(
+      [{ name: "Cleaner Textil", tags: ["textile", "cleaner"] }],
+      { locale: "ro" }
+    );
+    expect(text).not.toMatch(/\bClarificare:/);
+  });
+
   it("caps rendered product bullets to max 3", () => {
     const text = formatSelectionResponse([
       { name: "P1", tags: ["textile", "cleaner"] },

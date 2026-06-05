@@ -1710,6 +1710,25 @@ function assertDecisionOutputContract(decision, output, slots, message) {
   if (safeDecision.action === "clarification" && safeOutput.type !== "question") {
     throwInvariantFailure("CONTRACT VIOLATION: clarification must return question", safeDecision, safeSlots, message);
   }
+
+  const recommendActions = new Set(["recommend", "selection"]);
+  if (recommendActions.has(safeDecision.action) && safeOutput.type === "question") {
+    throwInvariantFailure(
+      "CONTRACT VIOLATION: recommend/selection must not return question",
+      safeDecision,
+      safeSlots,
+      message
+    );
+  }
+
+  if (safeDecision.action === "clarification" && safeOutput.type === "recommendation") {
+    throwInvariantFailure(
+      "CONTRACT VIOLATION: clarification must not return recommendation",
+      safeDecision,
+      safeSlots,
+      message
+    );
+  }
 }
 
 function getProceduralFlowCandidate(intent, message, slots, sessionContext) {
@@ -2041,6 +2060,38 @@ function applyClarificationNormalizationAfterExecution({
   return { finalResult, finalOutputType, finalProducts };
 }
 
+/** F36 — Repair recommend/selection + question mode collision before commit. */
+function applyRecommendQuestionMutexRepair({
+  workingDecision,
+  finalOutputType,
+  finalProducts,
+  sessionContext
+}) {
+  const recommendActions = new Set(["recommend", "selection"]);
+  if (!recommendActions.has(workingDecision?.action) || finalOutputType !== "question") {
+    return { workingDecision, finalOutputType, finalProducts };
+  }
+  const slot =
+    sessionContext?.pendingQuestion?.slot ||
+    workingDecision?.missingSlot ||
+    "intent_level";
+  console.error("[DECISION_CONTRACT_INVALID]", {
+    reason: "recommend_output_question_repair",
+    action: workingDecision?.action ?? null,
+    pendingSlot: slot
+  });
+  return {
+    workingDecision: buildDecision({
+      ...workingDecision,
+      action: "clarification",
+      missingSlot: slot,
+      reasonCode: workingDecision?.reasonCode || "routing.output_mode_repair"
+    }),
+    finalOutputType: "question",
+    finalProducts: []
+  };
+}
+
 /**
  * P2.6 — Post-execution normalization: knowledge dead-end + invalid payload repair.
  * Output/consistency only — does not re-run `resolveActionFinal` or re-route.
@@ -2341,6 +2392,16 @@ function prepareTurnCompletionPayloadBody(interactionRef, result, patch) {
   finalOutputType = clarAligned.finalOutputType;
   finalProducts = clarAligned.finalProducts;
 
+  const mutexRepair = applyRecommendQuestionMutexRepair({
+    workingDecision,
+    finalOutputType,
+    finalProducts,
+    sessionContext
+  });
+  workingDecision = mutexRepair.workingDecision;
+  finalOutputType = mutexRepair.finalOutputType;
+  finalProducts = mutexRepair.finalProducts;
+
   const resolvedResultType = getResultTypeFromOutputType(finalOutputType);
   if (resolvedResultType && finalResult && typeof finalResult === "object" && !finalResult.type) {
     finalResult = {
@@ -2429,6 +2490,17 @@ function endInteraction(interactionRef, result, patch = {}) {
   } = prep;
 
   assertDecisionOutputContract(interactionRef.decision, { type: finalOutputType }, interactionRef.slots, interactionRef.message);
+  if (finalOutputType === "recommendation") {
+    const replyText = String(finalResult?.reply ?? finalResult?.message ?? "").trim();
+    if (/\b(Clarificare|Narrowing):/i.test(replyText)) {
+      throwInvariantFailure(
+        "CONTRACT VIOLATION: recommendation reply must not contain clarification block",
+        interactionRef.decision,
+        interactionRef.slots,
+        interactionRef.message
+      );
+    }
+  }
   logInfo("DECISION_OUTPUT_CONSISTENCY", {
     decision: interactionRef.decision,
     outputType: finalOutputType
@@ -2648,7 +2720,7 @@ function endInteraction(interactionRef, result, patch = {}) {
     safetyAnswerType: interactionRef.safetyTelemetry?.safetyAnswerType ?? null,
     askedClarification:
       Boolean(interactionRef.safetyTelemetry?.askedClarification) ||
-      (interactionRef.decision?.action === "clarification" && finalOutputType === "question"),
+      finalOutputType === "question",
     clarificationGateReason:
       interactionRef.clarificationGateTelemetry?.clarificationGateReason ?? null,
     clarificationExhausted:
@@ -11908,6 +11980,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           context: selectionSlots?.context || null,
           surface: selectionSlots?.surface || null
         });
+        recordClarificationAsk(sessionContext, "intent_level");
         saveSession(sessionId, sessionContext);
 
         return endInteraction(
@@ -11917,7 +11990,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             message: coverageAsk
           },
           {
-            decision: { action: "recommend", flowId: null, missingSlot: null },
+            decision: {
+              action: "clarification",
+              flowId: null,
+              missingSlot: "intent_level",
+              reasonCode: "routing.coverage_role_goal"
+            },
             outputType: "question",
             productsReason: "none",
             slots: selectionSlots

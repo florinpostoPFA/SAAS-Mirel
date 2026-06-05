@@ -49,24 +49,22 @@ function formatFlowReply(opts = {}) {
 }
 
 /**
- * @param {{ body: string, narrowingQuestion?: string, locale?: string }} opts
+ * @param {{ body: string, narrowingQuestion?: string, includeNarrowing?: boolean, locale?: string }} opts
+ * F36 — Clarification blocks are opt-in only; routing must arm includeNarrowing + narrowingQuestion.
  */
 function formatSelectionReply(opts = {}) {
   const loc = normalizeLoc(opts.locale);
   const body = String(opts.body || "").trim();
-  const nq =
-    opts.narrowingQuestion != null && String(opts.narrowingQuestion).trim() !== ""
-      ? String(opts.narrowingQuestion).trim()
-      : loc === "en"
-        ? "One detail: which finish or soil level should we optimize for (light / heavy)?"
-        : "Un detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?";
-  const lines = [
-    loc === "en" ? "— Product picks —" : "— Recomandări produse —",
-    body,
-    "",
-    loc === "en" ? "Narrowing:" : "Clarificare:",
-    nq
-  ];
+  const lines = [loc === "en" ? "— Product picks —" : "— Recomandări produse —", body];
+  if (opts.includeNarrowing === true) {
+    const nq =
+      opts.narrowingQuestion != null && String(opts.narrowingQuestion).trim() !== ""
+        ? String(opts.narrowingQuestion).trim()
+        : loc === "en"
+          ? "One detail: which finish or soil level should we optimize for (light / heavy)?"
+          : "Un detaliu: ce tip de murdărie sau finisaj vrei să prioritizăm (ușoară / grea)?";
+    lines.push("", loc === "en" ? "Narrowing:" : "Clarificare:", nq);
+  }
   return lines.join("\n");
 }
 
