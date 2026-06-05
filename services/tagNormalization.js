@@ -17,11 +17,10 @@ const TAG_ALIAS_MAP = Object.freeze({
   anvelope: "tires"
 });
 
+/** Surface/context breadth tags only — action categories stay for strict overlap (F36 Gap A). */
 const STRICT_FILTER_NOISE_TAGS = new Set([
   "interior",
   "exterior",
-  "cleaning",
-  "protection",
   "shine",
   "restoration",
   "smell",

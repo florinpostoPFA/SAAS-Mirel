@@ -128,7 +128,7 @@ describe("F36 output mode integrity — E2E", () => {
     }
   });
 
-  it.skip("outputMode_leatherMurdar_cleaningNotHydration — F36-2b AC3 product filter", async () => {
+  it("outputMode_leatherMurdar_cleaningNotHydration — F36-2b AC3 product filter", async () => {
     const sid = `f36-clean-role-${Date.now()}`;
     const result = await handleChat(
       "recomanda o solutie pentru un scaun de piele murdar",
@@ -172,7 +172,7 @@ describe("F36 output mode integrity — E2E", () => {
     expect(msg).not.toMatch(/^— Recomandări produse —[\s\S]*\bClarificare:/);
   });
 
-  it("outputMode_wax_actionFilter — 2b placeholder: single mode + no template Clarificare", async () => {
+  it("outputMode_wax_actionFilter — wax intent returns wax SKU not glass cleaner", async () => {
     const sid = `f36-wax-${Date.now()}`;
     const catalog = [WAX_PRODUCT, GLASS_CLEANER];
     const result = await handleChat("vreau sau dau cu ceara la exterior", "C1", catalog, sid);
@@ -180,12 +180,15 @@ describe("F36 output mode integrity — E2E", () => {
     const msg = replyText(result);
 
     expect(msg).not.toMatch(/\bClarificare:/);
-    if (log.output?.type === "recommendation") {
+    if (log.output?.type === "recommendation" && (result.products || []).length > 0) {
       expect(log.decision.action).toMatch(/recommend|selection/);
+      const names = result.products.map((p) => String(p.name || "").toLowerCase()).join(" ");
+      expect(names).toMatch(/ceara|wax|carnauba/i);
+      expect(names).not.toMatch(/glass cleaner|sticla/i);
     }
   });
 
-  it.skip("outputMode_cleanIntent_hydrationExcluded — F36-2b AC3 product filter", async () => {
+  it("outputMode_cleanIntent_hydrationExcluded — F36-2b AC3 product filter", async () => {
     const sid = `f36-cur-${Date.now()}`;
     const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
     await handleChat("am cotiera foarte murdara", "C1", catalog, sid);

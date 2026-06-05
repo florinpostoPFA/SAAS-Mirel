@@ -2,7 +2,11 @@
 const fs = require("fs");
 const path = require("path");
 const config = require("../config");
-const { selectProducts, passesSlotObjectRole } = require("./productSelectionService");
+const {
+  selectProducts,
+  passesSlotObjectRole,
+  filterByActionCategory
+} = require("./productSelectionService");
 const { hasExplicitCommerceProductIntent } = require("./commerceIntentSignals");
 const { formatFlowReply, formatSelectionReply } = require("./responseFormatTemplates");
 const { buildPrompt } = require("./promptBuilder");
@@ -156,7 +160,9 @@ const {
   shouldAllowTerminalSafeFallback,
   detectForceFallback,
   buildTerminalFallbackMessage,
-  selectClarificationMessage
+  selectClarificationMessage,
+  extractActionCategoryTags,
+  resolveSelectionActionTags
 } = require("./clarificationFirstPolicy");
 
 const SOURCE = "ChatService";
@@ -3993,7 +3999,21 @@ function isFragranceOrOdorProduct(product) {
   return fragranceKeywords.some(keyword => name.includes(keyword));
 }
 
-function applyHardFilter(candidates, slots) {
+function resolveHardFilterRequiredAny(key, rule, slots, actionTags = []) {
+  const base = Array.isArray(rule?.requiredAny) ? [...rule.requiredAny] : [];
+  const actions = new Set(Array.isArray(actionTags) ? actionTags : []);
+  const cleaningIntent =
+    actions.has("cleaning") || String(slots?.action || "").toLowerCase() === "clean";
+  if (key === "interior|leather" && cleaningIntent) {
+    return ["leather_cleaner", "interior_cleaner"];
+  }
+  if (key === "interior|leather" && (actions.has("hydrate") || actions.has("protection"))) {
+    return ["leather_conditioner"];
+  }
+  return base;
+}
+
+function applyHardFilter(candidates, slots, actionTags = []) {
   const safeCandidates = Array.isArray(candidates) ? candidates : [];
   const safeSlots = slots && typeof slots === "object" ? slots : {};
   const key = hardFilterKeyFromSlots(safeSlots);
@@ -4015,7 +4035,7 @@ function applyHardFilter(candidates, slots) {
 
   const allow = Array.isArray(rule.allow) ? rule.allow : [];
   const exclude = Array.isArray(rule.exclude) ? rule.exclude : [];
-  const requiredAny = Array.isArray(rule.requiredAny) ? rule.requiredAny : [];
+  const requiredAny = resolveHardFilterRequiredAny(key, rule, safeSlots, actionTags);
   const requiredAllCombos = Array.isArray(rule.requiredAllCombos)
     ? rule.requiredAllCombos.filter(combo => Array.isArray(combo) && combo.length > 0)
     : [];
@@ -5671,6 +5691,10 @@ function findRelevantProducts(tags, products, maxProducts, options = {}) {
     }
 
     const { strictTagFilter = false } = options;
+    const actionTags =
+      Array.isArray(options.actionTags) && options.actionTags.length > 0
+        ? options.actionTags
+        : extractActionCategoryTags(tags, options.slots || {});
 
     info(SOURCE, `Selecting products (unified pipeline) with tags: ${tags.join(", ")}`);
 
@@ -5685,6 +5709,7 @@ function findRelevantProducts(tags, products, maxProducts, options = {}) {
       settings: options.settings || {},
       constraints: {
         strictTagFilter,
+        actionTags,
         poolSize: options.poolSize || 40,
         fallbackStrategy: options.fallbackStrategy || "relaxed_roles",
         ranking: options.ranking !== false,
@@ -12003,6 +12028,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         );
       }
       if (!role && coverageRoleDecision.role) role = coverageRoleDecision.role;
+
       if (
         !role &&
         (selectionSlots.surface === "tires" ||
@@ -12014,6 +12040,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (!role && selectionSlots.surface === "plastic" && /\bprotectie\b/.test(msg)) {
         role = "interior_protection";
       }
+      const selectionActionTags = resolveSelectionActionTags({
+        role,
+        tags: selectionTags,
+        slots: selectionSlots
+      });
       const roleConfig = role ? productRoles[role] || null : null;
 
       logInfo("SELECTION_DEBUG", {
@@ -12025,7 +12056,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         maxProducts: MAX_SELECTION_PRODUCTS
       });
 
-      const broadCandidates = selectionPreRetrievedCandidates
+      let broadCandidates = selectionPreRetrievedCandidates
         ? selectionPreRetrievedCandidates
         : roleConfig
           ? findProductsByRoleConfig(roleConfig, products, role)
@@ -12035,12 +12066,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
                   strictTagFilter: !(sessionContext.objective?.needsCompletion && isContinuation),
                   message: userMessage,
                   slots: selectionSlots,
-                  settings
+                  settings,
+                  actionTags: selectionActionTags
                 }),
               (c) => ({ productCount: Array.isArray(c) ? c.length : 0, path: "selection" })
             );
 
-      const hardFilterResult = applyHardFilter(broadCandidates, selectionSlots);
+      if (selectionActionTags.length > 0) {
+        broadCandidates = filterByActionCategory(broadCandidates, selectionActionTags);
+      }
+
+      const hardFilterResult = applyHardFilter(broadCandidates, selectionSlots, selectionActionTags);
       logInfo("HARD_FILTER", hardFilterResult.meta);
       if (hardFilterResult.meta.applied && hardFilterResult.meta.afterCount > 0) {
         hardFilterResult.products.forEach(product => {

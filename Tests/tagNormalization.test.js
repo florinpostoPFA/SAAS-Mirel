@@ -10,9 +10,9 @@ describe("tag normalization", () => {
     expect(normalized).toContain("textile");
   });
 
-  it("drops generic noise in strict overlap checks", () => {
+  it("drops surface noise but preserves action tags in strict overlap checks", () => {
     const reduced = dropStrictFilterNoise(["interior", "cleaning", "glass"]);
-    expect(reduced).toEqual(["glass"]);
+    expect(reduced).toEqual(["cleaning", "glass"]);
   });
 
   it("auto-tag inference uses canonical wheel/glass tags for Romanian synonyms", () => {

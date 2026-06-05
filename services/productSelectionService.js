@@ -35,6 +35,22 @@ const {
 } = require("./search");
 const { calculatePriceFit } = require("./rankingService");
 const { normalizeTagList: canonicalizeTags, dropStrictFilterNoise } = require("./tagNormalization");
+const { ACTION_SIGNAL_TAGS } = require("./clarificationFirstPolicy");
+
+const CLEANER_PRODUCT_TAGS = new Set([
+  "cleaning",
+  "cleaner",
+  "leather_cleaner",
+  "glass_cleaner",
+  "wheel_cleaner",
+  "interior_cleaner",
+  "textile_cleaner",
+  "upholstery_cleaner",
+  "stain_remover",
+  "shampoo",
+  "apc",
+  "degreaser"
+]);
 
 const PIPELINE = "unified";
 
@@ -70,6 +86,99 @@ function canonicalizeObjectSlot(obj) {
 /**
  * Coarse slot–SKU compatibility (hard gate when slots present).
  */
+function productTagText(product) {
+  const p = normalizeProduct(product);
+  return `${p.name || ""} ${p.description || ""} ${p.short_description || ""}`.toLowerCase();
+}
+
+function hasCleanerProductSignal(productTags, text) {
+  return [...CLEANER_PRODUCT_TAGS].some((t) => productTags.includes(t));
+}
+
+function isHydrationOrProtectOnlyProduct(product, productTags, text) {
+  if (hasCleanerProductSignal(productTags, text)) return false;
+  return (
+    productTags.includes("leather_conditioner") ||
+    productTags.includes("conditioner") ||
+    productTags.includes("protectant") ||
+    /hidratare|protectie dupa curatare|after clean|post.?clean/i.test(text)
+  );
+}
+
+function passesActionCategoryGate(product, actionTags) {
+  const categories = Array.isArray(actionTags)
+    ? actionTags.map((t) => String(t || "").toLowerCase().trim()).filter(Boolean)
+    : [];
+  if (categories.length === 0) return true;
+
+  const productTags = normalizeProductTags(product);
+  const text = productTagText(product);
+
+  for (const action of categories) {
+    if (action === "cleaning") {
+      if (isHydrationOrProtectOnlyProduct(product, productTags, text)) return false;
+      if (!hasCleanerProductSignal(productTags, text)) return false;
+      continue;
+    }
+    if (action === "wax") {
+      const hasWax =
+        productTags.includes("wax") ||
+        product?.applicability?.effect === "wax" ||
+        /ceara|wax|carnauba/i.test(text);
+      if (!hasWax) return false;
+      continue;
+    }
+    if (action === "protection" || action === "protect") {
+      const ok =
+        productTags.some((t) =>
+          ["protection", "protectant", "sealant", "conditioner", "dressing"].includes(t)
+        ) || /protectie|protectant|sealant/i.test(text);
+      if (!ok) return false;
+      continue;
+    }
+    if (action === "hydrate") {
+      const ok =
+        productTags.some((t) => ["leather_conditioner", "conditioner", "hydrate"].includes(t)) ||
+        /hidratare|conditioner/i.test(text);
+      if (!ok) return false;
+      continue;
+    }
+    if (action === "polish") {
+      if (!productTags.includes("polish") && !/polish|lustrui|compound/i.test(text)) return false;
+      continue;
+    }
+    if (action === "dress") {
+      if (
+        !productTags.some((t) => ["dressing", "tire_dressing"].includes(t)) &&
+        !/dressing|luciu anvelope/i.test(text)
+      ) {
+        return false;
+      }
+      continue;
+    }
+    if (action === "decontaminate") {
+      if (
+        !productTags.some((t) => ["decontamination", "iron", "fallout", "tar", "bug_remover"].includes(t)) &&
+        !/decontamin|iron|tar|insect/i.test(text)
+      ) {
+        return false;
+      }
+      continue;
+    }
+    if (ACTION_SIGNAL_TAGS.has(action) && !productTags.includes(action)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function filterByActionCategory(products, actionTags) {
+  const safe = Array.isArray(products) ? products : [];
+  const categories = Array.isArray(actionTags) ? actionTags : [];
+  if (categories.length === 0) return safe;
+  return safe.filter((product) => passesActionCategoryGate(product, categories));
+}
+
 function passesSlotObjectRole(product, slots) {
   if (!slots || typeof slots !== "object") return true;
   const obj = canonicalizeObjectSlot(slots.object);
@@ -154,6 +263,19 @@ function evaluateRoles(product, { tags, slots, constraints }) {
     }
     roleMatches.push("tag_overlap");
     reasons.push("role:tag_overlap");
+  }
+
+  const actionTags = Array.isArray(constraints.actionTags) ? constraints.actionTags : [];
+  if (actionTags.length > 0 && !passesActionCategoryGate(product, actionTags)) {
+    return {
+      ok: false,
+      roleMatches,
+      reasons: [...reasons, "action_category:mismatch"]
+    };
+  }
+  if (actionTags.length > 0) {
+    roleMatches.push("action_category");
+    reasons.push("role:action_category_ok");
   }
 
   if (constraints.applySlotObjectFilter !== false && !passesSlotObjectRole(product, slots)) {
@@ -318,13 +440,16 @@ function selectProducts(params) {
     priceRange: constraints.priceRange || settings?.priceRange || null
   };
 
+  const hasActionFilter = Array.isArray(constraints.actionTags) && constraints.actionTags.length > 0;
+
   function runRolePass(relaxed) {
     const c = {
       strictTagFilter: relaxed ? false : constraints.strictTagFilter === true,
       applyInteriorExteriorFilter: relaxed
         ? false
         : constraints.applyInteriorExteriorFilter !== false,
-      applySlotObjectFilter: relaxed ? false : constraints.applySlotObjectFilter !== false
+      applySlotObjectFilter: relaxed ? false : constraints.applySlotObjectFilter !== false,
+      actionTags: constraints.actionTags || []
     };
     const out = [];
     for (const raw of pool) {
@@ -344,13 +469,13 @@ function selectProducts(params) {
   let candidates = runRolePass(false);
   let fallbackUsed = null;
 
-  if (candidates.length === 0 && fallbackStrategy === "relaxed_roles") {
+  if (candidates.length === 0 && fallbackStrategy === "relaxed_roles" && !hasActionFilter) {
     candidates = runRolePass(true);
     if (candidates.length > 0) fallbackUsed = "relaxed_roles";
   }
 
   if (candidates.length === 0) {
-    const genericSafe = findGenericSafeProduct(catalog);
+    const genericSafe = !hasActionFilter ? findGenericSafeProduct(catalog) : null;
     if (genericSafe) {
       candidates = [
         {
@@ -454,6 +579,8 @@ function selectProducts(params) {
 
 module.exports = {
   selectProducts,
+  passesActionCategoryGate,
+  filterByActionCategory,
   evaluateRoles,
   passesSlotObjectRole,
   stableProductId,
