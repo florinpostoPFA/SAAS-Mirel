@@ -19,7 +19,7 @@ describe("EPIC 2.1 no-product fallback", () => {
     );
     expect(result.type).toBe("fallback_products");
     expect(String(result.recommendedProductName || "").length).toBeGreaterThan(0);
-    expect(result.message).toMatch(/fallback sigur|catalog/i);
+    expect(result.message).toMatch(/potrivire exactă|soluție generală|fallback/i);
   });
 
   test("relaxed retry ignores object filter when initial pass is empty", () => {

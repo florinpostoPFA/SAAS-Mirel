@@ -30,7 +30,7 @@ describe("F32 — locale policy (RO-only output)", () => {
     const r = await handleChat("recommend an interior cleaner for seats", "C1", [], sid);
     const msg = replyText(r);
     expect(msg.length).toBeGreaterThan(0);
-    expect(msg).toMatch(/interior|exterior|română|Continuăm/i);
+    expect(msg).toMatch(/interior|exterior|suprafata|textile|piele|română|Continuăm/i);
     expect(msg).not.toMatch(ENGLISH_OUTPUT_BAN);
   });
 

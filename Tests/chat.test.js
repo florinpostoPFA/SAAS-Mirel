@@ -140,7 +140,9 @@ describe("AI eCommerce Assistant API", () => {
         entry?.decision?.action
       );
       if (entry?.decision?.action === "clarification") {
-        expect(res.body.reply.toLowerCase()).toMatch(/interior|exterior/);
+        expect(res.body.reply.toLowerCase()).toMatch(
+          /interior|exterior|suprafata|textile|piele|scaune|bord|geamuri/
+        );
       }
     });
 

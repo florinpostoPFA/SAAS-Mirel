@@ -151,6 +151,13 @@ const {
 } = require("./clarificationEscalationService");
 const { evaluatePendingQuestionStaleness } = require("./pendingQuestionLifecycle");
 const { getArtifactVersions } = require("./artifactVersions");
+const {
+  evaluateClarificationGate,
+  shouldAllowTerminalSafeFallback,
+  detectForceFallback,
+  buildTerminalFallbackMessage,
+  selectClarificationMessage
+} = require("./clarificationFirstPolicy");
 
 const SOURCE = "ChatService";
 
@@ -204,6 +211,7 @@ const LOCALE_POLICY_RO_ACK =
 function applyLocalePolicyAck(sessionContext, finalResult, interactionRef) {
   if (!sessionContext || !finalResult || typeof finalResult !== "object") return finalResult;
   if (interactionRef?.decision?.action === "safety") return finalResult;
+  if (sessionContext?.pendingQuestion?.slot) return finalResult;
   const detected = normalizeResponseLocale(sessionContext.detectedInputLanguage || "ro");
   if (detected === "ro" || sessionContext.localeAckSent === true) return finalResult;
   const base = String(finalResult.reply ?? finalResult.message ?? "").trim();
@@ -2633,7 +2641,13 @@ function endInteraction(interactionRef, result, patch = {}) {
     safetyReason: interactionRef.safetyTelemetry?.safetyReason ?? null,
     missingCriticalField: interactionRef.safetyTelemetry?.missingCriticalField ?? null,
     safetyAnswerType: interactionRef.safetyTelemetry?.safetyAnswerType ?? null,
-    askedClarification: Boolean(interactionRef.safetyTelemetry?.askedClarification),
+    askedClarification:
+      Boolean(interactionRef.safetyTelemetry?.askedClarification) ||
+      (interactionRef.decision?.action === "clarification" && finalOutputType === "question"),
+    clarificationGateReason:
+      interactionRef.clarificationGateTelemetry?.clarificationGateReason ?? null,
+    clarificationExhausted:
+      Boolean(interactionRef.clarificationGateTelemetry?.clarificationExhausted),
     blockedProductRouting: Boolean(interactionRef.safetyTelemetry?.blockedProductRouting),
     knowledgeDeadEndDetected: Boolean(interactionRef.knowledgeTelemetry?.knowledgeDeadEndDetected),
     knowledgeRecoveryApplied: Boolean(interactionRef.knowledgeTelemetry?.knowledgeRecoveryApplied),
@@ -2710,7 +2724,12 @@ function endInteraction(interactionRef, result, patch = {}) {
       entry.clarificationAttemptCount != null ? Number(entry.clarificationAttemptCount) : 0,
     queryType: interactionRef.queryType,
     finalOutputType,
-    productsReason: entry.output.productsReason
+    productsReason: entry.output.productsReason,
+    prematureFallback:
+      entry.output.productsReason === "no_matching_products" &&
+      (entry.clarificationAttemptCount == null || Number(entry.clarificationAttemptCount) === 0) &&
+      interactionRef.decision?.action === "knowledge" &&
+      !detectForceFallback(interactionRef.message)
   });
   interactionRef.analysis = analysis;
   entry.analysis = analysis;
@@ -4115,8 +4134,7 @@ function buildNoProductFallbackResponse(selectionSlots = null, responseLocale = 
   return {
     type: "fallback_products",
     recommendedProductName: fallbackName,
-    message:
-      `Nu am găsit produse potrivite în catalog pentru combinația exactă. Ca fallback sigur, poți începe cu ${fallbackName} pentru curățare generală până confirmăm detalii suplimentare.`
+    message: buildTerminalFallbackMessage(fallbackName)
   };
 }
 
@@ -4164,21 +4182,91 @@ function returnSelectionFailSafe(
   options = {}
 ) {
   const userMessage = String(interactionRef?.message || "");
-  const products = interactionRef?.productsCatalog || fallbackProductsCatalog;
-  const broadening = tryEmitBroadeningOffer(
-    interactionRef,
-    sessionId,
-    userMessage,
-    products,
-    selectionDecision,
-    selectionSlots
-  );
-  if (broadening) return broadening;
+  const sessionContext = getSession(sessionId) || interactionRef?.sessionContext || null;
   const productsReason =
     options.productsReason != null && String(options.productsReason).trim() !== ""
       ? String(options.productsReason)
       : "no_matching_products";
   const responseLocale = interactionRef?.sessionContext?.responseLocale || "ro";
+  if (productsReason === PRODUCTS_REASON_TIER_ONE_UNAVAILABLE) {
+    const reply = options.reply || TIER_ONE_UNAVAILABLE_COPY_RO;
+    const failSafeDecision = {
+      ...(selectionDecision || {}),
+      action: "knowledge",
+      flowId: null,
+      missingSlot: null,
+      productsReason
+    };
+    interactionRef.slots = selectionSlots || interactionRef.slots || null;
+    updateSessionWithProducts(sessionId, [], "guidance");
+    return endInteraction(interactionRef, { reply, products: [] }, {
+      decision: failSafeDecision,
+      outputType: "reply",
+      productsReason,
+      products: []
+    });
+  }
+  const intentTags = interactionRef?.tags || sessionContext?.tags || [];
+  const gate = evaluateClarificationGate({
+    slots: selectionSlots || {},
+    slotMeta: sessionContext?.slotMeta || {},
+    intentTags,
+    productsReason,
+    session: sessionContext,
+    message: userMessage
+  });
+  interactionRef.clarificationGateTelemetry = {
+    clarificationGateReason: gate.gateReason || "none",
+    clarificationExhausted: Boolean(gate.clarificationExhausted)
+  };
+  if (
+    gate.shouldClarify &&
+    productsReason !== PRODUCTS_REASON_TIER_ONE_UNAVAILABLE
+  ) {
+    const slotGap = getMissingSlot(selectionSlots || {});
+    const missingSlot = slotGap
+      ? slotGap
+      : productsReason === "no_matching_products"
+        ? "intent_level"
+        : gate.missingSlot || "surface";
+    const questionMessage =
+      options.reply ||
+      selectClarificationMessage({
+        missingSlot,
+        gateReason: gate.gateReason,
+        slots: selectionSlots || {},
+        getQuestion: getClarificationQuestion
+      });
+    if (sessionContext) {
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+        slot: missingSlot,
+        object: selectionSlots?.object || null,
+        context: selectionSlots?.context || null
+      });
+      seedPendingClarificationAtEmission(sessionContext, missingSlot);
+      recordClarificationAsk(sessionContext, missingSlot);
+      saveSession(sessionId, sessionContext);
+    }
+    const failSafeDecision = {
+      ...(selectionDecision || {}),
+      action: "clarification",
+      flowId: null,
+      missingSlot,
+      productsReason,
+      reasonCode: "routing.clarification.f39_gate"
+    };
+    interactionRef.slots = selectionSlots || interactionRef.slots || null;
+    return endInteraction(
+      interactionRef,
+      { type: "question", message: questionMessage },
+      {
+        decision: failSafeDecision,
+        outputType: "question",
+        productsReason,
+        slots: selectionSlots || {}
+      }
+    );
+  }
   const fallbackPlan = buildNoProductFallbackResponse(selectionSlots || {}, responseLocale);
   if (
     fallbackPlan.type === "question" &&
@@ -4204,6 +4292,54 @@ function returnSelectionFailSafe(
       }
     );
   }
+  if (
+    productsReason === "no_matching_products" &&
+    !shouldAllowTerminalSafeFallback(sessionContext, userMessage)
+  ) {
+    const missingSlot = getMissingSlot(selectionSlots || {}) || "surface";
+    const questionMessage = selectClarificationMessage({
+      missingSlot,
+      gateReason: "slots_missing",
+      slots: selectionSlots || {},
+      getQuestion: getClarificationQuestion
+    });
+    if (sessionContext) {
+      sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+        slot: missingSlot,
+        object: selectionSlots?.object || null,
+        context: selectionSlots?.context || null
+      });
+      recordClarificationAsk(sessionContext, missingSlot);
+      saveSession(sessionId, sessionContext);
+    }
+    return endInteraction(
+      interactionRef,
+      { type: "question", message: questionMessage },
+      {
+        decision: {
+          ...(selectionDecision || {}),
+          action: "clarification",
+          flowId: null,
+          missingSlot,
+          productsReason,
+          reasonCode: "routing.clarification.f39_ac2"
+        },
+        outputType: "question",
+        productsReason,
+        slots: selectionSlots || {}
+      }
+    );
+  }
+  const products = interactionRef?.productsCatalog || fallbackProductsCatalog;
+  const broadening = tryEmitBroadeningOffer(
+    interactionRef,
+    sessionId,
+    userMessage,
+    products,
+    selectionDecision,
+    selectionSlots
+  );
+  if (broadening) return broadening;
   const reply = options.reply || fallbackPlan.message;
   const safeFallbackProducts = [];
   logInfo("NO_MATCHING_PRODUCTS_FALLBACK", {
@@ -6456,7 +6592,8 @@ const RO_WORDS = [
   "salut", "buna", "bună", "cum", "cat", "unde", "cand",
   "curat", "curata", "spal", "masina", "cotiera", "bord",
   "murdar", "solutie",
-  "recomanda", "recomand", "prosop", "uscare", "produs", "produse"
+  "recomanda", "recomand", "prosop", "uscare", "produs", "produse",
+  "textil", "textile", "piele", "plastic", "alcantara", "alcantară"
 ];
 
 function detectLanguage(message) {
@@ -9536,6 +9673,29 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
+    if (detectForceFallback(userMessage) && !sessionContext?.pendingQuestion?.slot) {
+      const fallbackProducts = findSafeGenericFallbackProducts(1);
+      const fallbackName = fallbackProducts[0]?.name ? String(fallbackProducts[0].name) : "un APC sigur";
+      const reply = buildTerminalFallbackMessage(fallbackName);
+      updateSessionWithProducts(sessionId, [], "guidance");
+      clearProblemType(sessionContext, sessionId);
+      interactionRef.clarificationGateTelemetry = {
+        clarificationGateReason: "none",
+        clarificationExhausted: false
+      };
+      return endInteraction(interactionRef, { reply, products: [] }, {
+        decision: {
+          action: "knowledge",
+          flowId: null,
+          missingSlot: null,
+          safeFallback: true,
+          reasonCode: "routing.knowledge.safe_fallback"
+        },
+        outputType: "reply",
+        productsReason: "no_matching_products"
+      });
+    }
+
     if (productSectionQuotePreSafety?.decline === true) {
       logChatPipelineStage("product_section_quote_decline");
       const productSectionQuoteDecline = productSectionQuotePreSafety;
@@ -11569,59 +11729,35 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       if (!hasRequiredSelectionSlots(currentSlots)) {
         const missing = selectionDecision.missingSlot;
-        let retrievalCandidateCount = 0;
-        let retrievalDecision = "fall_through_to_clarify";
-
-        if (highLevelIntent === "product_search" && tokenInferenceEmpty) {
-          const retrievalAttempt = tryRetrieveBeforeClarifySelection(
-            userMessage,
-            products,
-            selectionTagsBeforeDecision
-          );
-          retrievalCandidateCount = retrievalAttempt.candidates.length;
-          retrievalDecision = retrievalAttempt.decision;
-          logInfo("ROUTING_RETRIEVAL_BEFORE_CLARIFY", {
-            intentType: highLevelIntent,
-            intentTags: workingTags,
-            tokenInferenceMatches,
-            retrievalCandidateCount,
-            decision: retrievalDecision,
-            matchPhrases: retrievalAttempt.matchText
+        sessionContext.slots = currentSlots;
+        interactionRef.slots = currentSlots;
+        sessionContext.state =
+          missing === "context" ? "NEEDS_CONTEXT" :
+          missing === "object" ? "NEEDS_OBJECT" :
+          missing === "surface" ? "NEEDS_SURFACE" :
+          sessionContext.state;
+        sessionContext.originalIntent = "selection";
+        sessionContext.pendingSelection = true;
+        sessionContext.pendingSelectionMissingSlot = missing || null;
+        if (["surface", "object"].includes(missing)) {
+          sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
+            slot: missing,
+            object: currentSlots?.object || null,
+            context: currentSlots?.context || null
           });
-          if (retrievalAttempt.candidates.length > 0) {
-            selectionPreRetrievedCandidates = retrievalAttempt.candidates;
-            selectionDecision = {
-              ...selectionDecision,
-              action: "selection",
-              flowId: null,
-              missingSlot: null,
-              reasonCode: "routing.selection.retrieval_before_clarify"
-            };
-          }
+          seedPendingClarificationAtEmission(sessionContext, missing);
+          recordClarificationAsk(sessionContext, missing);
         }
+        saveSession(sessionId, sessionContext);
 
-        if (!selectionPreRetrievedCandidates) {
-          sessionContext.slots = currentSlots;
-          interactionRef.slots = currentSlots;
-          sessionContext.state =
-            missing === "context" ? "NEEDS_CONTEXT" :
-            missing === "object" ? "NEEDS_OBJECT" :
-            missing === "surface" ? "NEEDS_SURFACE" :
-            sessionContext.state;
-          sessionContext.originalIntent = "selection";
-          sessionContext.pendingSelection = true;
-          sessionContext.pendingSelectionMissingSlot = missing || null;
-          saveSession(sessionId, sessionContext);
-
-          return endInteraction(interactionRef, {
-            type: "question",
-            message:
-              getClarificationQuestion(missing, currentSlots, sessionContext.responseLocale)
-          }, {
-            decision: selectionDecision,
-            outputType: "question"
-          });
-        }
+        return endInteraction(interactionRef, {
+          type: "question",
+          message:
+            getClarificationQuestion(missing, currentSlots, sessionContext.responseLocale)
+        }, {
+          decision: selectionDecision,
+          outputType: "question"
+        });
       }
 
       if (selectionDecision.action === "clarification" && !selectionPreRetrievedCandidates) {
@@ -12025,15 +12161,6 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       if (finalProducts.length === 0) {
-        const broadeningEmpty = tryEmitBroadeningOffer(
-          interactionRef,
-          sessionId,
-          userMessage,
-          products,
-          selectionDecision,
-          selectionSlots
-        );
-        if (broadeningEmpty) return broadeningEmpty;
         const fallbackReply = role && COVERAGE_ROLE_SET.has(role)
           ? roleCoverageFallbackQuestion(role)
           : null;

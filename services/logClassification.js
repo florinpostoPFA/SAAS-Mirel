@@ -17,6 +17,7 @@ const { inferHighLevelIntent } = require("./productIntentHeuristics");
  * @param {string|null} [opts.queryType]
  * @param {string|null} [opts.finalOutputType]
  * @param {string|null} [opts.productsReason]
+ * @param {boolean} [opts.prematureFallback]
  * @returns {{
  *   failureType: "wrong_flow"|"no_products"|"clarification_loop"|"low_signal"|null,
  *   frictionPoint: string|null,
@@ -35,7 +36,8 @@ function classifyInteraction(opts) {
     clarificationAttemptCount = 0,
     queryType = null,
     finalOutputType = null,
-    productsReason = null
+    productsReason = null,
+    prematureFallback = false
   } = opts && typeof opts === "object" ? opts : {};
 
   const action = decision && typeof decision === "object" ? decision.action ?? null : null;
@@ -56,7 +58,10 @@ function classifyInteraction(opts) {
 
   const attempts = Number(clarificationAttemptCount) || 0;
 
-  if (lowSignalDetected) {
+  if (prematureFallback) {
+    failureType = "no_products";
+    frictionPoint = "premature_fallback";
+  } else if (lowSignalDetected) {
     failureType = "low_signal";
     frictionPoint = "low_signal_detected";
   } else if (clarificationEscalated || (action === "clarification" && attempts >= 2)) {

@@ -75,10 +75,14 @@ describe("Selection hard filtering and output", () => {
     const result = await handleChat("ce produs recomanzi pentru cotiera textil murdara", "C1", products, sessionId);
     const reply = String(result.reply || result.message || "");
 
-    expect(result.type).toBe("reply");
-    expect(reply).toMatch(/Nu am găsit produse potrivite în catalog|Clarificare:/i);
-    expect(result.productsReason).toBe("no_matching_products");
-    expect(Array.isArray(result.products)).toBe(true);
-    expect(result.products).toHaveLength(0);
+    expect(["reply", "question"]).toContain(result.type);
+    expect(reply).toMatch(
+      /Nu am găsit produse potrivite|potrivire exactă|extind căutarea|pași|recomandare de produse|Clarificare:|reprezentantii nostri/i
+    );
+    if (result.type === "reply") {
+      expect(result.productsReason).toBe("no_matching_products");
+      expect(Array.isArray(result.products)).toBe(true);
+      expect(result.products).toHaveLength(0);
+    }
   });
 });

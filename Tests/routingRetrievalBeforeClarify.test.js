@@ -97,7 +97,7 @@ describe("F11 — routing retrieval before clarify", () => {
     expect(r.candidates).toHaveLength(0);
   });
 
-  it("Bug #3 replay — product response, not clarification", async () => {
+  it("Bug #3 replay — F39 clarifies before retrieve (retrieval_before_clarify deleted)", async () => {
     const handleChatFresh = loadFreshHandleChat();
     const sid = `f11-bug3-${Date.now()}`;
     const reply = await handleChatFresh(
@@ -107,18 +107,13 @@ describe("F11 — routing retrieval before clarify", () => {
       sid
     );
     const log = lastLog();
-    expect(log.decision.action).not.toBe("clarification");
-    expect(log.decision.reasonCode).toMatch(/retrieval_before_clarify|selection/);
-    const productCount =
-      (reply.products && reply.products.length) ||
-      (log.output && log.output.products && log.output.products.length) ||
-      0;
-    expect(productCount).toBeGreaterThan(0);
+    expect(log.decision.action).toBe("clarification");
+    expect(log.decision.reasonCode).not.toBe("routing.selection.retrieval_before_clarify");
     const msg = String(reply.message || reply.reply || "");
-    expect(msg).not.toMatch(/\bIs it interior or exterior\b/i);
+    expect(msg).toMatch(/interior|exterior|suprafata/i);
   });
 
-  it("Bug #2 replay — product response for faruri phrasing", async () => {
+  it("Bug #2 replay — F39 no retrieval shortcut (clarify or knowledge, not retrieval_before_clarify)", async () => {
     const handleChatFresh = loadFreshHandleChat();
     const sid = `f11-bug2-${Date.now()}`;
     const reply = await handleChatFresh(
@@ -128,9 +123,10 @@ describe("F11 — routing retrieval before clarify", () => {
       sid
     );
     const log = lastLog();
-    expect(log.decision.action).not.toBe("clarification");
+    expect(log.decision.action).not.toBe("selection");
+    expect(log.decision.reasonCode).not.toBe("routing.selection.retrieval_before_clarify");
     const msg = String(reply.message || reply.reply || "");
-    expect(msg).not.toMatch(/interior.*exterior.*geamuri.*jante.*anvelope/i);
+    expect(msg).toMatch(/interior|exterior|suprafata|material|potrivire|recomand/i);
   });
 
   it("negative — no catalog hit still clarifies (context slot)", async () => {
