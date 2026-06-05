@@ -164,12 +164,33 @@ describe("F36 output mode integrity — E2E", () => {
     const msg = replyText(result);
 
     expect(log.decision.action).toBe("clarification");
+    expect(log.decision.missingSlot).toBe("intent_level");
+    expect(log.decision.reasonCode).toBe("routing.coverage_role_goal");
     expect(log.output?.type).toBe("question");
     expect(log.decision.action).not.toBe("recommend");
     expect(Boolean(log.askedClarification)).toBe(true);
     expect(log.pendingQuestion?.source).toBe("coverage_role_goal");
     expect(msg).toMatch(/cureti|protejezi|hidratezi/i);
     expect(msg).not.toMatch(/^— Recomandări produse —[\s\S]*\bClarificare:/);
+  });
+
+  it("outputMode_coverageRoleGoal_3turn_integration — prod replay vreau sa curat pielea → cotiera → piele", async () => {
+    const sid = `f36-cov3-${Date.now()}`;
+    const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
+    await handleChat("vreau sa curat pielea", "C1", catalog, sid);
+    await handleChat("cotiera", "C1", catalog, sid);
+    const result = await handleChat("piele", "C1", catalog, sid);
+    const log = lastLog();
+    const msg = replyText(result);
+
+    expect(log.decision.action).toBe("clarification");
+    expect(log.decision.missingSlot).toBe("intent_level");
+    expect(log.decision.reasonCode).toBe("routing.coverage_role_goal");
+    expect(log.output?.type).toBe("question");
+    expect(log.output?.productsLength ?? 0).toBe(0);
+    expect(Boolean(log.askedClarification)).toBe(true);
+    expect(log.pendingQuestion?.source).toBe("coverage_role_goal");
+    expect(msg).toMatch(/cureti|protejezi|hidratezi/i);
   });
 
   it("outputMode_wax_actionFilter — wax intent returns wax SKU not glass cleaner", async () => {

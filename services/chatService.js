@@ -2077,21 +2077,27 @@ function applyRecommendQuestionMutexRepair({
   if (!recommendActions.has(workingDecision?.action) || finalOutputType !== "question") {
     return { workingDecision, finalOutputType, finalProducts };
   }
-  const slot =
-    sessionContext?.pendingQuestion?.slot ||
-    workingDecision?.missingSlot ||
-    "intent_level";
+  const coverageRoleGoalPending =
+    sessionContext?.pendingQuestion?.source === "coverage_role_goal";
+  const slot = coverageRoleGoalPending
+    ? "intent_level"
+    : sessionContext?.pendingQuestion?.slot ||
+      workingDecision?.missingSlot ||
+      "intent_level";
   console.error("[DECISION_CONTRACT_INVALID]", {
     reason: "recommend_output_question_repair",
     action: workingDecision?.action ?? null,
-    pendingSlot: slot
+    pendingSlot: slot,
+    coverageRoleGoalPending
   });
   return {
     workingDecision: buildDecision({
       ...workingDecision,
       action: "clarification",
       missingSlot: slot,
-      reasonCode: workingDecision?.reasonCode || "routing.output_mode_repair"
+      reasonCode: coverageRoleGoalPending
+        ? "routing.coverage_role_goal"
+        : workingDecision?.reasonCode || "routing.output_mode_repair"
     }),
     finalOutputType: "question",
     finalProducts: []
