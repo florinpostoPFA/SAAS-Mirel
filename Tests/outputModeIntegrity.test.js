@@ -193,6 +193,30 @@ describe("F36 output mode integrity — E2E", () => {
     expect(msg).toMatch(/cureti|protejezi|hidratezi/i);
   });
 
+  it("F43 coverageRoleGoal action-only answer preserves slots and recommends cleaner", async () => {
+    const sid = `f43-cov4-${Date.now()}`;
+    const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
+    await handleChat("vreau sa curat pielea", "C1", catalog, sid);
+    await handleChat("cotiera", "C1", catalog, sid);
+    await handleChat("piele", "C1", catalog, sid);
+    const result = await handleChat("vreau sa curat", "C1", catalog, sid);
+    const log = lastLog();
+    const msg = replyText(result);
+
+    expect(log.slots?.context).toBe("interior");
+    expect(log.slots?.object).toBe("cotiera");
+    expect(log.slots?.surface).toBe("piele");
+    expect(log.pendingQuestion).toBeFalsy();
+    expect(log.decision.action).toMatch(/recommend|selection/);
+    expect(log.decision.missingSlot).toBeNull();
+    expect(msg).not.toMatch(/interiorul sau exteriorul/i);
+    if ((result.products || []).length > 0) {
+      const names = result.products.map((p) => String(p.name || "").toLowerCase()).join(" ");
+      expect(names).toMatch(/curatare piele|leather cleaner/i);
+      expect(names).not.toMatch(/hidratare|protect leather care/i);
+    }
+  });
+
   it("outputMode_wax_actionFilter — wax intent returns wax SKU not glass cleaner", async () => {
     const sid = `f36-wax-${Date.now()}`;
     const catalog = [WAX_PRODUCT, GLASS_CLEANER];

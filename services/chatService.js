@@ -6058,11 +6058,17 @@ function isDirectPendingClarificationAnswer(message, pendingQuestion) {
       .some(token => msg.includes(token));
   }
 
-  if (pending.slot === "intent_level" && pending.source === "low_signal") {
+  if (pending.slot === "intent_level") {
+    if (parseCoverageGoalReply(message)) {
+      return true;
+    }
     if (classifyIntentLevelReply(message).kind !== "none") {
       return true;
     }
-    return isShortSlotValueMessage(message);
+    if (pending.source === "low_signal" && isShortSlotValueMessage(message)) {
+      return true;
+    }
+    return false;
   }
 
   return false;
@@ -7444,6 +7450,107 @@ function parseCoverageGoalReply(message) {
   if (isClean && !isProtect) return "clean";
   if (isProtect && !isClean) return "protect";
   return null;
+}
+
+/**
+ * Resolve pending intent_level clarification (coverage_role_goal, low_signal, loop_breaker, …)
+ * when the user reply is an unambiguous action-only or route signal. Preserves prior slots.
+ */
+function tryResolveIntentLevelPendingAnswer(sessionContext, userMessage, sessionId) {
+  const pending = sessionContext?.pendingQuestion;
+  if (pending?.slot !== "intent_level") {
+    return { resolved: false };
+  }
+
+  const norm = normalizeLowSignalText(userMessage);
+  const coverageGoal = parseCoverageGoalReply(userMessage);
+  const route = classifyIntentLevelReply(userMessage, norm);
+  const parsedSlots = normalizeSlots(
+    applyObjectSlotInference(extractSlotsFromMessage(userMessage))
+  );
+  const hasSlotSignal = Boolean(
+    parsedSlots.object || parsedSlots.context || parsedSlots.surface
+  );
+  const prevSlots =
+    sessionContext?.slots && typeof sessionContext.slots === "object"
+      ? sessionContext.slots
+      : {};
+
+  if (coverageGoal) {
+    sessionContext.coverageGoal = coverageGoal;
+    sessionContext.slots = mergeSlots(prevSlots, parsedSlots);
+    sessionContext.pendingQuestion = null;
+    sessionContext.state = "IDLE";
+    sessionContext.originalIntent = "selection";
+    sessionContext.pendingSelection = true;
+    sessionContext.pendingSelectionMissingSlot = null;
+    clearPendingClarificationSlots(sessionContext);
+    logInfo("INTENT_LEVEL_PENDING_RESOLVED", {
+      sessionId,
+      source: pending.source || null,
+      kind: "coverage_goal",
+      goal: coverageGoal,
+      slots: sessionContext.slots
+    });
+    return { resolved: true, kind: "coverage_goal", goal: coverageGoal };
+  }
+
+  if (route.kind === "procedural") {
+    sessionContext.pendingQuestion = null;
+    sessionContext.originalIntent = "product_guidance";
+    sessionContext.pendingSelection = false;
+    sessionContext.slots = mergeSlots(prevSlots, parsedSlots);
+    sessionContext.state = "IDLE";
+    clearPendingClarificationSlots(sessionContext);
+    logInfo("INTENT_LEVEL_PENDING_RESOLVED", {
+      sessionId,
+      source: pending.source || null,
+      kind: "procedural",
+      slots: sessionContext.slots
+    });
+    return { resolved: true, kind: "procedural" };
+  }
+
+  if (route.kind === "selection") {
+    sessionContext.pendingQuestion = null;
+    sessionContext.originalIntent = "selection";
+    sessionContext.pendingSelection = true;
+    sessionContext.slots = mergeSlots(prevSlots, parsedSlots);
+    if (!hasSlotSignal) {
+      const seeded = seedSelectionSlotsFromRecentMemory(sessionContext);
+      if (seeded.applied) {
+        logInfo("INTENT_LEVEL_SELECTION_CONTEXT_SEEDED", {
+          source: seeded.source,
+          slots: seeded.slots
+        });
+      }
+    }
+    sessionContext.state = "IDLE";
+    clearPendingClarificationSlots(sessionContext);
+    logInfo("INTENT_LEVEL_PENDING_RESOLVED", {
+      sessionId,
+      source: pending.source || null,
+      kind: "selection",
+      slots: sessionContext.slots
+    });
+    return { resolved: true, kind: "selection" };
+  }
+
+  if (hasSlotSignal) {
+    sessionContext.pendingQuestion = null;
+    sessionContext.slots = mergeSlots(prevSlots, parsedSlots);
+    sessionContext.state = "IDLE";
+    clearPendingClarificationSlots(sessionContext);
+    logInfo("INTENT_LEVEL_PENDING_RESOLVED", {
+      sessionId,
+      source: pending.source || null,
+      kind: "slot_signal",
+      slots: sessionContext.slots
+    });
+    return { resolved: true, kind: "slot_signal" };
+  }
+
+  return { resolved: false };
 }
 
 function messageIncludesAny(text, terms) {
@@ -9545,6 +9652,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       Boolean(sessionContext?.pendingQuestion) ||
       (String(sessionContext?.state || "").startsWith("NEEDS_") &&
         sessionContext?.pendingClarification?.active === true);
+    const hadCoverageRoleGoalPendingAtEntry =
+      sessionContext?.pendingQuestion?.source === "coverage_role_goal";
+    const hadIntentLevelPendingAtEntry =
+      sessionContext?.pendingQuestion?.slot === "intent_level";
     logInfo("PENDING_SELECTION_LOADED", {
       sessionId,
       pendingSelection: sessionContext?.pendingSelection,
@@ -9888,6 +9999,25 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
+    if (hadIntentLevelPendingAtEntry) {
+      const intentLevelResolution = tryResolveIntentLevelPendingAnswer(
+        sessionContext,
+        userMessage,
+        sessionId
+      );
+      if (intentLevelResolution.resolved) {
+        handledPendingQuestionAnswerEarly = true;
+        interactionRef.handledPendingQuestionAnswerEarly = true;
+        saveSession(sessionId, sessionContext);
+        logInfo("INTENT_LEVEL_PENDING_RESOLVED_EARLY", {
+          sessionId,
+          kind: intentLevelResolution.kind || null,
+          goal: intentLevelResolution.goal || null,
+          slots: sessionContext.slots || {}
+        });
+      }
+    }
+
     if (sessionContext?.pendingQuestion?.active === true || sessionContext?.pendingQuestion?.slot) {
       const earlyPendingResolution = resolvePendingQuestionFirst(sessionContext, userMessage);
       if (earlyPendingResolution.resolved) {
@@ -9916,7 +10046,10 @@ async function handleChat(message, clientId, products, sessionId = "default") {
               userMessage: msg,
               sessionContext: ctx,
               intentCore: ic,
-              pendingSlotClarificationActive: false
+              pendingSlotClarificationActive:
+                Boolean(ctx?.pendingQuestion) &&
+                (ctx?.pendingQuestion?.slot !== "intent_level" ||
+                  isDirectPendingClarificationAnswer(msg, ctx.pendingQuestion))
             }),
           isInterrogativeFollowUp: isInterrogativeFollowUpMessage,
           isOffTopicForPending: (msg, ctx, ic) =>
@@ -10925,7 +11058,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       // --- After resolving pendingQuestion for selection, re-enter slot evaluation loop ---
       const currentIntent = sessionContext.originalIntent || overrideIntent(intentCore, detectIntent(intentCore, sessionId));
       const intentType = typeof currentIntent === "string" ? currentIntent : currentIntent?.type;
-      if (intentType === "selection") {
+      if (intentType === "selection" && pending.slot !== "intent_level") {
         // Re-enter selection slot evaluation immediately
         const continuationSlotGuard =
           sessionContext?.pendingSelection === true ||
@@ -11768,10 +11901,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     // SELECTION (strict slot logic, no fallback/knowledge)
     // queryType drives this path; routing may normalize action to "recommend" while slots are complete.
     if (!isSafetyEnforced && queryType === "selection") {
-      const pendingCoverageGoalQuestionAtEntry =
-        sessionContext?.pendingQuestion?.source === "coverage_role_goal"
-          ? sessionContext.pendingQuestion
-          : null;
+      const pendingCoverageGoalQuestionAtEntry = hadCoverageRoleGoalPendingAtEntry
+        ? sessionContext?.pendingQuestion || { source: "coverage_role_goal" }
+        : null;
       const selectionStrictMergeSession =
         hadPendingSlotClarificationAtStart ||
         sessionContext?.pendingSelection === true ||
