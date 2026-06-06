@@ -48,7 +48,7 @@ describe("F10 — clarification template localization", () => {
 
   it("getClarificationQuestion(object) is Romanian when locale is en", () => {
     const q = t.getClarificationQuestion("object", { context: "interior" }, "en");
-    expect(q.toLowerCase()).toContain("ce vrei sa cureti");
+    expect(q.toLowerCase()).toMatch(/interiorului|scaune|bord/);
     expect(q).not.toMatch(/\bWhat exactly do you want\b/i);
   });
 

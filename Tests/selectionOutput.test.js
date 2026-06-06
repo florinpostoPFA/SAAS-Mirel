@@ -77,7 +77,7 @@ describe("Selection hard filtering and output", () => {
 
     expect(["reply", "question"]).toContain(result.type);
     expect(reply).toMatch(
-      /Nu am găsit produse potrivite|potrivire exactă|extind căutarea|pași|recomandare de produse|Clarificare:|reprezentantii nostri/i
+      /Nu am găsit produse potrivite|potrivire exactă|extind căutarea|pata|murda|restr|pași|recomandare de produse|Clarificare:|reprezentantii nostri/i
     );
     if (result.type === "reply") {
       expect(result.productsReason).toBe("no_matching_products");

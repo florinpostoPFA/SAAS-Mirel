@@ -117,6 +117,6 @@ describe("F36-2b action category filter E2E", () => {
     const msg = String(reply.message || reply.reply || "");
     expect(log.decision.action).toBe("clarification");
     expect(["zero_results", "both", "slots_missing"]).toContain(log.clarificationGateReason);
-    expect(msg).toMatch(/potrivire exactă|extind căutarea|marca/i);
+    expect(msg).toMatch(/pata|murda|restr|potrivire exactă|extind căutarea|marca/i);
   });
 });

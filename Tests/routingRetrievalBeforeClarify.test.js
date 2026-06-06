@@ -126,7 +126,7 @@ describe("F11 — routing retrieval before clarify", () => {
     expect(log.decision.action).not.toBe("selection");
     expect(log.decision.reasonCode).not.toBe("routing.selection.retrieval_before_clarify");
     const msg = String(reply.message || reply.reply || "");
-    expect(msg).toMatch(/interior|exterior|suprafata|material|potrivire|recomand/i);
+    expect(msg).toMatch(/interior|exterior|suprafata|material|potrivire|recomand|restr|murda|pata/i);
   });
 
   it("negative — no catalog hit still clarifies (context slot)", async () => {

@@ -1,0 +1,53 @@
+{
+  "verbs": {
+    "clean": ["cureti", "speli"],
+    "protect": ["protejezi", "aplici"],
+    "polish": ["lustruiesti", "polishezi"],
+    "hydrate": ["hidratezi", "conditionezi"],
+    "default": ["faci"]
+  },
+  "verbsByFamily": {
+    "wax": { "protect": "ceruiești" },
+    "coating": { "protect": "aplici" },
+    "sealant": { "protect": "sigilezi" }
+  },
+  "familyNouns": {
+    "wax": "ceara",
+    "polish": "polishul",
+    "coating": "coatingul",
+    "apc": "APC-ul",
+    "degreaser": "degresantul",
+    "iron_remover": "degresantul de fier",
+    "default": "produsul"
+  },
+  "familyTagAliases": {
+    "cleaning": "apc",
+    "protection": "coating",
+    "leather": "piele",
+    "leather_cleaner": "piele",
+    "leather_conditioner": "piele"
+  },
+  "examples": {
+    "interior": ["scaune", "bord", "plafon", "covorase", "cotiera", "plastice interioare"],
+    "exterior": ["vopsea", "caroserie", "jante", "plastice exterioare", "geamuri", "parbriz"]
+  },
+  "narrowing": {
+    "textile": {
+      "clean": "Pată specifică sau toată suprafața? Cât de murdară: ușoară sau pată grea?"
+    },
+    "piele": {
+      "clean": "Pată localizată sau toată suprafața de piele? Ușoară sau murdarie intensă?",
+      "protect": "Protecție ușoară sau hidratare intensă după curățare?"
+    },
+    "default": {
+      "clean": "Vrei să restrângi zona sau nivelul de murdărie (ușoară vs grea)?",
+      "protect": "Protecție de bază sau tratament complet?"
+    }
+  },
+  "contextQuestion": "Este pentru interior sau exterior?",
+  "intentLevel": {
+    "protectLeather": "Vrei să o protejezi/hidratezi sau doar să o cureți?",
+    "cleanLeather": "Vrei să o cureți sau să o protejezi/hidratezi?",
+    "generic": "Vrei pași / cum se face, recomandare de produse, sau spune ce zonă?"
+  }
+}
