@@ -141,7 +141,7 @@ describe("clarificationFirstPolicy E2E", () => {
     const reply = await handleChat("nu știu ce-mi trebuie, recomanda-mi tu", "C1", [], sid);
     const log = lastLog();
     const msg = String(reply.message || reply.reply || "");
-    expect(msg).toMatch(/potrivire exactă|soluție generală|fallback/i);
+    expect(msg).toMatch(/pata|murda|restr|potrivire exactă|soluție generală|fallback/i);
     expect(log.decision.action).toBe("knowledge");
   });
 
@@ -174,7 +174,7 @@ describe("clarificationFirstPolicy E2E", () => {
     const msg = String(reply.message || reply.reply || "");
     expect(log.decision.action).toBe("clarification");
     expect(["zero_results", "both"]).toContain(log.clarificationGateReason);
-    expect(msg).toMatch(/potrivire exactă|extind căutarea|marca/i);
+    expect(msg).toMatch(/pata|murda|restr|suprafata/i);
     expect(msg).not.toMatch(/fallback sigur|All Purpose Cleaner/i);
   });
 });

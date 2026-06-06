@@ -1,4 +1,5 @@
 const { getMissingSlot } = require("./slotCompleteness");
+const { composeClarificationQuestion } = require("./clarificationTemplateService");
 
 const ACTION_SIGNAL_TAGS = new Set([
   "cleaning",
@@ -169,16 +170,27 @@ function buildTerminalFallbackMessage(productName) {
   );
 }
 
-function selectClarificationMessage({ missingSlot, gateReason, slots, getQuestion }) {
+function selectClarificationMessage({ missingSlot, gateReason, slots, intentTags = [], getQuestion }) {
   const slotGap = getMissingSlot(slots || {});
-  if (
-    (gateReason === "zero_results" || gateReason === "both") &&
-    !slotGap
-  ) {
-    return ZERO_RESULTS_QUESTION_RO;
+  if ((gateReason === "zero_results" || gateReason === "both") && !slotGap) {
+    return composeClarificationQuestion({
+      missingSlot: missingSlot || "narrowing",
+      slots: slots || {},
+      intentTags,
+      clarificationGateReason: gateReason
+    }).message;
   }
   if (typeof getQuestion === "function" && missingSlot) {
-    return getQuestion(missingSlot, slots || {}, "ro");
+    const tel = {};
+    const message = getQuestion(missingSlot, slots || {}, "ro", {
+      intentTags,
+      clarificationGateReason: gateReason,
+      telemetryRef: tel
+    });
+    if (tel.clarificationTemplateKey) {
+      selectClarificationMessage.lastTemplateKey = tel.clarificationTemplateKey;
+    }
+    return message;
   }
   return ZERO_RESULTS_QUESTION_RO;
 }

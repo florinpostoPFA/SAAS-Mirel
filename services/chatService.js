@@ -9,6 +9,7 @@ const {
 } = require("./productSelectionService");
 const { hasExplicitCommerceProductIntent } = require("./commerceIntentSignals");
 const { formatFlowReply, formatSelectionReply } = require("./responseFormatTemplates");
+const { composeClarificationQuestion } = require("./clarificationTemplateService");
 const { buildPrompt } = require("./promptBuilder");
 const { getSettings } = require("./settingsService");
 const { askLLM } = require("./llm");
@@ -1415,7 +1416,7 @@ function getFlowClarification(flowId, missingSlot, slots, responseLocale = "ro")
     missingSlot,
     promptSlot,
     state: "NEEDS_OBJECT",
-    message: "Ce vrei sa cureti mai exact?"
+    message: getClarificationQuestion("object", slots, responseLocale, { intentTags: [] })
   };
 }
 
@@ -1470,7 +1471,7 @@ function buildSmartNoProductFallbackMessage(userMessage, slots) {
   if (noun) {
     return `Pentru \`${noun}\` nu am gasit produs potrivit. Vrei sa cauti dupa alta categorie sau marca?`;
   }
-  return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
+  return getClarificationQuestion("object", slots || {}, "ro", { intentTags: [] });
 }
 
 function needsNarrowingClarification(slots, retrievalCount) {
@@ -1531,24 +1532,37 @@ function buildSmartValidatorClarificationMessage(userMessage, slots, defaultQues
   return defaultQuestion;
 }
 
-function getClarificationQuestion(missingSlot, slots, _responseLocale = "ro") {
-  if (missingSlot === "context") {
-    return "Este pentru interior sau exterior?";
+function getClarificationQuestion(missingSlot, slots, _responseLocale = "ro", options = {}) {
+  const safeSlots = slots && typeof slots === "object" ? slots : {};
+  const intentTags = Array.isArray(options.intentTags) ? options.intentTags : [];
+  const composed = composeClarificationQuestion({
+    missingSlot,
+    slots: safeSlots,
+    intentTags,
+    clarificationGateReason: options.clarificationGateReason || null,
+    responseLocale: _responseLocale
+  });
+  if (options.telemetryRef && typeof options.telemetryRef === "object") {
+    options.telemetryRef.clarificationTemplateKey = composed.templateKey;
   }
-
+  getClarificationQuestion.lastTemplateKey = composed.templateKey;
+  if (missingSlot === "context") return composed.message;
   if (missingSlot === "surface") {
-    return buildSurfaceClarificationQuestionWithAssist(slots, "ro", null, null);
+    if (!safeSlots.action && intentTags.length === 0 && !options.clarificationGateReason) {
+      return buildSurfaceClarificationQuestionWithAssist(safeSlots, "ro", null, null);
+    }
+    return composed.message;
   }
-
   if (missingSlot === "object") {
-    return buildSmartNoProductFallbackMessage("", slots);
+    if (safeSlots.action || safeSlots.context || intentTags.length > 0) return composed.message;
+    return buildSmartNoProductFallbackMessage("", safeSlots);
   }
-
   if (missingSlot === "intent_level") {
-    return buildLowSignalClarificationQuestion("", "", _responseLocale);
+    const hasCtx = safeSlots.action || safeSlots.context || safeSlots.surface || intentTags.length > 0;
+    if (!hasCtx) return buildLowSignalClarificationQuestion("", "", _responseLocale);
+    return composed.message;
   }
-
-  return "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)";
+  return composed.message;
 }
 
 function withClarificationRetryHint(message, shouldAppend, responseLocale = "ro") {
@@ -2735,6 +2749,8 @@ function endInteraction(interactionRef, result, patch = {}) {
       finalOutputType === "question",
     clarificationGateReason:
       interactionRef.clarificationGateTelemetry?.clarificationGateReason ?? null,
+    clarificationTemplateKey:
+      interactionRef.clarificationTemplateKey ?? getClarificationQuestion.lastTemplateKey ?? null,
     clarificationExhausted:
       Boolean(interactionRef.clarificationGateTelemetry?.clarificationExhausted),
     blockedProductRouting: Boolean(interactionRef.safetyTelemetry?.blockedProductRouting),
@@ -4338,8 +4354,11 @@ function returnSelectionFailSafe(
         missingSlot,
         gateReason: gate.gateReason,
         slots: selectionSlots || {},
+        intentTags,
         getQuestion: getClarificationQuestion
       });
+    interactionRef.clarificationTemplateKey =
+      selectClarificationMessage.lastTemplateKey || interactionRef.clarificationTemplateKey || null;
     if (sessionContext) {
       sessionContext.pendingQuestion = createPendingQuestionState(sessionContext.pendingQuestion, {
         slot: missingSlot,
@@ -4404,6 +4423,7 @@ function returnSelectionFailSafe(
       missingSlot,
       gateReason: "slots_missing",
       slots: selectionSlots || {},
+      intentTags,
       getQuestion: getClarificationQuestion
     });
     if (sessionContext) {
@@ -11164,7 +11184,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             const allowedObjects = getAllowedObjects(slotResult.slots);
             return endInteraction(interactionRef, {
               type: "question",
-              message: `Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri) (${allowedObjects.join(", ")})`
+              message: getClarificationQuestion("object", slotResult.slots || sessionContext.slots || {}, sessionContext.responseLocale, {
+                intentTags: sessionContext.tags || interactionRef?.tags || []
+              })
             }, {
               intentType: "selection",
               tags: sessionContext.tags || null,
@@ -12000,10 +12022,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         saveSession(sessionId, sessionContext);
 
+        const clarifyTags = [
+          ...new Set([
+            ...(Array.isArray(sessionContext.tags) ? sessionContext.tags : []),
+            ...(Array.isArray(selectionTagsBeforeDecision) ? selectionTagsBeforeDecision : [])
+          ])
+        ];
         return endInteraction(interactionRef, {
           type: "question",
           message:
-            getClarificationQuestion(missing, currentSlots, sessionContext.responseLocale)
+            getClarificationQuestion(missing, currentSlots, sessionContext.responseLocale, {
+              intentTags: clarifyTags
+            })
         }, {
           decision: selectionDecision,
           outputType: "question"
@@ -12021,9 +12051,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.pendingSelectionMissingSlot = selectionDecision.missingSlot || null;
         saveSession(sessionId, sessionContext);
 
+        const clarifyTagsEnforced = [
+          ...new Set([
+            ...(Array.isArray(sessionContext.tags) ? sessionContext.tags : []),
+            ...(Array.isArray(selectionTagsBeforeDecision) ? selectionTagsBeforeDecision : [])
+          ])
+        ];
         return endInteraction(interactionRef, {
           type: "question",
-          message: getClarificationQuestion(selectionDecision.missingSlot, currentSlots, sessionContext.responseLocale)
+          message: getClarificationQuestion(selectionDecision.missingSlot, currentSlots, sessionContext.responseLocale, {
+            intentTags: clarifyTagsEnforced
+          })
         }, {
           decision: selectionDecision,
           outputType: "question"

@@ -1047,7 +1047,7 @@
         "message": "vreau sa spal masina complet"
       },
       "outcome": {
-        "assistantReply": "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)",
+        "assistantReply": "Pe ce parte a exteriorului vrei sa cureti produsul? (ex: vopsea, caroserie, jante)",
         "decision": {
           "action": "clarification",
           "flowId": null,
@@ -1110,7 +1110,7 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "object",
-        "lastBotReply": "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)",
+        "lastBotReply": "Pe ce parte a exteriorului vrei sa cureti produsul? (ex: vopsea, caroserie, jante)",
         "lastFlow": null,
         "lastHighLevelIntent": "product_guidance",
         "lastIntent": "procedural",
@@ -1233,7 +1233,7 @@
         "intentFlags": {},
         "language": "ro",
         "lastAskedClarificationSlot": "object",
-        "lastBotReply": "Ce vrei sa cureti mai exact? (ex: scaune, bord, geamuri)",
+        "lastBotReply": "Pe ce parte a exteriorului vrei sa cureti produsul? (ex: vopsea, caroserie, jante)",
         "lastFlow": null,
         "lastHighLevelIntent": "product_guidance",
         "lastIntent": "procedural",
