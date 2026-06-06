@@ -7476,11 +7476,22 @@ function parseCoverageGoalReply(message) {
  * Resolve pending intent_level clarification (coverage_role_goal, low_signal, loop_breaker, …)
  * when the user reply is an unambiguous action-only or route signal. Preserves prior slots.
  */
-function tryResolveIntentLevelPendingAnswer(sessionContext, userMessage, sessionId) {
+function tryResolveIntentLevelPendingAnswer(sessionContext, userMessage, sessionId, interactionRef) {
   const pending = sessionContext?.pendingQuestion;
   if (pending?.slot !== "intent_level") {
     return { resolved: false };
   }
+
+  const markLowSignalRecovery = () => {
+    if (pending.source === "low_signal" && interactionRef) {
+      interactionRef.lowSignalTelemetry = {
+        lowSignalDetected: false,
+        lowSignalReason: "intent_level_resolved",
+        lowSignalRecoveryApplied: true,
+        lowSignalQuestionType: "intent_level"
+      };
+    }
+  };
 
   const norm = normalizeLowSignalText(userMessage);
   const coverageGoal = parseCoverageGoalReply(userMessage);
@@ -7512,6 +7523,7 @@ function tryResolveIntentLevelPendingAnswer(sessionContext, userMessage, session
       goal: coverageGoal,
       slots: sessionContext.slots
     });
+    markLowSignalRecovery();
     return { resolved: true, kind: "coverage_goal", goal: coverageGoal };
   }
 
@@ -7528,6 +7540,7 @@ function tryResolveIntentLevelPendingAnswer(sessionContext, userMessage, session
       kind: "procedural",
       slots: sessionContext.slots
     });
+    markLowSignalRecovery();
     return { resolved: true, kind: "procedural" };
   }
 
@@ -7553,6 +7566,7 @@ function tryResolveIntentLevelPendingAnswer(sessionContext, userMessage, session
       kind: "selection",
       slots: sessionContext.slots
     });
+    markLowSignalRecovery();
     return { resolved: true, kind: "selection" };
   }
 
@@ -7567,6 +7581,7 @@ function tryResolveIntentLevelPendingAnswer(sessionContext, userMessage, session
       kind: "slot_signal",
       slots: sessionContext.slots
     });
+    markLowSignalRecovery();
     return { resolved: true, kind: "slot_signal" };
   }
 
@@ -10023,7 +10038,8 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const intentLevelResolution = tryResolveIntentLevelPendingAnswer(
         sessionContext,
         userMessage,
-        sessionId
+        sessionId,
+        interactionRef
       );
       if (intentLevelResolution.resolved) {
         handledPendingQuestionAnswerEarly = true;
