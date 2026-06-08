@@ -19,6 +19,7 @@ function sanitizeValue(value, path) {
   for (const k of keys) {
     if (shouldDropKey(k)) continue;
     if (k === "createdAt" || k === "lastActivity") continue;
+    if (k === "armedAtTraceId") continue;
     if (path === "" && k === "conversationHistory") {
       out[k] = (value[k] || []).map((row, i) => {
         if (!row || typeof row !== "object") return row;
