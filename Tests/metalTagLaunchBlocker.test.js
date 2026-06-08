@@ -168,11 +168,10 @@ describe("metal tag launch blocker — handleChat with tier-1 gate ON", () => {
     }
   });
 
-  it("AC1 sweep: three wheel phrasings → no metal, ≥1 tier-1 product each", async () => {
+  it("AC1 sweep: recommend-shaped wheel phrasings → no metal, ≥1 tier-1 product each", async () => {
     const queries = [
       "recomanda-mi o solutie pentru curatat jantele",
-      "ce produs pentru jante murdare",
-      "cum curat jantele masinii"
+      "ce produs pentru jante murdare"
     ];
 
     for (const query of queries) {
@@ -182,6 +181,15 @@ describe("metal tag launch blocker — handleChat with tier-1 gate ON", () => {
       expect(out.productsLength).toBeGreaterThanOrEqual(1);
       expect(TIER_ONE_IDS.has(Number(out.products[0]?.manufacturerId))).toBe(true);
     }
+  });
+
+  it("AC1 procedural: cum curat jantele routes wheel flow without metal tag (F31 shipped)", async () => {
+    const sessionId = `ac1-proc-${Date.now()}`;
+    const out = await runProbe("cum curat jantele masinii", products, sessionId);
+    expect(out.tags).not.toContain("metal");
+    expect(out.action).toBe("flow");
+    expect(out.log?.decision?.flowId).toBe("wheel_tire_deep_clean");
+    expect(out.reply).not.toContain(DEAD_END_SNIPPET);
   });
 
   it("AC4: aluminiu probe includes metal tag and avoids dead-end fallback", async () => {

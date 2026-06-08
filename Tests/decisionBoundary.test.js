@@ -174,27 +174,34 @@ describe("Decision boundary and reset rules", () => {
     expect(lastLogEntry.decision.missingSlot).not.toBe("object");
   });
 
-  it("vreau sa curat pielea does not default context; asks interior vs exterior (leather alone ambiguous)", async () => {
+  it("vreau sa curat pielea infers slots and routes interior_clean_basic flow (F35/F39 shipped)", async () => {
     const sessionId = `leather-default-${Date.now()}`;
 
     const first = await handleChat("vreau sa curat pielea", "C1", [], sessionId);
-    const firstMessage = String(first.message || first.reply || "").toLowerCase();
     const session = getSession(sessionId);
+    const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
 
-    expect(firstMessage).toMatch(/interior.*exterior|exterior.*interior/);
-    expect(session.slots.context == null || String(session.slots.context).trim() === "").toBe(true);
+    expect(first.type).toBe("flow");
+    expect(lastLogEntry.decision.action).toBe("flow");
+    expect(lastLogEntry.decision.flowId).toBe("interior_clean_basic");
     expect(session.slots.surface).toBe("piele");
+    expect(session.slots.context).toBe("interior");
+    expect(session.slots.action).toBe("clean");
+    expect(session.pendingQuestion).toBeFalsy();
   });
 
-  it("pending clarification keeps procedural path on cotiera follow-up", async () => {
+  it("cotiera follow-up after pielea flow clarifies surface (F39 clarification-first)", async () => {
     const sessionId = `pending-lock-${Date.now()}`;
 
     await handleChat("vreau sa curat pielea", "C1", [], sessionId);
     await handleChat("cotiera", "C1", [], sessionId);
 
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
+    expect(lastLogEntry.decision.action).toBe("clarification");
+    expect(lastLogEntry.decision.missingSlot).toBe("surface");
+    expect(lastLogEntry.decision.reasonCode).toBe("routing.clarification.slot");
+    expect(lastLogEntry.output?.type).toBe("question");
     expect(lastLogEntry.decision.action).not.toBe("knowledge");
-    expect(lastLogEntry.decision.missingSlot).not.toBe("surface");
   });
 
   it("pending clarification treats interiorul as slot completion, not product_search", async () => {
