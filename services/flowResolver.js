@@ -261,7 +261,7 @@ function getFlowSpecificityScore(flow, slots, message) {
     kw => msg.includes(kw) || (msgNorm && msgNorm.includes(normalizeForInsectMatch(kw)))
   );
   if (matchedKeyword) {
-    console.log("KEYWORD_MATCH", {
+    logInfo("KEYWORD_MATCH", {
       flowId: flow?.flowId,
       matched: matchedKeyword,
       message: msg
@@ -303,7 +303,7 @@ function getBestMatchingFlow(candidates, slots, message) {
   const matchedFlows = candidates.map(flow => {
     const rawScore = getFlowSpecificityScore(flow, slots, message);
     const score = Number.isFinite(rawScore) ? rawScore : 0;
-    console.log("FLOW_SCORING", {
+    logInfo("FLOW_SCORING", {
       flowId: flow?.flowId,
       score
     });
@@ -337,7 +337,7 @@ function getBestMatchingFlow(candidates, slots, message) {
     throw new Error("FLOW SELECTION FAILED: matches exist but no candidate");
   }
 
-  console.log("FLOW_SELECTED_FINAL", flowCandidate?.flowId || null);
+  logInfo("FLOW_SELECTED_FINAL", flowCandidate?.flowId || null);
 
   return flowCandidate;
 }
@@ -596,7 +596,7 @@ function findMatchingFlows(request, allowPartial = false) {
     }
 
     if (matchesIntent && matchesContext && matchesTarget) {
-      console.log("FLOW_MATCH_REASON", {
+      logInfo("FLOW_MATCH_REASON", {
         flowId: flow?.flowId,
         matched: true,
         slots: request.slots || {}

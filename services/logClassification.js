@@ -1,9 +1,66 @@
 /**
- * Observability-only interaction labels for JSONL (Epic 1.1).
+ * Observability-only interaction labels for JSONL (Epic 1.1 + Goal A F37).
  * Does not influence routing or decisions.
  */
 
 const { inferHighLevelIntent } = require("./productIntentHeuristics");
+const { extractActionCategoryTags } = require("./clarificationFirstPolicy");
+const { passesActionCategoryGate } = require("./productSelectionService");
+
+/**
+ * @param {unknown[]} products
+ * @param {string[]} actionTags
+ * @returns {{ matchedProductCount: number, tagsMatched: string[], tagsUnmatched: string[], actionMatchType: "matched"|"partial"|"mismatched"|"intent_no_signal" }}
+ */
+function evaluateConversionAlignment(products, actionTags, slots = null) {
+  const tags = extractActionCategoryTags(actionTags, slots);
+  const plen = Array.isArray(products) ? products.length : 0;
+
+  if (tags.length === 0) {
+    return {
+      matchedProductCount: 0,
+      tagsMatched: [],
+      tagsUnmatched: [],
+      actionMatchType: "intent_no_signal"
+    };
+  }
+
+  if (plen === 0) {
+    return {
+      matchedProductCount: 0,
+      tagsMatched: [],
+      tagsUnmatched: tags.slice(),
+      actionMatchType: "mismatched"
+    };
+  }
+
+  const tagsMatched = [];
+  const tagsUnmatched = [];
+  for (const tag of tags) {
+    const anyMatch = products.some((p) => passesActionCategoryGate(p, [tag]));
+    if (anyMatch) tagsMatched.push(tag);
+    else tagsUnmatched.push(tag);
+  }
+
+  let matchedProductCount = 0;
+  for (const p of products) {
+    if (passesActionCategoryGate(p, tags)) matchedProductCount += 1;
+  }
+
+  let actionMatchType = "mismatched";
+  if (tagsMatched.length === tags.length && tagsMatched.length > 0) {
+    actionMatchType = "matched";
+  } else if (tagsMatched.length > 0 && tagsUnmatched.length > 0) {
+    actionMatchType = "partial";
+  }
+
+  return {
+    matchedProductCount,
+    tagsMatched,
+    tagsUnmatched,
+    actionMatchType
+  };
+}
 
 /**
  * @param {object} opts
@@ -18,11 +75,22 @@ const { inferHighLevelIntent } = require("./productIntentHeuristics");
  * @param {string|null} [opts.finalOutputType]
  * @param {string|null} [opts.productsReason]
  * @param {boolean} [opts.prematureFallback]
+ * @param {string[]|null} [opts.intentTags]
+ * @param {object|null} [opts.slots]
  * @returns {{
  *   failureType: "wrong_flow"|"no_products"|"clarification_loop"|"low_signal"|null,
  *   frictionPoint: string|null,
  *   conversionIntent: boolean,
- *   conversionSuccess: boolean
+ *   conversionSuccess: boolean,
+ *   conversionAligned: boolean,
+ *   conversionAlignment: {
+ *     actionMatchType: "matched"|"partial"|"mismatched"|"intent_no_signal",
+ *     intentActionTags: string[],
+ *     matchedProductCount: number,
+ *     shownProductCount: number,
+ *     tagsMatched: string[],
+ *     tagsUnmatched: string[]
+ *   }
  * }}
  */
 function classifyInteraction(opts) {
@@ -37,7 +105,9 @@ function classifyInteraction(opts) {
     queryType = null,
     finalOutputType = null,
     productsReason = null,
-    prematureFallback = false
+    prematureFallback = false,
+    intentTags = null,
+    slots = null
   } = opts && typeof opts === "object" ? opts : {};
 
   const action = decision && typeof decision === "object" ? decision.action ?? null : null;
@@ -94,14 +164,39 @@ function classifyInteraction(opts) {
     }
   }
 
+  const tagSource = Array.isArray(intentTags) ? intentTags : [];
+  const alignment = evaluateConversionAlignment(products, tagSource, slots);
+
+  let conversionAligned = false;
+  if (alignment.actionMatchType === "intent_no_signal") {
+    conversionAligned = conversionSuccess;
+  } else if (alignment.actionMatchType === "matched" && !failureType) {
+    conversionAligned = true;
+  } else if (alignment.actionMatchType === "partial" || alignment.actionMatchType === "mismatched") {
+    conversionAligned = false;
+    if (!failureType && plen > 0 && alignment.actionMatchType === "mismatched") {
+      frictionPoint = frictionPoint || "wrong_action";
+    }
+  }
+
   return {
     failureType,
     frictionPoint,
     conversionIntent,
-    conversionSuccess
+    conversionSuccess,
+    conversionAligned,
+    conversionAlignment: {
+      actionMatchType: alignment.actionMatchType,
+      intentActionTags: extractActionCategoryTags(tagSource, slots),
+      matchedProductCount: alignment.matchedProductCount,
+      shownProductCount: plen,
+      tagsMatched: alignment.tagsMatched,
+      tagsUnmatched: alignment.tagsUnmatched
+    }
   };
 }
 
 module.exports = {
-  classifyInteraction
+  classifyInteraction,
+  evaluateConversionAlignment
 };

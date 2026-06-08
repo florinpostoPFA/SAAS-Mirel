@@ -459,7 +459,7 @@ function executeFlow(flow, products, slots = {}, options = {}) {
   const flowId = safeFlow.flowId || safeFlow.id || null;
   const flowRegistry = getFlowRegistry(safeFlow);
 
-  console.log("STAGE:EXECUTE_FLOW", {
+  logInfo("STAGE:EXECUTE_FLOW", {
     flowId,
     availableFlows: Object.keys(flowRegistry || {}),
     responseLocale

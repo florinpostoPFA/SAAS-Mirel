@@ -343,6 +343,22 @@ function flushStagesForEarlyExit(interactionRef) {
  * @param {string} finalOutputType
  * @param {unknown[]} finalProducts
  */
+/**
+ * @param {Record<string, unknown>} meta
+ * @param {{ traceId?: string, sessionId?: string }} [ctx]
+ */
+function emitAssemblySnapshot(meta, ctx = {}) {
+  writeRow(
+    baseFields("ASSEMBLY_SNAPSHOT", {
+      stage: "assembly",
+      ok: true,
+      meta: meta || {},
+      ...(ctx.traceId != null ? { traceId: ctx.traceId } : {}),
+      ...(ctx.sessionId != null ? { sessionId: ctx.sessionId } : {})
+    })
+  );
+}
+
 function emitTurnSummary(interactionRef, finalResult, finalOutputType, finalProducts) {
   const s = getTraceStore();
   const action = interactionRef?.decision?.action ?? null;
@@ -504,6 +520,7 @@ module.exports = {
   emitLlmCall,
   emitError,
   flushStagesForEarlyExit,
+  emitAssemblySnapshot,
   emitTurnSummary,
   startRoutingStage,
   endRoutingStage,

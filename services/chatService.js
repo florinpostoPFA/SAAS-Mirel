@@ -24,6 +24,10 @@ const { decideNextAction } = require("./decisionService");
 const { info, debug, error, warn, logInfo } = require("./logger");
 const { appendInteractionLine } = require("./interactionLog");
 const { classifyInteraction } = require("./logClassification");
+const {
+  buildAssemblySnapshotMeta,
+  countFromFlowDefinition
+} = require("./assemblySnapshot");
 const supportService = require("./supportService");
 const { emit } = require("./eventBus");
 const {
@@ -2515,6 +2519,27 @@ function endInteraction(interactionRef, result, patch = {}) {
     sessionContext
   } = prep;
 
+  if (!interactionRef.turnCompletionEmitted) {
+    const assemblyMeta = buildAssemblySnapshotMeta({
+      interactionRef,
+      decision: interactionRef.decision,
+      finalOutputType,
+      finalProducts,
+      patch
+    });
+    loggingV2.emitAssemblySnapshot(assemblyMeta, {
+      traceId: interactionRef.traceId,
+      sessionId: interactionRef.sessionId
+    });
+    interactionRef.turnCompletionEmitted = true;
+  } else {
+    logInfo("TURN_COMPLETION_DUPLICATE_SKIPPED", {
+      traceId: interactionRef.traceId ?? null,
+      sessionId: interactionRef.sessionId ?? null,
+      event: "ASSEMBLY_SNAPSHOT"
+    });
+  }
+
   assertDecisionOutputContract(interactionRef.decision, { type: finalOutputType }, interactionRef.slots, interactionRef.message);
   if (finalOutputType === "recommendation") {
     const replyText = String(finalResult?.reply ?? finalResult?.message ?? "").trim();
@@ -2556,6 +2581,7 @@ function endInteraction(interactionRef, result, patch = {}) {
       preview: localeText.slice(0, 140)
     });
   }
+  logInfo("FINAL_DECISION", interactionRef.decision);
   console.log("FINAL_DECISION", interactionRef.decision);
 
   if (sessionContext) {
@@ -2830,6 +2856,8 @@ function endInteraction(interactionRef, result, patch = {}) {
     queryType: interactionRef.queryType,
     finalOutputType,
     productsReason: entry.output.productsReason,
+    intentTags: Array.isArray(interactionRef.tags) ? interactionRef.tags : [],
+    slots: interactionRef.slots || null,
     prematureFallback:
       entry.output.productsReason === "no_matching_products" &&
       (entry.clarificationAttemptCount == null || Number(entry.clarificationAttemptCount) === 0) &&
@@ -4471,6 +4499,12 @@ function returnSelectionFailSafe(
     slots: selectionSlots || null,
     messagePreview: String(interactionRef?.message || "").slice(0, 120)
   });
+  interactionRef.assemblyTelemetry = {
+    ...(interactionRef.assemblyTelemetry || {}),
+    safeFallbackFired: true,
+    priorRecommendPath: true,
+    productsReason
+  };
   const failSafeDecision = {
     ...(selectionDecision || {}),
     action: "knowledge",
@@ -4495,7 +4529,7 @@ const TIER_ONE_CONFIG_PATH = path.join(__dirname, "..", "data", "tier-one-manufa
 function loadTierOneGateConfig() {
   try {
     if (!fs.existsSync(TIER_ONE_CONFIG_PATH)) {
-      console.log("[TIER_ONE_GATE] enabled=false skipped (config file missing)");
+      logInfo("[TIER_ONE_GATE] enabled=false skipped (config file missing)");
       return { gateEnabled: false, allowedIds: new Set() };
     }
 
@@ -4503,7 +4537,7 @@ function loadTierOneGateConfig() {
     const ids = Array.isArray(parsed?.tierOneManufacturerIds) ? parsed.tierOneManufacturerIds : [];
 
     if (ids.length === 0) {
-      console.log("[TIER_ONE_GATE] enabled=false skipped (empty tierOneManufacturerIds)");
+      logInfo("[TIER_ONE_GATE] enabled=false skipped (empty tierOneManufacturerIds)");
       return { gateEnabled: false, allowedIds: new Set() };
     }
 
@@ -4512,11 +4546,11 @@ function loadTierOneGateConfig() {
     );
 
     const sorted = [...allowedIds].sort((a, b) => a - b);
-    console.log(`[TIER_ONE_GATE] enabled=true allowedIds=[${sorted.join(", ")}]`);
+    logInfo(`[TIER_ONE_GATE] enabled=true allowedIds=[${sorted.join(", ")}]`);
     return { gateEnabled: true, allowedIds };
   } catch (err) {
     const message = err && err.message ? err.message : String(err);
-    console.log(`[TIER_ONE_GATE] enabled=false skipped (config unparseable: ${message})`);
+    logInfo(`[TIER_ONE_GATE] enabled=false skipped (config unparseable: ${message})`);
     return { gateEnabled: false, allowedIds: new Set() };
   }
 }
@@ -4527,7 +4561,7 @@ function applyTierOneManufacturerGate(products) {
   const list = Array.isArray(products) ? products : [];
 
   if (!tierOneGateState.gateEnabled) {
-    console.log("[TIER_ONE_GATE] enabled=false skipped");
+    logInfo("[TIER_ONE_GATE] enabled=false skipped");
     return list;
   }
 
@@ -4557,7 +4591,7 @@ function applyTierOneManufacturerGate(products) {
     return String(a).localeCompare(String(b), undefined, { numeric: true });
   });
 
-  console.log(
+  logInfo(
     `[TIER_ONE_GATE] enabled=true before=${before} after=${surviving.length} dropped=${dropped} droppedManufacturerIds=[${sortedDropped.join(", ")}]`
   );
 
@@ -5011,7 +5045,7 @@ function applyFlowProductFilterWithNoWipeout(rawFlowProducts, slots, logContext 
       slots: safeSlots,
       ...logContext
     });
-    console.log("PRODUCT_FILTER_FALLBACK", {
+    logInfo("PRODUCT_FILTER_FALLBACK", {
       reason: "filtered_out_fallback_to_raw",
       before: raw.length,
       after: raw.length,
@@ -5666,7 +5700,7 @@ function applyDeterministicTagFallback(message, detectedTags) {
   let finalTags = Array.from(tags);
   finalTags = stripInferredMaterialTags(message, finalTags);
   if (fallbackUsed) {
-    console.log("TAG_FALLBACK_USED", finalTags);
+    logInfo("TAG_FALLBACK_USED", finalTags);
   }
 
   return finalTags;
@@ -6237,7 +6271,7 @@ function applyDeterministicSessionResetInPlace(
     resetReasonCode: reasonCode,
     sessionId
   });
-  console.log("CONTEXT_RESET", {
+  logInfo("CONTEXT_RESET", {
     triggered: true,
     reason: reasonCode
   });  return true;
@@ -8094,7 +8128,7 @@ function computeFlowResolutionFromProcedural(opts) {
   ) {
     const flowMissing = getMissingSlotForRequiredList(safeSlots, reqCfg.requiredSlots);
     if (flowMissing) {
-      console.log("FLOW_DECISION", {
+      logInfo("FLOW_DECISION", {
         flowCandidate: preemptFlow.flowId,
         missingSlot: flowMissing,
         flowRequirement: "explicit_slots_incomplete"
@@ -8141,7 +8175,7 @@ function computeFlowResolutionFromProcedural(opts) {
       requiredSlots: reqCfg.requiredSlots
     });
     assertFlowLockInvariant(true, lockedDecision);
-    console.log("FLOW_DECISION", {
+    logInfo("FLOW_DECISION", {
       flowCandidate: preemptFlow.flowId,
       missingSlot: null,
       flowLocked: true
@@ -8152,7 +8186,7 @@ function computeFlowResolutionFromProcedural(opts) {
   const missingSlot = getMissingSlot(safeSlots);
 
   if (missingSlot) {
-    console.log("FLOW_DECISION", {
+    logInfo("FLOW_DECISION", {
       flowCandidate: null,
       missingSlot
     });
@@ -8190,7 +8224,7 @@ function computeFlowResolutionFromProcedural(opts) {
     ? flowCandidates[0]
     : null;
 
-  console.log("FLOW_DECISION", {
+  logInfo("FLOW_DECISION", {
     flowCandidate: flowCandidate?.flowId || null,
     missingSlot
   });
@@ -9065,7 +9099,7 @@ function stripDecisionPipelineMarkers(partial) {
 
 function runPostCoreApplyPipeline(partial, opts) {
   const slots = opts?.slots && typeof opts.slots === "object" ? opts.slots : {};
-  console.log("SLOT_CHECK_SOURCE", slots);
+  logInfo("SLOT_CHECK_SOURCE", slots);
   let p = applyClarificationNormalization(partial, opts);
   p = applyFlowResolutionAdjustments(p, opts);
   p = applySafetyAdjustments(p, opts);
@@ -9733,7 +9767,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         intentHeuristicOverrideTo: null,
         intentHeuristicReason: null
       },
-      currentPhase: "intent"
+      currentPhase: "intent",
+      turnCompletionEmitted: false,
+      assemblyTelemetry: null
     };
 
     logChatPipelineStage("interaction_ref");
@@ -10898,7 +10934,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const previousPending = pending;
         sessionContext.pendingQuestion = null;
 
-        console.log("PENDING_CLEARED", {
+        logInfo("PENDING_CLEARED", {
           previous: previousPending,
           slots: sessionContext.slots
         });
@@ -11113,7 +11149,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         }
         const reentrySlotMode = hadPendingSlotClarificationAtStart || continuationSlotGuard ? "merge" : "replace";
         const reentryBeforeSlots = { ...(sessionContext.slots || {}) };
-        console.log("SLOT_MODE", {
+        logInfo("SLOT_MODE", {
           mode: reentrySlotMode
         });
         sessionContext.slots = reentrySlotMode === "merge"
@@ -11121,12 +11157,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           : (slotResult.slots || {});
         if (isPendingQuestionFulfilled(reentryPendingBeforeUpdate, sessionContext.slots)) {
           sessionContext.pendingQuestion = null;
-          console.log("PENDING_CLEARED", {
+          logInfo("PENDING_CLEARED", {
             previous: reentryPendingBeforeUpdate,
             slots: sessionContext.slots
           });
         }
-        console.log("SLOT_UPDATE", {
+        logInfo("SLOT_UPDATE", {
           mode: reentrySlotMode,
           before: reentryBeforeSlots,
           after: sessionContext.slots
@@ -11161,6 +11197,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           throw new Error("Invalid decision: resolveActionFinal must return action");
         }
         logInfo("DECISION_SOURCE", { source: "resolveActionFinal", decision: selectionDecision });
+        logInfo("ROUTING_DECISION", { ...selectionDecision, source: "router_selection" });
         logInfo("ROUTER_DECISION", selectionDecision);
         if (JSON.stringify(selectionDecision) !== originalSelectionDecision) {
           console.warn("DECISION_MUTATION_DETECTED", {
@@ -11363,7 +11400,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
     }
 
-    console.log("PROBLEM_TYPE_ACTIVE", {
+    logInfo("PROBLEM_TYPE_ACTIVE", {
       message: userMessage,
       problemType: sessionContext.problemType || null
     });
@@ -12096,6 +12133,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         delete sessionContext.pendingSelectionMissingSlot;
       }
       saveSession(sessionId, sessionContext);
+      logInfo("ROUTING_DECISION", { ...selectionDecision, source: "router_selection" });
       logInfo("ROUTER_DECISION", selectionDecision);
 
       // All required slots are present, proceed with selection
@@ -12365,12 +12403,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const selectionBundle = buildProductBundle(tierOneSelectionProducts, {
         hardFilterKey: hardFilterResult?.meta?.key || null
       });
-      console.log("PRODUCT_FILTER", {
+      logInfo("PRODUCT_FILTER", {
         slots: selectionSlots,
         before: enrichedSelectionProducts.length,
         after: filteredSelectionProducts.length
       });
-      console.log("PRODUCT_BUNDLE", {
+      logInfo("PRODUCT_BUNDLE", {
         selected: selectionBundle.map(product => product?.name || null).filter(Boolean),
         roles: selectionBundle.map(product => product?.tags || [])
       });
@@ -12826,7 +12864,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       !hasStrongSlots(slotResult.slots || {}) &&
       !productHeuristicBlocksEarlyFallback
     ) {
-      console.log("SAFE_FALLBACK_TRIGGERED", {
+      logInfo("SAFE_FALLBACK_TRIGGERED", {
         message: userMessage,
         slots: slotResult.slots || {}
       });
@@ -12850,7 +12888,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     if (shouldEarlySafeFallback) {
-      console.log("SAFE_FALLBACK_TRIGGERED", {
+      logInfo("SAFE_FALLBACK_TRIGGERED", {
         message: userMessage,
         slots: slotResult.slots || {}
       });
@@ -12944,17 +12982,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           ? "merge"
           : "replace";
     const beforeSlots = { ...(sessionContext.slots || {}) };
-    console.log("SLOT_MODE", {
+    logInfo("SLOT_MODE", {
       mode: slotMode
     });
     let proposedSlots;
     if (slotMode === "override") {
       const freshSlots = extractSlotsForSafetyQuery(userMessage);
-      console.log("SAFETY_SLOT_EXTRACTION", {
+      logInfo("SAFETY_SLOT_EXTRACTION", {
         message: userMessage,
         extracted: freshSlots
       });
-      console.log("SLOT_OVERRIDE_APPLIED", {
+      logInfo("SLOT_OVERRIDE_APPLIED", {
         previousSlots: beforeSlots,
         newSlots: freshSlots,
         finalSlots: freshSlots
@@ -13029,7 +13067,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
     if (isPendingQuestionFulfilled(pendingBeforeSlotUpdate, proposedSlots)) {
       sessionContext.pendingQuestion = null;
-      console.log("PENDING_CLEARED", {
+      logInfo("PENDING_CLEARED", {
         previous: pendingBeforeSlotUpdate,
         slots: proposedSlots
       });
@@ -13039,7 +13077,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         slots: proposedSlots
       });
     }
-    console.log("SLOT_UPDATE", {
+    logInfo("SLOT_UPDATE", {
       mode: slotMode,
       before: beforeSlots,
       after: proposedSlots
@@ -13193,7 +13231,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       );
     }
 
-    console.log("SLOT_CHECK_SOURCE", sessionContext.slots);
+    logInfo("SLOT_CHECK_SOURCE", sessionContext.slots);
     slotResult.missing = getMissingSlot(sessionContext.slots);
 
     const completedSlotFollowUp =
@@ -13211,7 +13249,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     if (!sessionContext.slots || typeof sessionContext.slots !== "object") {
       throw new Error("Slots not initialized");
     }
-    console.log("SLOT_SOURCE_CHECK", {
+    logInfo("SLOT_SOURCE_CHECK", {
       slotsUsed: sessionContext.slots
     });
     interactionRef.currentPhase = "routing";
@@ -13311,10 +13349,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       pendingSelectionState: sessionContext.pendingSelection === true ? sessionContext.pendingSelectionMissingSlot : null
     });
 
-    logInfo("ROUTING_DECISION", canonicalRoutingDecision);
+    logInfo("ROUTING_DECISION", { ...canonicalRoutingDecision, source: "resolveActionFinal" });
 
+    logInfo("DECISION_FINAL", resolvedAction);
     console.log("DECISION_FINAL", resolvedAction);
     logInfo("DECISION_SOURCE", { source: "resolveActionFinal", decision: resolvedAction });
+    logInfo("STAGE:RESOLVE", { stage: "resolve", decision: resolvedAction });
     console.log("STAGE:RESOLVE", resolvedAction);
     if (JSON.stringify(resolvedAction) !== originalResolvedAction) {
       console.warn("DECISION_MUTATION_DETECTED", {
@@ -13391,6 +13431,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       );
     }
 
+    logInfo("ROUTING_DECISION", { ...routingDecision, source: "router_routing" });
     logInfo("ROUTER_DECISION", routingDecision);
     logInfo("SLOTS", {
       context: sessionContext.slots?.context || null,
@@ -13442,7 +13483,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
     }
 
     if (resolvedAction.action === "knowledge" && resolvedAction.safeFallback) {
-      console.log("SAFE_FALLBACK_TRIGGERED", {
+      logInfo("SAFE_FALLBACK_TRIGGERED", {
         message: userMessage,
         slots: sessionContext.slots || {}
       });
@@ -13761,13 +13802,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       strategy = "guidance";
     }
 
-    console.log("STAGE:EXECUTE_INPUT", {
+    logInfo("STAGE:EXECUTE_INPUT", {
       action: resolvedAction.action,
       flowId: resolvedAction.flowId,
       slots: sessionContext.slots || {}
     });
 
-    console.log("EXECUTION_PATH", {
+    logInfo("EXECUTION_PATH", {
       action: resolvedAction.action
     });
 
@@ -13784,19 +13825,19 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const flowRegistry = config?.flows && typeof config.flows === "object"
           ? config.flows
           : {};
-        console.log("FLOW_REGISTRY_KEYS", Object.keys(flowRegistry));
-        console.log("FLOW_LOOKUP", { requested: normalizedFlowId, type: typeof normalizedFlowId });
+        logInfo("FLOW_REGISTRY_KEYS", Object.keys(flowRegistry));
+        logInfo("FLOW_LOOKUP", { requested: normalizedFlowId, type: typeof normalizedFlowId });
         const resolvedPrioritizedFlow = !shouldForceSafety
           ? flowRegistry[normalizedFlowId] || null
           : null;
 
-        console.log("FLOW_SELECTED", {
+        logInfo("FLOW_SELECTED", {
           flowId: normalizedFlowId,
           exists: !!resolvedPrioritizedFlow
         });
 
         if (!resolvedPrioritizedFlow) {
-          console.log("FLOW_REGISTRY_FULL", flowRegistry);
+          logInfo("FLOW_REGISTRY_FULL", flowRegistry);
           throw new Error("Flow not found: " + normalizedFlowId);
         }
 
@@ -13822,6 +13863,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const flowResult = executeFlow(resolvedPrioritizedFlow, products, sessionContext.slots || {}, {
           responseLocale: flowLocale
         });
+        const flowAssemblyCounts = countFromFlowDefinition(resolvedPrioritizedFlow);
+        interactionRef.assemblyTelemetry = {
+          ...(interactionRef.assemblyTelemetry || {}),
+          flowDef: resolvedPrioritizedFlow,
+          knowledgeCount: flowAssemblyCounts.knowledgeCount,
+          toolCount: flowAssemblyCounts.toolCount
+        };
         const rawFlowProducts = Array.isArray(flowResult?.products) ? flowResult.products : [];
         const flowFilterOutcome = applyFlowProductFilterWithNoWipeout(
           rawFlowProducts,
@@ -13832,13 +13880,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const tierOneFlowProducts = applyTierOneManufacturerGate(filteredFlowProducts);
         const flowBundle = buildProductBundle(tierOneFlowProducts);
         const flowReply = buildMinimalFlowReply(resolvedPrioritizedFlow, flowResult, flowLocale);
-        console.log("PRODUCT_FILTER", {
+        logInfo("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
           before: rawFlowProducts.length,
           after: filteredFlowProducts.length,
           filterFallbackToRaw: flowFilterOutcome.fallbackUsed
         });
-        console.log("PRODUCT_BUNDLE", {
+        logInfo("PRODUCT_BUNDLE", {
           selected: flowBundle.map(product => product?.name || null).filter(Boolean),
           roles: flowBundle.map(product => product?.tags || [])
         });
@@ -13972,12 +14020,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const filteredSafetyProducts = filterProducts(safetyProducts, sessionContext.slots || {});
         const tierOneSafetyProducts = applyTierOneManufacturerGate(filteredSafetyProducts);
         const safetyBundle = buildProductBundle(tierOneSafetyProducts);
-        console.log("PRODUCT_FILTER", {
+        logInfo("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
           before: safetyProducts.length,
           after: filteredSafetyProducts.length
         });
-        console.log("PRODUCT_BUNDLE", {
+        logInfo("PRODUCT_BUNDLE", {
           selected: safetyBundle.map(product => product?.name || null).filter(Boolean),
           roles: safetyBundle.map(product => product?.tags || [])
         });
@@ -14214,12 +14262,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         const filteredFound = filterProducts(found, sessionContext.slots || {});
         const tierOneFound = applyTierOneManufacturerGate(filteredFound);
         const searchBundle = buildProductBundle(tierOneFound);
-        console.log("PRODUCT_FILTER", {
+        logInfo("PRODUCT_FILTER", {
           slots: sessionContext.slots || {},
           before: found.length,
           after: filteredFound.length
         });
-        console.log("PRODUCT_BUNDLE", {
+        logInfo("PRODUCT_BUNDLE", {
           selected: searchBundle.map(product => product?.name || null).filter(Boolean),
           roles: searchBundle.map(product => product?.tags || [])
         });
