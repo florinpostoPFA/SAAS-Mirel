@@ -155,7 +155,7 @@ describe("F36 output mode integrity — E2E", () => {
     }
   });
 
-  it("outputMode_coverageRoleGoal_mutex — piele after surface clarify", async () => {
+  it("outputMode_coverageRoleGoal_mutex — piele after surface clarify recommends (F48)", async () => {
     const sid = `f36-cov-${Date.now()}`;
     const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
     await handleChat("am cotiera foarte murdara", "C1", catalog, sid);
@@ -163,18 +163,13 @@ describe("F36 output mode integrity — E2E", () => {
     const log = lastLog();
     const msg = replyText(result);
 
-    expect(log.decision.action).toBe("clarification");
-    expect(log.decision.missingSlot).toBe("intent_level");
-    expect(log.decision.reasonCode).toBe("routing.coverage_role_goal");
-    expect(log.output?.type).toBe("question");
-    expect(log.decision.action).not.toBe("recommend");
-    expect(Boolean(log.askedClarification)).toBe(true);
-    expect(log.pendingQuestion?.source).toBe("coverage_role_goal");
-    expect(msg).toMatch(/cureti|protejezi|hidratezi/i);
-    expect(msg).not.toMatch(/^— Recomandări produse —[\s\S]*\bClarificare:/);
+    expect(log.decision.action).toMatch(/recommend|selection/);
+    expect(log.decision.reasonCode).not.toBe("routing.coverage_role_goal");
+    expect(log.pendingQuestion).toBeFalsy();
+    expect(msg).not.toMatch(/cureti|protejezi|hidratezi/i);
   });
 
-  it("outputMode_coverageRoleGoal_3turn_integration — prod replay vreau sa curat pielea → cotiera → piele", async () => {
+  it("outputMode_coverageRoleGoal_3turn_integration — prod replay recommends at T3 (F48)", async () => {
     const sid = `f36-cov3-${Date.now()}`;
     const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
     await handleChat("vreau sa curat pielea", "C1", catalog, sid);
@@ -183,33 +178,32 @@ describe("F36 output mode integrity — E2E", () => {
     const log = lastLog();
     const msg = replyText(result);
 
-    expect(log.decision.action).toBe("clarification");
-    expect(log.decision.missingSlot).toBe("intent_level");
-    expect(log.decision.reasonCode).toBe("routing.coverage_role_goal");
-    expect(log.output?.type).toBe("question");
-    expect(log.output?.productsLength ?? 0).toBe(0);
-    expect(Boolean(log.askedClarification)).toBe(true);
-    expect(log.pendingQuestion?.source).toBe("coverage_role_goal");
-    expect(msg).toMatch(/cureti|protejezi|hidratezi/i);
+    expect(log.decision.action).toMatch(/recommend|selection/);
+    expect(log.decision.reasonCode).not.toBe("routing.coverage_role_goal");
+    expect(log.slots?.action).toBe("clean");
+    expect(log.slots?.surface).toBe("piele");
+    expect(log.slots?.object).toBe("cotiera");
+    expect(log.pendingQuestion).toBeFalsy();
+    expect(msg).not.toMatch(/cureti|protejezi|hidratezi/i);
   });
 
-  it("F43 coverageRoleGoal action-only answer preserves slots and recommends cleaner", async () => {
+  it("F48 3-turn leather flow preserves slots and recommends cleaner at piele", async () => {
     const sid = `f43-cov4-${Date.now()}`;
     const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
     await handleChat("vreau sa curat pielea", "C1", catalog, sid);
     await handleChat("cotiera", "C1", catalog, sid);
-    await handleChat("piele", "C1", catalog, sid);
-    const result = await handleChat("vreau sa curat", "C1", catalog, sid);
+    const result = await handleChat("piele", "C1", catalog, sid);
     const log = lastLog();
     const msg = replyText(result);
 
     expect(log.slots?.context).toBe("interior");
     expect(log.slots?.object).toBe("cotiera");
     expect(log.slots?.surface).toBe("piele");
+    expect(log.slots?.action).toBe("clean");
     expect(log.pendingQuestion).toBeFalsy();
     expect(log.decision.action).toMatch(/recommend|selection/);
     expect(log.decision.missingSlot).toBeNull();
-    expect(msg).not.toMatch(/interiorul sau exteriorul/i);
+    expect(msg).not.toMatch(/interiorul sau exteriorul|cureti|protejezi/i);
     if ((result.products || []).length > 0) {
       const names = result.products.map((p) => String(p.name || "").toLowerCase()).join(" ");
       expect(names).toMatch(/curatare piele|leather cleaner/i);

@@ -130,23 +130,21 @@ describe("F46 — intent_level carryover", () => {
     expect(names).not.toMatch(/sampon|shampoo|snow/i);
   });
 
-  it("AC2 — 4-turn leather: cureti returns leather cleaner with carried tags", async () => {
+  it("AC2 — 3-turn leather recommends at piele with carried tags (F48 skips coverage_role_goal)", async () => {
     const sid = `f46-leather4-${Date.now()}`;
     const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
 
     await handleChat("vreau sa curat pielea", "C1", catalog, sid);
     await handleChat("cotiera", "C1", catalog, sid);
-    await handleChat("piele", "C1", catalog, sid);
-    const t3Log = lastLog();
-    expect(t3Log.decision?.missingSlot).toBe("intent_level");
-
     carryoverEvents.length = 0;
-    const result = await handleChat("cureti", "C1", catalog, sid);
-    const t4Log = lastLog();
+    const result = await handleChat("piele", "C1", catalog, sid);
+    const t3Log = lastLog();
 
-    expect((t4Log.intent?.tags || []).map(String)).toEqual(expect.arrayContaining(["leather"]));
-    expect(t4Log.slotMeta?.action).toBe("carried");
-    expect(t4Log.decision?.action).toMatch(/recommend|selection/);
+    expect(t3Log.decision?.reasonCode).not.toBe("routing.coverage_role_goal");
+    expect(t3Log.decision?.action).toMatch(/recommend|selection/);
+    expect((t3Log.intent?.tags || []).map(String)).toEqual(expect.arrayContaining(["leather"]));
+    expect(["carried", "inferred"]).toContain(t3Log.slotMeta?.action);
+    expect(t3Log.slots?.action).toBe("clean");
 
     if ((result.products || []).length > 0) {
       const names = result.products.map((p) => String(p.name).toLowerCase()).join(" ");

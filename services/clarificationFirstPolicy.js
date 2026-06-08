@@ -134,8 +134,7 @@ function evaluateClarificationGate(opts = {}) {
   const missingSlot = resolvePriorityMissingSlot(slots, intentTags, message);
   const slotsMissing = missingSlot != null || getMissingSlot(slots) != null;
   const zeroResults = productsReason === "no_matching_products";
-  const lowConfidenceSurface =
-    slotMeta?.surface === "inferred" && !slotMeta?.surfaceConfirmed;
+  const lowConfidenceSurface = slotMeta?.surface === "inferred";
 
   if (!slotsMissing && !zeroResults && !lowConfidenceSurface) {
     return { shouldClarify: false, gateReason: "none", missingSlot: null, allowTerminalFallback: false };
