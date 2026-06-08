@@ -153,13 +153,19 @@ function isSlotFresh(slotKey, currentSlots, slotMeta) {
   return false;
 }
 
-function canApplySlotUpdate(slotKey, currentSlots, slotMeta) {
+function canApplySlotUpdate(slotKey, currentSlots, slotMeta, options = {}) {
   if (isSlotFresh(slotKey, currentSlots, slotMeta)) {
     return { ok: false, reason: "slot_already_fresh" };
   }
   const cur = currentSlots && currentSlots[slotKey];
   const empty = cur == null || String(cur).trim() === "";
   const meta = slotMeta && typeof slotMeta === "object" ? slotMeta : {};
+  if (meta[slotKey] === "carried") {
+    return { ok: false, reason: "slot_carried_preserved" };
+  }
+  if (options.clarificationAnswerResolution && slotKey === "action" && !empty) {
+    return { ok: false, reason: "slot_carried_preserved" };
+  }
   if (empty) return { ok: true };
   if (meta[slotKey] === "stale") return { ok: true };
   return { ok: false, reason: "stale_slot_present" };
@@ -168,6 +174,7 @@ function canApplySlotUpdate(slotKey, currentSlots, slotMeta) {
 const EXPECTED_GUARD_REASONS = new Set([
   "stale_slot_present",
   "slot_already_fresh",
+  "slot_carried_preserved",
   "blocked_guard_surface_object",
   "blocked_guard_all",
   "session_slots_established"
@@ -288,7 +295,13 @@ function canonicalizeRuleSets(sets) {
  *   tokenInferenceApplied: boolean
  * }}
  */
-function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, locale = "ro" }) {
+function inferSlotsFromMessage({
+  message,
+  currentSlots = {},
+  slotMeta = {},
+  locale = "ro",
+  options = {}
+}) {
   void locale;
   const normalized = normalizeMessageText(message);
   const matches = [];
@@ -348,7 +361,7 @@ function inferSlotsFromMessage({ message, currentSlots = {}, slotMeta = {}, loca
         continue;
       }
 
-      const applyCheck = canApplySlotUpdate(slotKey, currentSlots, slotMeta);
+      const applyCheck = canApplySlotUpdate(slotKey, currentSlots, slotMeta, options);
       if (!applyCheck.ok) {
         if (applyCheck.reason && !skippedReasons.includes(applyCheck.reason)) {
           skippedReasons.push(applyCheck.reason);
@@ -437,10 +450,14 @@ function applyTokenInferenceToSessionSlots({
   const result = inferSlotsFromMessage({
     message,
     currentSlots: sessionContext.slots,
-    slotMeta: sessionContext.slotMeta
+    slotMeta: sessionContext.slotMeta,
+    options: {
+      clarificationAnswerResolution: Boolean(options.clarificationAnswerResolution)
+    }
   });
   const blockAll = options && options.blockAll === true;
   const blockSurfaceObject = options && options.blockSurfaceObject === true;
+  const clarificationAnswerResolution = Boolean(options.clarificationAnswerResolution);
 
   if (shouldSkipSessionSlotWrites(sessionContext.slotMeta)) {
     result.tokenInferenceApplied = false;
@@ -568,9 +585,21 @@ function applyTokenInferenceToSessionSlots({
     const cur = sessionContext.slots[slotKey];
     const empty = cur == null || String(cur).trim() === "";
     const meta = sessionContext.slotMeta[slotKey];
+    if (meta === "carried") {
+      if (!result.skippedReasons.includes("slot_carried_preserved")) {
+        result.skippedReasons.push("slot_carried_preserved");
+      }
+      continue;
+    }
+    if (clarificationAnswerResolution && slotKey === "action" && !empty) {
+      if (!result.skippedReasons.includes("slot_carried_preserved")) {
+        result.skippedReasons.push("slot_carried_preserved");
+      }
+      continue;
+    }
     if (!empty && meta !== "stale") continue;
     sessionContext.slots[slotKey] = value;
-    if (meta !== "confirmed") {
+    if (meta !== "confirmed" && meta !== "carried") {
       sessionContext.slotMeta[slotKey] = "inferred";
     }
   }

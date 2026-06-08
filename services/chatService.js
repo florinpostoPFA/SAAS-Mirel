@@ -28,6 +28,15 @@ const {
   buildAssemblySnapshotMeta,
   countFromFlowDefinition
 } = require("./assemblySnapshot");
+const {
+  armClarificationAnswerCarryover,
+  hydrateClarificationAnswerCarryover,
+  mergeCarryoverTagsWithAnswer,
+  clearClarificationAnswerCarryover,
+  discardClarificationAnswerCarryover,
+  shouldArmCarryover,
+  applyCarriedSlotsForTelemetry
+} = require("./clarificationAnswerCarryover");
 const supportService = require("./supportService");
 const { emit } = require("./eventBus");
 const {
@@ -2671,6 +2680,39 @@ function endInteraction(interactionRef, result, patch = {}) {
         active: false
       };
     }
+
+    if (
+      finalOutputType === "question" &&
+      sessionContext.pendingQuestion &&
+      shouldArmCarryover(sessionContext.pendingQuestion)
+    ) {
+      armClarificationAnswerCarryover(
+        sessionContext,
+        interactionRef,
+        sessionContext.pendingQuestion
+      );
+    } else if (
+      String(interactionRef?.decision?.action || "") === "flow" &&
+      sessionContext.slots?.action
+    ) {
+      const flowSlots = sessionContext.slots || {};
+      const flowMissingSlot =
+        getMissingSlot(flowSlots) ||
+        (!flowSlots.object ? "object" : !flowSlots.surface ? "surface" : null);
+      if (flowMissingSlot && shouldArmCarryover({ slot: flowMissingSlot })) {
+        armClarificationAnswerCarryover(sessionContext, interactionRef, {
+          slot: flowMissingSlot,
+          type: "slot"
+        });
+      }
+    } else if (
+      interactionRef.clarificationCarryoverHydratedTurn &&
+      finalOutputType !== "question" &&
+      !shouldArmCarryover(sessionContext.pendingQuestion)
+    ) {
+      clearClarificationAnswerCarryover(sessionContext);
+    }
+
     saveSession(interactionRef.sessionId, sessionContext);
   }
 
@@ -2698,6 +2740,26 @@ function endInteraction(interactionRef, result, patch = {}) {
       ? String(finalResult.reply ?? finalResult.message ?? "").trim() || null
       : null;
 
+  if (
+    interactionRef?.clarificationCarryoverHydratedTurn ||
+    interactionRef?.clarificationAnswerResolution ||
+    sessionContext?.clarificationAnswerCarryover
+  ) {
+    applyCarriedSlotsForTelemetry(interactionRef, sessionContext);
+  }
+
+  let slotMetaForEntry = sessionContext?.slotMeta ?? null;
+  if (
+    (interactionRef?.clarificationCarryoverHydratedTurn ||
+      interactionRef?.clarificationAnswerResolution) &&
+    sessionContext?.clarificationAnswerCarryover?.slots?.action
+  ) {
+    slotMetaForEntry = {
+      ...(slotMetaForEntry && typeof slotMetaForEntry === "object" ? slotMetaForEntry : {}),
+      action: "carried"
+    };
+  }
+
   const entry = {
     timestamp: interactionRef.timestamp,
     traceId: interactionRef.traceId ?? null,
@@ -2718,6 +2780,7 @@ function endInteraction(interactionRef, result, patch = {}) {
       tags: interactionRef.tags
     },
     slots: interactionRef.slots,
+    slotMeta: slotMetaForEntry,
     decision: {
       action: interactionRef.decision.action,
       flowId: interactionRef.decision.flowId,
@@ -4859,7 +4922,8 @@ function runTokenSlotInferencePass({
   sessionContext,
   interactionRef,
   sessionId,
-  tags = null
+  tags = null,
+  clarificationAnswerResolution = false
 }) {
   if (!sessionContext || typeof sessionContext !== "object") return null;
   const loopBreakerActive =
@@ -4876,7 +4940,7 @@ function runTokenSlotInferencePass({
   }
 
   let staleInvalidation = null;
-  if (Array.isArray(tags) && sessionContext.slots) {
+  if (Array.isArray(tags) && sessionContext.slots && !clarificationAnswerResolution) {
     staleInvalidation = invalidateStaleSurfaceFromTags(sessionContext.slots, tags, sessionId);
     const objectStale = invalidateStaleObjectFromTags(sessionContext.slots, tags, sessionId);
     if (objectStale) {
@@ -4905,7 +4969,8 @@ function runTokenSlotInferencePass({
     interactionRef,
     options: {
       blockAll: loopBreakerActive,
-      blockSurfaceObject
+      blockSurfaceObject,
+      clarificationAnswerResolution: Boolean(clarificationAnswerResolution)
     }
   });
   logChatPipelineStage("token_inference", {
@@ -6252,6 +6317,7 @@ function applyDeterministicSessionResetInPlace(
   sessionContext.originalIntent = null;
   sessionContext.intentFlags = {};
   delete sessionContext.selectionFollowupCarryover;
+  discardClarificationAnswerCarryover(sessionContext, reasonCode);
   const currentSlotMeta =
     sessionContext?.slotMeta && typeof sessionContext.slotMeta === "object"
       ? sessionContext.slotMeta
@@ -10095,6 +10161,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (earlyPendingResolution.resolved) {
         handledPendingQuestionAnswerEarly = true;
         interactionRef.handledPendingQuestionAnswerEarly = true;
+        interactionRef.clarificationAnswerResolution = true;
+        interactionRef.pendingAnsweredSlot = earlyPendingResolution.binding?.slot || null;
+        const hydrateResult = hydrateClarificationAnswerCarryover(
+          sessionContext,
+          interactionRef,
+          earlyPendingResolution.binding?.slot || null
+        );
+        if (hydrateResult.hydrated) {
+          interactionRef.clarificationCarryoverHydratedTurn = true;
+          interactionRef.slots = { ...(sessionContext.slots || {}) };
+        }
         saveSession(sessionId, sessionContext);
         logInfo("PENDING_SLOT_RESOLVED_EARLY", {
           slot: earlyPendingResolution.binding?.slot || null,
@@ -10142,6 +10219,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext.pendingSelection = false;
         sessionContext.pendingSelectionMissingSlot = null;
         sessionContext.originalIntent = null;
+        discardClarificationAnswerCarryover(sessionContext, pendingStale.reason || "pending_expired");
         if (sessionContext.pendingClarification?.active) {
           clearPendingClarificationSlots(sessionContext);
         }
@@ -11582,6 +11660,23 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       saveSession(sessionId, sessionContext);
     }
 
+    if (
+      sessionContext?.clarificationAnswerCarryover &&
+      !handledPendingQuestionAnswerEarly &&
+      !interactionRef.clarificationCarryoverHydratedTurn
+    ) {
+      const turnEntryHydrate = hydrateClarificationAnswerCarryover(
+        sessionContext,
+        interactionRef,
+        null
+      );
+      if (turnEntryHydrate.hydrated) {
+        interactionRef.clarificationCarryoverHydratedTurn = true;
+        interactionRef.slots = { ...(sessionContext.slots || {}) };
+        saveSession(sessionId, sessionContext);
+      }
+    }
+
     tryClearIntentLevelPendingForTokenSignal(sessionContext, userMessage, sessionId);
 
     if (!shouldPreserveFollowUpState && !sessionContext.pendingQuestion) {
@@ -11590,7 +11685,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext,
         interactionRef,
         sessionId,
-        tags: null
+        tags: null,
+        clarificationAnswerResolution: Boolean(
+          interactionRef.clarificationAnswerResolution ||
+          interactionRef.clarificationCarryoverHydratedTurn
+        )
       });
       if (sessionContext.slots && typeof sessionContext.slots === "object") {
         interactionRef.slots = { ...sessionContext.slots };
@@ -11614,9 +11713,27 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       });
     }
 
-    let workingTags = shouldPreserveFollowUpState
-      ? [...new Set([...reinforcedSessionTags, ...coreTags])]
-      : [...coreTags];
+    let workingTags;
+    if (
+      (interactionRef.clarificationAnswerResolution ||
+        interactionRef.clarificationCarryoverHydratedTurn) &&
+      sessionContext.clarificationAnswerCarryover
+    ) {
+      workingTags = mergeCarryoverTagsWithAnswer({
+        carryoverTags: sessionContext.clarificationAnswerCarryover.tags || [],
+        answerCoreTags: coreTags,
+        userMessage,
+        slots: sessionContext.slots || {},
+        answeredSlot:
+          interactionRef.pendingAnsweredSlot ||
+          sessionContext?.pendingQuestion?.slot ||
+          null
+      });
+    } else if (shouldPreserveFollowUpState) {
+      workingTags = [...new Set([...reinforcedSessionTags, ...coreTags])];
+    } else {
+      workingTags = [...coreTags];
+    }
 
     workingTags = enrichTagsFromMessage(userMessage, workingTags);
 
@@ -12001,7 +12118,12 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         currentObjectNormalized === "jante" ||
         currentObjectNormalized === "anvelope" ||
         currentObjectNormalized === "tires";
-      if (introducesNewObjectOrContext && !currentMessageSlots.surface && !isWheelTireObject) {
+      if (
+        introducesNewObjectOrContext &&
+        !currentMessageSlots.surface &&
+        !isWheelTireObject &&
+        !interactionRef.clarificationCarryoverHydratedTurn
+      ) {
         currentSlots.surface = null;
         slotResult.slots.surface = null;
       }
@@ -12018,7 +12140,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         sessionContext,
         interactionRef,
         sessionId,
-        tags: selectionTagsBeforeDecision
+        tags: selectionTagsBeforeDecision,
+        clarificationAnswerResolution: Boolean(
+          interactionRef.clarificationAnswerResolution ||
+          interactionRef.clarificationCarryoverHydratedTurn
+        )
       });
       currentSlots = { ...(sessionContext.slots || {}) };
       slotResult.slots = currentSlots;
@@ -12145,8 +12271,16 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         buildFinalTags(coreTags, workingTags, slotResult.slots),
         slotResult.slots || {}
       );
-      const staleInvalidation = invalidateStaleSurfaceFromTags(selectionSlots, selectionTags, sessionId);
-      const staleObjectInvalidation = invalidateStaleObjectFromTags(selectionSlots, selectionTags, sessionId);
+      const staleInvalidation =
+        interactionRef.clarificationAnswerResolution ||
+        interactionRef.clarificationCarryoverHydratedTurn
+          ? null
+          : invalidateStaleSurfaceFromTags(selectionSlots, selectionTags, sessionId);
+      const staleObjectInvalidation =
+        interactionRef.clarificationAnswerResolution ||
+        interactionRef.clarificationCarryoverHydratedTurn
+          ? null
+          : invalidateStaleObjectFromTags(selectionSlots, selectionTags, sessionId);
       if (staleInvalidation || staleObjectInvalidation) {
         if (sessionContext.slots) {
           if (staleInvalidation) {

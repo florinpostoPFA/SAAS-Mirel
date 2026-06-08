@@ -53,6 +53,25 @@
       "sessionMutations": [],
       "sessionServiceAfter": {
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "surface",
+          "slotMeta": {
+            "action": "inferred",
+            "context": "inferred",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": "clean",
+            "context": "interior",
+            "object": "cotiera",
+            "surface": null
+          },
+          "tags": [
+            "interior",
+            "cleaning"
+          ]
+        },
         "clarificationAskCounts": {
           "surface": 1
         },
@@ -157,6 +176,25 @@
       },
       "sessionStoreAfter": {
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "surface",
+          "slotMeta": {
+            "action": "inferred",
+            "context": "inferred",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": "clean",
+            "context": "interior",
+            "object": "cotiera",
+            "surface": null
+          },
+          "tags": [
+            "interior",
+            "cleaning"
+          ]
+        },
         "clarificationAskCounts": {
           "surface": 1
         },
@@ -286,7 +324,8 @@
             "textile",
             "carpet",
             "headliner",
-            "interior"
+            "interior",
+            "cleaning"
           ],
           "type": "product_guidance"
         },
@@ -303,6 +342,25 @@
         {
           "after": {
             "activeProducts": [],
+            "clarificationAnswerCarryover": {
+              "pendingSlot": "surface",
+              "slotMeta": {
+                "action": "inferred",
+                "context": "inferred",
+                "object": "unknown",
+                "surface": "unknown"
+              },
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "object": "cotiera",
+                "surface": null
+              },
+              "tags": [
+                "interior",
+                "cleaning"
+              ]
+            },
             "clarificationAskCounts": {},
             "clarificationCountIncrement": 1,
             "conversationContextMvp": null,
@@ -396,6 +454,25 @@
           },
           "before": {
             "activeProducts": [],
+            "clarificationAnswerCarryover": {
+              "pendingSlot": "surface",
+              "slotMeta": {
+                "action": "inferred",
+                "context": "inferred",
+                "object": "unknown",
+                "surface": "unknown"
+              },
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "object": "cotiera",
+                "surface": null
+              },
+              "tags": [
+                "interior",
+                "cleaning"
+              ]
+            },
             "clarificationAskCounts": {},
             "clarificationCountIncrement": 1,
             "conversationContextMvp": null,
@@ -493,6 +570,25 @@
         {
           "after": {
             "activeProducts": [],
+            "clarificationAnswerCarryover": {
+              "pendingSlot": "surface",
+              "slotMeta": {
+                "action": "inferred",
+                "context": "inferred",
+                "object": "unknown",
+                "surface": "unknown"
+              },
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "object": "cotiera",
+                "surface": null
+              },
+              "tags": [
+                "interior",
+                "cleaning"
+              ]
+            },
             "clarificationAskCounts": {},
             "clarificationCountIncrement": 1,
             "conversationContextMvp": null,
@@ -573,6 +669,25 @@
           },
           "before": {
             "activeProducts": [],
+            "clarificationAnswerCarryover": {
+              "pendingSlot": "surface",
+              "slotMeta": {
+                "action": "inferred",
+                "context": "inferred",
+                "object": "unknown",
+                "surface": "unknown"
+              },
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "object": "cotiera",
+                "surface": null
+              },
+              "tags": [
+                "interior",
+                "cleaning"
+              ]
+            },
             "clarificationAskCounts": {},
             "clarificationCountIncrement": 1,
             "conversationContextMvp": null,
@@ -658,6 +773,25 @@
           "after": {
             "activeIntent": "procedural",
             "activeProducts": [],
+            "clarificationAnswerCarryover": {
+              "pendingSlot": "surface",
+              "slotMeta": {
+                "action": "inferred",
+                "context": "inferred",
+                "object": "unknown",
+                "surface": "unknown"
+              },
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "object": "cotiera",
+                "surface": null
+              },
+              "tags": [
+                "interior",
+                "cleaning"
+              ]
+            },
             "clarificationAskCounts": {},
             "clarificationCountIncrement": 1,
             "conversationContextMvp": null,
@@ -740,6 +874,8 @@
             "surfaceAssistShortlist": null,
             "surfaceUnknown": false,
             "tags": [
+              "interior",
+              "cleaning",
               "textile",
               "carpet",
               "headliner"
@@ -749,6 +885,25 @@
           "before": {
             "activeIntent": "procedural",
             "activeProducts": [],
+            "clarificationAnswerCarryover": {
+              "pendingSlot": "surface",
+              "slotMeta": {
+                "action": "inferred",
+                "context": "inferred",
+                "object": "unknown",
+                "surface": "unknown"
+              },
+              "slots": {
+                "action": "clean",
+                "context": "interior",
+                "object": "cotiera",
+                "surface": null
+              },
+              "tags": [
+                "interior",
+                "cleaning"
+              ]
+            },
             "clarificationAskCounts": {},
             "clarificationCountIncrement": 1,
             "conversationContextMvp": null,
@@ -831,6 +986,8 @@
             "surfaceAssistShortlist": null,
             "surfaceUnknown": false,
             "tags": [
+              "interior",
+              "cleaning",
               "textile",
               "carpet",
               "headliner"
@@ -844,6 +1001,25 @@
       "sessionServiceAfter": {
         "activeIntent": "procedural",
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "surface",
+          "slotMeta": {
+            "action": "inferred",
+            "context": "inferred",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": "clean",
+            "context": "interior",
+            "object": "cotiera",
+            "surface": null
+          },
+          "tags": [
+            "interior",
+            "cleaning"
+          ]
+        },
         "clarificationAskCounts": {},
         "clarificationCountIncrement": 0,
         "context": "interior",
@@ -936,13 +1112,33 @@
           "textile",
           "carpet",
           "headliner",
-          "interior"
+          "interior",
+          "cleaning"
         ],
         "vehicleFieldsRequested": false
       },
       "sessionStoreAfter": {
         "activeIntent": "procedural",
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "surface",
+          "slotMeta": {
+            "action": "inferred",
+            "context": "inferred",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": "clean",
+            "context": "interior",
+            "object": "cotiera",
+            "surface": null
+          },
+          "tags": [
+            "interior",
+            "cleaning"
+          ]
+        },
         "clarificationAskCounts": {},
         "clarificationCountIncrement": 0,
         "context": "interior",
@@ -1035,7 +1231,8 @@
           "textile",
           "carpet",
           "headliner",
-          "interior"
+          "interior",
+          "cleaning"
         ],
         "vehicleFieldsRequested": false
       }
@@ -1091,6 +1288,24 @@
       "sessionServiceAfter": {
         "activeIntent": "procedural",
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "object",
+          "slotMeta": {
+            "action": "inferred",
+            "context": "unknown",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": "clean",
+            "context": "exterior",
+            "object": null,
+            "surface": null
+          },
+          "tags": [
+            "cleaning"
+          ]
+        },
         "clarificationAskCounts": {
           "object": 1
         },
@@ -1214,6 +1429,24 @@
       "sessionStoreAfter": {
         "activeIntent": "procedural",
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "object",
+          "slotMeta": {
+            "action": "inferred",
+            "context": "unknown",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": "clean",
+            "context": "exterior",
+            "object": null,
+            "surface": null
+          },
+          "tags": [
+            "cleaning"
+          ]
+        },
         "clarificationAskCounts": {
           "object": 1
         },
