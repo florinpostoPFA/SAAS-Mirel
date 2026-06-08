@@ -3,7 +3,7 @@
 const logger = require("./logger");
 const { extractActionCategoryTags } = require("./clarificationFirstPolicy");
 
-const CARRYOVER_PENDING_SLOTS = new Set(["context", "object", "surface"]);
+const CARRYOVER_PENDING_SLOTS = new Set(["context", "object", "surface", "intent_level"]);
 
 const ACTION_CATEGORY_TAGS = new Set([
   "cleaning",
@@ -30,7 +30,6 @@ function shouldArmCarryover(pendingQuestion) {
   if (!pendingQuestion || typeof pendingQuestion !== "object") return false;
   if (pendingQuestion.type === "confirm_context") return false;
   const slot = normalizeTag(pendingQuestion.slot);
-  if (slot === "intent_level") return false;
   return CARRYOVER_PENDING_SLOTS.has(slot);
 }
 
@@ -92,7 +91,7 @@ function mergeCarryoverTagsWithAnswer({
   const carried = (Array.isArray(carryoverTags) ? carryoverTags : []).map(normalizeTag).filter(Boolean);
   const answerTags = (Array.isArray(answerCoreTags) ? answerCoreTags : []).map(normalizeTag).filter(Boolean);
   const answerCategories = new Set(extractActionCategoryTags(answerTags, slots));
-  const slotOnlyAnswer = ["context", "object", "surface"].includes(
+  const slotOnlyAnswer = ["context", "object", "surface", "intent_level"].includes(
     normalizeTag(answeredSlot)
   );
 
@@ -128,8 +127,18 @@ function hydrateClarificationAnswerCarryover(sessionContext, interactionRef, ans
 
   const carriedSlots = carry.slots && typeof carry.slots === "object" ? carry.slots : {};
   let restoredAction = null;
+  const answeredSlotNorm = normalizeTag(answeredSlot);
 
-  if (
+  if (answeredSlotNorm === "intent_level" && carriedSlots.action) {
+    if (
+      sessionContext.slots.action == null ||
+      String(sessionContext.slots.action).trim() === ""
+    ) {
+      sessionContext.slots.action = carriedSlots.action;
+    }
+    sessionContext.slotMeta.action = "carried";
+    restoredAction = sessionContext.slots.action;
+  } else if (
     (sessionContext.slots.action == null || String(sessionContext.slots.action).trim() === "") &&
     carriedSlots.action
   ) {

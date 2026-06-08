@@ -13,9 +13,9 @@ When the user message resolves an armed `pendingQuestion`:
 
 ### Arm condition (`shouldArmCarryover`)
 
-Arm when `pendingQuestion.slot ∈ {context, object, surface}`.
+Arm when `pendingQuestion.slot ∈ {context, object, surface, intent_level}` (F46).
 
-**Skip:** `intent_level`, `confirm_context`, and any slot outside that set.
+**Skip:** `confirm_context` and any slot outside that set. F43 still owns `tryResolveIntentLevelPendingAnswer` binding; carryover hydrates tags/action after F43 resolves.
 
 **Flow follow-up:** After a `flow` decision with `slots.action` set, arm using `getMissingSlot(slots)` or implicit `object` / `surface` gap so procedural turns seed carryover before selection follow-ups (e.g. `vreau sa curat pielea` → `cotiera`).
 
