@@ -2752,7 +2752,8 @@ function endInteraction(interactionRef, result, patch = {}) {
   if (
     (interactionRef?.clarificationCarryoverHydratedTurn ||
       interactionRef?.clarificationAnswerResolution) &&
-    sessionContext?.clarificationAnswerCarryover?.slots?.action
+    (sessionContext?.slotMeta?.action === "carried" ||
+      sessionContext?.clarificationAnswerCarryover?.slots?.action)
   ) {
     slotMetaForEntry = {
       ...(slotMetaForEntry && typeof slotMetaForEntry === "object" ? slotMetaForEntry : {}),
@@ -7565,7 +7566,9 @@ function parseCoverageGoalReply(message) {
   if (!norm) return null;
 
   const isClean = /\b(curatare|curat|cureti|curata|spalare|spal)\b/.test(norm);
-  const isProtect = /\b(protectie|protectiei|protej|hidrat|hidratare|hidratezi|intretin|condition)\b/.test(norm);
+  const isProtect =
+    /\b(protectie|protectiei|protej|hidrat|hidratare|hidratezi|intretin|condition)\b/.test(norm) ||
+    /\btratament\s+complet\b/.test(norm);
 
   if (isClean && !isProtect) return "clean";
   if (isProtect && !isClean) return "protect";
@@ -10146,6 +10149,17 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       if (intentLevelResolution.resolved) {
         handledPendingQuestionAnswerEarly = true;
         interactionRef.handledPendingQuestionAnswerEarly = true;
+        interactionRef.clarificationAnswerResolution = true;
+        interactionRef.pendingAnsweredSlot = "intent_level";
+        const hydrateResult = hydrateClarificationAnswerCarryover(
+          sessionContext,
+          interactionRef,
+          "intent_level"
+        );
+        if (hydrateResult.hydrated) {
+          interactionRef.clarificationCarryoverHydratedTurn = true;
+          interactionRef.slots = { ...(sessionContext.slots || {}) };
+        }
         saveSession(sessionId, sessionContext);
         logInfo("INTENT_LEVEL_PENDING_RESOLVED_EARLY", {
           sessionId,

@@ -45,6 +45,21 @@
       "sessionMutations": [],
       "sessionServiceAfter": {
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "intent_level",
+          "slotMeta": {
+            "context": "unknown",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": null,
+            "context": null,
+            "object": null,
+            "surface": null
+          },
+          "tags": []
+        },
         "clarificationCountIncrement": 1,
         "conversationContextMvp": null,
         "conversationHistory": [],
@@ -92,6 +107,21 @@
       },
       "sessionStoreAfter": {
         "activeProducts": [],
+        "clarificationAnswerCarryover": {
+          "pendingSlot": "intent_level",
+          "slotMeta": {
+            "context": "unknown",
+            "object": "unknown",
+            "surface": "unknown"
+          },
+          "slots": {
+            "action": null,
+            "context": null,
+            "object": null,
+            "surface": null
+          },
+          "tags": []
+        },
         "clarificationCountIncrement": 1,
         "conversationContextMvp": null,
         "conversationHistory": [],
