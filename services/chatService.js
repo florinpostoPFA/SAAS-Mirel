@@ -5912,6 +5912,38 @@ function findRelevantProducts(tags, products, maxProducts, options = {}) {
   }
 }
 
+function rescueProtectLaneTierOneCandidates(
+  catalog,
+  selectionTags,
+  selectionSlots,
+  selectionActionTags,
+  userMessage,
+  settings
+) {
+  const WIDE_LIMIT = 40;
+  const wide = findRelevantProducts(selectionTags, catalog, WIDE_LIMIT, {
+    message: userMessage,
+    slots: selectionSlots,
+    settings,
+    actionTags: selectionActionTags,
+    strictTagFilter: false
+  });
+  const actionFiltered =
+    selectionActionTags.length > 0
+      ? filterByActionCategory(wide, selectionActionTags)
+      : wide;
+  const filtered = applyHardFilter(actionFiltered, selectionSlots, selectionActionTags).products.filter(
+    (product) => !isGenericProduct(product)
+  );
+  const tier1 = applyTierOneManufacturerGate(filtered);
+  const ranked = applyRanking(tier1, { tags: selectionTags, priceRange: null }, settings);
+  return ranked.slice(0, 3);
+}
+
+const protectLaneTierOneRescue = {
+  run: rescueProtectLaneTierOneCandidates
+};
+
 /**
  * Step 4: Apply ranking to maximize conversion
  */
@@ -12635,13 +12667,38 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       qualityCandidates = applyTierOneManufacturerGate(qualityCandidates);
 
       if (isTierOneGateWipe(preTierOneQuality, qualityCandidates)) {
-        return returnTierOneUnavailableFailSafe(
-          interactionRef,
-          sessionId,
-          selectionDecision,
-          selectionSlots,
-          { roleId: role, preGateProducts: preTierOneQuality }
-        );
+        if (
+          hardFilterResult.meta.key === "exterior|paint" &&
+          selectionSlots.action === "protect"
+        ) {
+          const rescued = protectLaneTierOneRescue.run(
+            products,
+            selectionTags,
+            selectionSlots,
+            selectionActionTags,
+            userMessage,
+            settings
+          );
+          if (rescued.length > 0) {
+            qualityCandidates = rescued;
+          } else {
+            return returnTierOneUnavailableFailSafe(
+              interactionRef,
+              sessionId,
+              selectionDecision,
+              selectionSlots,
+              { roleId: role, preGateProducts: preTierOneQuality }
+            );
+          }
+        } else {
+          return returnTierOneUnavailableFailSafe(
+            interactionRef,
+            sessionId,
+            selectionDecision,
+            selectionSlots,
+            { roleId: role, preGateProducts: preTierOneQuality }
+          );
+        }
       }
 
       if (qualityCandidates.length === 0) {
@@ -14680,6 +14737,8 @@ module.exports = {
     buildMicroExplanation,
     isCleaningProduct,
     applyHardFilter,
+    rescueProtectLaneTierOneCandidates,
+    protectLaneTierOneRescue,
     resolveHardFilterRequiredAny,
     resolveHardFilterRequiredAllCombos,
     buildNoProductFallbackResponse,
