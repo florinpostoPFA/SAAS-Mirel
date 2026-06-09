@@ -101,24 +101,33 @@ describe("F46 — intent_level carryover", () => {
 
     await handleChat("vreau sa dau cu ceara la exterior", "C1", catalog, sid);
     carryoverEvents.length = 0;
-    await handleChat("vopsea", "C1", catalog, sid);
-    const t2Log = lastLog();
-    expect(t2Log.decision?.missingSlot).toBe("intent_level");
-    expect(carryoverEvents).toContain("CLARIFICATION_CARRYOVER_ARMED");
-
-    carryoverEvents.length = 0;
-    const result = await handleChat("tratament complet", "C1", catalog, sid);
-    const t3Log = lastLog();
-
-    expect((t3Log.intent?.tags || []).map(String)).toEqual(expect.arrayContaining(["wax"]));
-    expect(t3Log.slotMeta?.action).toBe("carried");
-    expect(carryoverEvents).toContain("CLARIFICATION_CARRYOVER_HYDRATED");
-
-    if ((result.products || []).length > 0) {
-      const names = result.products.map((p) => String(p.name).toLowerCase()).join(" ");
-      expect(names).toMatch(/ceara|wax|carnauba/i);
-      expect(names).not.toMatch(/sampon|shampoo|snow/i);
+    let result = await handleChat("vopsea", "C1", catalog, sid);
+    let waxLog = lastLog();
+    // F47: wax may recommend at T2 once hard filter allows protect lane; carryover still arms on clarify.
+    if (waxLog.decision?.missingSlot === "intent_level") {
+      expect(carryoverEvents).toContain("CLARIFICATION_CARRYOVER_ARMED");
     }
+
+    const t2Wax =
+      /recommend|selection/.test(String(waxLog.decision?.action || "")) &&
+      (result.products || []).some((p) => /ceara|wax|carnauba/i.test(String(p.name)));
+
+    if (!t2Wax) {
+      carryoverEvents.length = 0;
+      result = await handleChat("tratament complet", "C1", catalog, sid);
+      waxLog = lastLog();
+      expect(carryoverEvents).toContain("CLARIFICATION_CARRYOVER_HYDRATED");
+      expect(waxLog.slotMeta?.action).toBe("carried");
+    }
+
+    expect((waxLog.intent?.tags || []).map(String)).toEqual(expect.arrayContaining(["wax"]));
+    expect(waxLog.output?.productsReason).toBe("strict");
+    expect(waxLog.decision?.action).toMatch(/recommend|selection/);
+
+    expect(result.products?.length).toBeGreaterThan(0);
+    const names = result.products.map((p) => String(p.name).toLowerCase()).join(" ");
+    expect(names).toMatch(/ceara|wax|carnauba/i);
+    expect(names).not.toMatch(/sampon|shampoo|snow/i);
   });
 
   it("AC2 — 4-turn leather: cureti returns leather cleaner with carried tags", async () => {

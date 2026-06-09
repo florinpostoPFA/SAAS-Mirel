@@ -4116,8 +4116,20 @@ function isFragranceOrOdorProduct(product) {
 function resolveHardFilterRequiredAny(key, rule, slots, actionTags = []) {
   const base = Array.isArray(rule?.requiredAny) ? [...rule.requiredAny] : [];
   const actions = new Set(Array.isArray(actionTags) ? actionTags : []);
-  const cleaningIntent =
-    actions.has("cleaning") || String(slots?.action || "").toLowerCase() === "clean";
+  const slotAction = String(slots?.action || "").toLowerCase();
+
+  if (key === "exterior|paint") {
+    const cleaningIntent =
+      slotAction === "clean" || (actions.has("cleaning") && !actions.has("wax"));
+    if (!cleaningIntent) {
+      if (actions.has("wax") || actions.has("protection") || slotAction === "protect") {
+        return ["wax", "sealant", "protection"];
+      }
+    }
+    return base;
+  }
+
+  const cleaningIntent = actions.has("cleaning") || slotAction === "clean";
   if (key === "interior|leather" && cleaningIntent) {
     return ["leather_cleaner", "interior_cleaner"];
   }
@@ -11749,6 +11761,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       workingTags = [...coreTags];
     }
 
+    if (
+      String(sessionContext.slots?.action || "").toLowerCase() === "protect" &&
+      hardFilterKeyFromSlots(sessionContext.slots || {}) === "exterior|paint"
+    ) {
+      const stickyProtectTags = sessionTags
+        .map((t) => String(t || "").toLowerCase())
+        .filter((t) => t && ["wax", "protection", "sealant"].includes(t));
+      if (stickyProtectTags.length > 0) {
+        workingTags = [...new Set([...workingTags, ...stickyProtectTags])];
+      }
+    }
+
     workingTags = enrichTagsFromMessage(userMessage, workingTags);
 
     sessionContext.tags = workingTags;
@@ -14557,6 +14581,8 @@ module.exports = {
     formatSelectionResponse,
     buildMicroExplanation,
     isCleaningProduct,
+    applyHardFilter,
+    resolveHardFilterRequiredAny,
     buildNoProductFallbackResponse,
     getClarificationQuestion,
     LOCALE_POLICY_RO_ACK,

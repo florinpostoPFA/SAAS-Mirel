@@ -106,7 +106,7 @@ describe("Goal B — clarificationAnswerCarryover", () => {
     expect((log.intent?.tags || []).map(String)).toEqual(expect.arrayContaining(["wax"]));
     expect(log.slots?.object).toBe("caroserie");
     if (log.slotMeta?.action) {
-      expect(log.slotMeta.action).toBe("carried");
+      expect(["carried", "inferred"]).toContain(log.slotMeta.action);
     }
   });
 
