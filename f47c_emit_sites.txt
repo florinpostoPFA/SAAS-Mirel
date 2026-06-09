@@ -1,0 +1,43 @@
+services/chatService.js:192:const PRODUCTS_REASON_TIER_ONE_UNAVAILABLE = "tier_one_unavailable";
+
+# Literal string "tier_one_unavailable" appears only as the constant definition above.
+# Runtime emission uses PRODUCTS_REASON_TIER_ONE_UNAVAILABLE via the call chain below.
+
+## Emit chain (services/chatService.js)
+
+### E1 — classifyEmptySelectionReason (lines 4717–4722)
+- Gate: isTierOneGateWipe(preGateProducts, postGateProducts)
+- Condition: tierOneGateState.gateEnabled && preGate.length > 0 && postGate.length === 0
+- Role: classifies empty selection reason; does not emit JSONL directly
+
+### E2 — returnTierOneUnavailableFailSafe (lines 4724–4743)  ← PRIMARY EMIT
+- Sets productsReason: PRODUCTS_REASON_TIER_ONE_UNAVAILABLE via returnSelectionFailSafe
+- Logs info(SOURCE, "TIER_ONE_UNAVAILABLE", { roleId, preGateCount, droppedManufacturerIds })
+- User-facing copy: TIER_ONE_UNAVAILABLE_COPY_RO
+
+### E3 — Selection path, early quality pool (lines 12634–12644)  ← LOCAL REPRO HIT THIS SITE
+- Preceding gate: applyHardFilter → qualityCandidates filter (generic/accessory fallback)
+- Immediately before emit: applyTierOneManufacturerGate(qualityCandidates) at line 12635
+- Condition: isTierOneGateWipe(preTierOneQuality, qualityCandidates) — tag-search top-N (2) all non-tier-1
+- Local repro: 2 Meguiar's SKUs (manufacturerId=9) pass hard filter, both dropped by tier-1 allowlist [13,39,44,70,92]
+
+### E4 — Selection path, post-bundle empty (lines 12705–12712)
+- Preceding gates: ranking → tool exclude → filterProducts → filterByUseCase → filterByFlow → applyTierOneManufacturerGate
+- Condition: selectionBundle.length === 0 && !applicabilityDeclineReason && isTierOneGateWipe(preTierOneFiltered, tierOneSelectionProducts)
+- Empty when applicability filters zero candidates OR tier-1 wipes post-filter set
+
+### E5 — Selection path, final bundle trim (lines 12748–12756)
+- Preceding gate: ensureApcProductIncluded → applyTierOneManufacturerGate on finalProducts
+- Condition: isTierOneGateWipe(preTierOneFinal, finalProducts) after bundle was non-empty at E4 check
+
+## Tier-1 gate helper (lines 4670–4708)
+- applyTierOneManufacturerGate: drops products whose manufacturerId ∉ tier-one-manufacturer-ids.json
+- Allowed IDs at launch: 13 (Koch), 39 (Gtechniq), 44 (ZviZZer), 70 (Ewocar), 92 (ADBL)
+- Meguiar's (9) and other brands fail even when hard-filter/tag match is correct
+
+## Flow path (lines 1958–1959) — does NOT emit tier_one_unavailable
+- applyTierOneManufacturerGate on flow products only; empty bundle returns no_matching_products on flow path, not E2
+
+## Tests referencing tier_one_unavailable
+- Tests/tierOneGracefulDecline.test.js
+- Tests/declineReasonPrecedence.test.js

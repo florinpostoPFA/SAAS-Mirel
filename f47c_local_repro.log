@@ -1,0 +1,36 @@
+# F47c local repro log
+# main: 7f48d50780c517c27220ab78d16daf2aa70d4a3c
+# prod trace: b45310a2-4c82-47aa-b8f3-329c2c637d1f
+# prod session: 326b24ae-7f26-4821-a923-8cdb8a8a0f59
+# T2 prod slots: context=exterior surface=paint object=caroserie action=protect
+# T2 prod slotMeta: object=confirmed others=inferred
+# T2 prod intent.tags: [exterior, wax, paint]
+
+[2026-06-09T04:50:38.538Z] [INFO] [[TIER_ONE_GATE] enabled=true allowedIds=[13, 39, 44, 70, 92]]
+=== F47c local repro — wax 2-turn ===
+T1: vreau sa dau cu ceara la exterior
+[2026-06-09T04:50:38.574Z] [INFO] [SLOT_CHECK_SOURCE] {"context":"exterior","action":"protect","surface":null,"object":null,"brand":null,"vehicleMake":null,"vehicleModel":null,"vehicleYear":null}
+[2026-06-09T04:50:38.575Z] [INFO] [DECISION_SOURCE] {"source":"resolveActionFinal","decision":{"action":"clarification","flowId":null,"missingSlot":"object","reasonCode":"routing.clarification.slot","needsDisambiguation":false,"productsReason":null,"selection":{"empty":false}}}
+[2026-06-09T04:50:38.577Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"clarification","flowId":null,"missingSlot":"object","reasonCode":"routing.clarification.slot","needsDisambiguation":false,"productsReason":null,"selection":{"empty":false}},"outputType":"question"}
+[2026-06-09T04:50:38.577Z] [INFO] [FINAL_DECISION] {"action":"clarification","flowId":null,"missingSlot":"object","reasonCode":"routing.clarification.slot","needsDisambiguation":false,"productsReason":null,"selection":{"empty":false}}
+FINAL_DECISION {
+  productsReason: null,
+[2026-06-09T04:50:38.578Z] [INFO] [DECISION_PAYLOAD] {"traceId":"[REDACTED]","sessionId":"[REDACTED]","action":"clarification","flowId":null,"missingSlot":"object","reasonCode":"routing.clarification.slot","needsDisambiguation":false,"productsReason":null}
+[2026-06-09T04:50:38.578Z] [INFO] [INTERACTION_COMPLETE] {"action":"clarification","flowId":null,"productsLength":0,"productsReason":null,"pendingQuestion":true,"hardGuardApplied":false,"catalogVersion":"6d633d7f9a22","rolesVersion":"44fcdd968d3e","flowsVersion":"8a40fae83864"}
+T2: vopsea
+[2026-06-09T04:50:38.592Z] [INFO] [SLOT_CHECK_SOURCE] {"context":"exterior","surface":"paint","object":"caroserie","brand":null,"vehicleMake":null,"vehicleModel":null,"vehicleYear":null,"action":"protect"}
+[2026-06-09T04:50:38.592Z] [INFO] [DECISION_SOURCE] {"source":"resolveActionFinal","decision":{"action":"recommend","flowId":null,"missingSlot":null,"reasonCode":"routing.recommend","needsDisambiguation":false,"productsReason":null,"selection":{"empty":false}}}
+[2026-06-09T04:50:38.592Z] [INFO] [ROUTING_DECISION] {"action":"recommend","flowId":null,"missingSlot":null,"reasonCode":"routing.recommend","needsDisambiguation":false,"productsReason":null,"selection":{"empty":false},"source":"router_selection"}
+[2026-06-09T04:50:38.592Z] [INFO] [ROUTER_DECISION] {"action":"recommend","flowId":null,"missingSlot":null,"reasonCode":"routing.recommend","needsDisambiguation":false,"productsReason":null,"selection":{"empty":false}}
+[2026-06-09T04:50:38.593Z] [INFO] [SELECTION_DEBUG] {"queryType":"selection","selectionSlots":{"context":"exterior","surface":"paint","object":"caroserie","brand":null,"vehicleMake":null,"vehicleModel":null,"vehicleYear":null,"action":"protect"},"selectionTags":["paint","exterior","wax"],"role":null,"usedRoleConfig":false,"maxProducts":2}
+[2026-06-09T04:50:38.601Z] [INFO] [ChatService] {"message":"Found 2 product(s):","products":[{"name":"Ceara auto solida cu polimeri NXT Generation Tech Wax Meguiar's, 311gr","score":620,"price":168.16},{"name":"Ceara auto solida Gold Class Carnauba Plus Premium Meguiar's, 311gr","score":620,"price":173.56}]}
+[2026-06-09T04:50:38.601Z] [INFO] [HARD_FILTER] {"applied":true,"key":"exterior|paint","allow":["paint","shampoo","prewash","bug_remover","microfiber"],"requiredAny":["wax","sealant","protection"],"requiredAllCombos":[],"allowsAccessoryBypass":true,"exclude":["textile","leather","interior"],"beforeCount":2,"afterAllowExcludeCount":2,"afterRequiredCount":2,"afterCount":2}
+[2026-06-09T04:50:38.602Z] [INFO] [[TIER_ONE_GATE] enabled=true before=2 after=0 dropped=2 droppedManufacturerIds=[9]]
+[2026-06-09T04:50:38.602Z] [INFO] [ChatService] {"message":"TIER_ONE_UNAVAILABLE","roleId":null,"preGateCount":2,"droppedManufacturerIds":["9","9"]}
+[2026-06-09T04:50:38.602Z] [INFO] [DECISION_OUTPUT_CONSISTENCY] {"decision":{"action":"knowledge","flowId":null,"missingSlot":null,"reasonCode":"routing.recommend","needsDisambiguation":false,"productsReason":"tier_one_unavailable","selection":{"empty":false}},"outputType":"reply"}
+[2026-06-09T04:50:38.602Z] [INFO] [FINAL_DECISION] {"action":"knowledge","flowId":null,"missingSlot":null,"reasonCode":"routing.recommend","needsDisambiguation":false,"productsReason":"tier_one_unavailable","selection":{"empty":false}}
+FINAL_DECISION {
+  productsReason: 'tier_one_unavailable',
+[2026-06-09T04:50:38.603Z] [INFO] [DECISION_PAYLOAD] {"traceId":"[REDACTED]","sessionId":"[REDACTED]","action":"knowledge","flowId":null,"missingSlot":null,"reasonCode":"routing.recommend","needsDisambiguation":false,"productsReason":"tier_one_unavailable"}
+[2026-06-09T04:50:38.603Z] [INFO] [INTERACTION_COMPLETE] {"action":"knowledge","flowId":null,"productsLength":0,"productsReason":"tier_one_unavailable","pendingQuestion":false,"hardGuardApplied":false,"catalogVersion":"6d633d7f9a22","rolesVersion":"44fcdd968d3e","flowsVersion":"8a40fae83864"}
+T2_OUTCOME {"productsCount":0,"messagePreview":"Pentru categoria aceasta nu avem momentan un produs dintre brand-urile pe care le recomandăm. Vrei să-ți sugerez o alternativă apropiată sau să trec l"}
