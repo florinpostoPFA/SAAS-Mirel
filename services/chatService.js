@@ -4003,7 +4003,10 @@ const HARD_FILTER_RULES = {
     exclude: ["polish", "wax", "paint", "exterior"]
   },
   "exterior|paint": {
-    allow: ["paint", "shampoo", "prewash", "bug_remover", "microfiber", "drying_towel", "cleaner"],
+    allow: [
+      "paint", "shampoo", "prewash", "bug_remover", "microfiber", "drying_towel", "cleaner",
+      "wax", "sealant", "protection"
+    ],
     requiredAny: ["shampoo", "prewash", "bug_remover"],
     requiredAllCombos: [["paint", "cleaner"]],
     exclude: ["textile", "leather", "interior"]
@@ -4144,6 +4147,25 @@ function resolveHardFilterRequiredAny(key, rule, slots, actionTags = []) {
   return base;
 }
 
+function resolveHardFilterRequiredAllCombos(key, rule, slots, actionTags = []) {
+  const base = Array.isArray(rule?.requiredAllCombos)
+    ? rule.requiredAllCombos.filter(combo => Array.isArray(combo) && combo.length > 0)
+    : [];
+  const actions = new Set(Array.isArray(actionTags) ? actionTags : []);
+  const slotAction = String(slots?.action || "").toLowerCase();
+
+  if (key === "exterior|paint") {
+    const cleaningIntent =
+      slotAction === "clean" || (actions.has("cleaning") && !actions.has("wax"));
+    if (cleaningIntent) {
+      return base;
+    }
+    return [];
+  }
+
+  return base;
+}
+
 function applyHardFilter(candidates, slots, actionTags = []) {
   const safeCandidates = Array.isArray(candidates) ? candidates : [];
   const safeSlots = slots && typeof slots === "object" ? slots : {};
@@ -4167,9 +4189,7 @@ function applyHardFilter(candidates, slots, actionTags = []) {
   const allow = Array.isArray(rule.allow) ? rule.allow : [];
   const exclude = Array.isArray(rule.exclude) ? rule.exclude : [];
   const requiredAny = resolveHardFilterRequiredAny(key, rule, safeSlots, actionTags);
-  const requiredAllCombos = Array.isArray(rule.requiredAllCombos)
-    ? rule.requiredAllCombos.filter(combo => Array.isArray(combo) && combo.length > 0)
-    : [];
+  const requiredAllCombos = resolveHardFilterRequiredAllCombos(key, rule, safeSlots, actionTags);
 
   const allowExcludeFiltered = safeCandidates.filter(product => {
     const matchesAllow =
@@ -14611,6 +14631,7 @@ module.exports = {
     isCleaningProduct,
     applyHardFilter,
     resolveHardFilterRequiredAny,
+    resolveHardFilterRequiredAllCombos,
     buildNoProductFallbackResponse,
     getClarificationQuestion,
     LOCALE_POLICY_RO_ACK,
