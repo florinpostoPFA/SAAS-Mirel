@@ -178,6 +178,11 @@ const {
   extractActionCategoryTags,
   resolveSelectionActionTags
 } = require("./clarificationFirstPolicy");
+const {
+  isSlotKnown,
+  isActionKnown,
+  deriveLeatherCoverageRoleFromAction
+} = require("./slotMetaGate");
 
 const SOURCE = "ChatService";
 
@@ -4452,6 +4457,9 @@ function returnSelectionFailSafe(
       : productsReason === "no_matching_products"
         ? "intent_level"
         : gate.missingSlot || "surface";
+    const failSafeSlotMeta = sessionContext?.slotMeta || {};
+    const failSafeSlots = { ...(selectionSlots || {}), ...(sessionContext?.slots || {}) };
+    if (!isSlotKnown(failSafeSlotMeta, missingSlot, failSafeSlots)) {
     const questionMessage =
       options.reply ||
       selectClarificationMessage({
@@ -4481,7 +4489,7 @@ function returnSelectionFailSafe(
       productsReason,
       reasonCode: "routing.clarification.f39_gate"
     };
-    interactionRef.slots = selectionSlots || interactionRef.slots || null;
+    interactionRef.slots = failSafeSlots;
     return endInteraction(
       interactionRef,
       { type: "question", message: questionMessage },
@@ -4489,9 +4497,10 @@ function returnSelectionFailSafe(
         decision: failSafeDecision,
         outputType: "question",
         productsReason,
-        slots: selectionSlots || {}
+        slots: failSafeSlots
       }
     );
+    }
   }
   const fallbackPlan = buildNoProductFallbackResponse(selectionSlots || {}, responseLocale);
   if (
@@ -11353,6 +11362,9 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             });
           }
           if (selectionDecision.missingSlot === "surface") {
+            const gateSlots = { ...(slotSnapshot || {}), ...(sessionContext.slots || {}) };
+            const slotMetaForGate = sessionContext.slotMeta || {};
+            if (!isSlotKnown(slotMetaForGate, "surface", gateSlots)) {
             sessionContext.state = "NEEDS_SURFACE";
             sessionContext.originalIntent = "selection";
             sessionContext.pendingSelection = true;
@@ -11381,6 +11393,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
               decision: selectionDecision,
               outputType: "question"
             });
+            }
           }
         }
         // All slots present, continue with selection logic below (let main handler proceed)
@@ -12218,6 +12231,13 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       if (!hasRequiredSelectionSlots(currentSlots)) {
         const missing = selectionDecision.missingSlot;
+        const gateSlots = { ...(currentSlots || {}), ...(sessionContext.slots || {}) };
+        const slotMetaForGate = sessionContext.slotMeta || {};
+        if (missing && isSlotKnown(slotMetaForGate, missing, gateSlots)) {
+          currentSlots = { ...gateSlots, ...currentSlots };
+          sessionContext.slots = currentSlots;
+          interactionRef.slots = currentSlots;
+        } else {
         sessionContext.slots = currentSlots;
         interactionRef.slots = currentSlots;
         sessionContext.state =
@@ -12255,6 +12275,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           decision: selectionDecision,
           outputType: "question"
         });
+        }
       }
 
       if (selectionDecision.action === "clarification" && !selectionPreRetrievedCandidates) {
@@ -12362,7 +12383,14 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const coverageRoleDecision = !role
         ? detectCoverageGapRole(userMessage, selectionSlots)
         : { role: null, ask: null };
-      if (!role && coverageRoleDecision.ask) {
+      if (
+        !role &&
+        coverageRoleDecision.ask &&
+        isActionKnown(sessionContext.slotMeta || {}, selectionSlots || {})
+      ) {
+        role = deriveLeatherCoverageRoleFromAction(selectionSlots || {});
+      }
+      if (!role && coverageRoleDecision.ask && !isActionKnown(sessionContext.slotMeta || {}, selectionSlots || {})) {
         const coverageAsk = coverageRoleDecision.ask;
         const targetedMissingSlot = getMissingSlot(selectionSlots);
 

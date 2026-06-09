@@ -190,17 +190,25 @@ describe("Decision boundary and reset rules", () => {
     expect(session.pendingQuestion).toBeFalsy();
   });
 
-  it("cotiera follow-up after pielea flow clarifies surface (F39 clarification-first)", async () => {
+  it("cotiera follow-up preserves leather slots on JSONL (F48 slotMeta gate companion)", async () => {
     const sessionId = `pending-lock-${Date.now()}`;
+    const catalog = [
+      {
+        id: "lc-777",
+        name: "Solutie curatare piele Leather Cleaner Koch Chemie, 500ml",
+        tags: ["leather", "leather_cleaner", "cleaner", "cleaning", "interior"],
+        stock: 5,
+        manufacturerId: "13"
+      }
+    ];
 
-    await handleChat("vreau sa curat pielea", "C1", [], sessionId);
-    await handleChat("cotiera", "C1", [], sessionId);
+    await handleChat("vreau sa curat pielea", "C1", catalog, sessionId);
+    await handleChat("cotiera", "C1", catalog, sessionId);
 
     const lastLogEntry = appendInteractionLine.mock.calls[appendInteractionLine.mock.calls.length - 1][0];
-    expect(lastLogEntry.decision.action).toBe("clarification");
-    expect(lastLogEntry.decision.missingSlot).toBe("surface");
-    expect(lastLogEntry.decision.reasonCode).toBe("routing.clarification.slot");
-    expect(lastLogEntry.output?.type).toBe("question");
+    expect(lastLogEntry.slots?.surface).toBe("piele");
+    expect(lastLogEntry.slots?.object).toBe("cotiera");
+    expect(lastLogEntry.slots?.action).toBe("clean");
     expect(lastLogEntry.decision.action).not.toBe("knowledge");
   });
 
