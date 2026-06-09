@@ -181,6 +181,7 @@ const {
 const {
   isSlotKnown,
   isActionKnown,
+  mergeSlotsForMetaGate,
   deriveLeatherCoverageRoleFromAction
 } = require("./slotMetaGate");
 
@@ -4478,7 +4479,11 @@ function returnSelectionFailSafe(
         ? "intent_level"
         : gate.missingSlot || "surface";
     const failSafeSlotMeta = sessionContext?.slotMeta || {};
-    const failSafeSlots = { ...(selectionSlots || {}), ...(sessionContext?.slots || {}) };
+    const failSafeSlots = mergeSlotsForMetaGate(
+      sessionContext?.slots,
+      selectionSlots,
+      failSafeSlotMeta
+    );
     if (!isSlotKnown(failSafeSlotMeta, missingSlot, failSafeSlots)) {
     const questionMessage =
       options.reply ||
@@ -6386,6 +6391,21 @@ function applyDeterministicSessionResetInPlace(
 }
 
 /**
+ * Flow turn followed by object-only selection narrowing (e.g. piele flow → "cotiera").
+ */
+function isFlowToSelectionObjectContinuation(userMessage, sessionContext) {
+  const prevAction = String(sessionContext?.previousAction || "").toLowerCase().trim();
+  if (prevAction !== "flow") return false;
+  const prevSlots =
+    sessionContext?.slots && typeof sessionContext.slots === "object" ? sessionContext.slots : {};
+  if (!prevSlots.surface || String(prevSlots.surface).trim() === "") return false;
+  const extracted = normalizeSlots(applyObjectSlotInference(extractSlotsFromMessage(userMessage)));
+  if (!extracted?.object || String(extracted.object).trim() === "") return false;
+  if (extracted.surface && extracted.surface !== prevSlots.surface) return false;
+  return true;
+}
+
+/**
  * Whether routing slots/tags from the prior turn should carry into this turn.
  * Intentionally does NOT treat generic "short messages" as continuations — that caused
  * cross-intent slot leakage (e.g. jante slots affecting a later "ce este apc?" turn).
@@ -6417,6 +6437,7 @@ function shouldPreserveSlotsForContinuation({
     previousState === "NEEDS_CONTEXT" ||
     previousState === "NEEDS_OBJECT" ||
     previousState === "NEEDS_SURFACE" ||
+    isFlowToSelectionObjectContinuation(userMessage, sessionContext) ||
     (isSelectionFollowupMessage(userMessage) && hasCarryoverSelectionContext(sessionContext))
   );
 }
@@ -11382,7 +11403,11 @@ async function handleChat(message, clientId, products, sessionId = "default") {
             });
           }
           if (selectionDecision.missingSlot === "surface") {
-            const gateSlots = { ...(slotSnapshot || {}), ...(sessionContext.slots || {}) };
+            const gateSlots = mergeSlotsForMetaGate(
+              sessionContext.slots,
+              slotSnapshot,
+              sessionContext.slotMeta || {}
+            );
             const slotMetaForGate = sessionContext.slotMeta || {};
             if (!isSlotKnown(slotMetaForGate, "surface", gateSlots)) {
             sessionContext.state = "NEEDS_SURFACE";
@@ -12170,6 +12195,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       const selectionStrictMergeSession =
         hadPendingSlotClarificationAtStart ||
         sessionContext?.pendingSelection === true ||
+        isFlowToSelectionObjectContinuation(userMessage, sessionContext) ||
         (isSelectionFollowupMessage(userMessage) &&
           hasCarryoverSelectionContext(sessionContext));
       const slotResult = processSlots(userMessage, "selection", sessionContext, {
@@ -12195,8 +12221,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
         !isWheelTireObject &&
         !interactionRef.clarificationCarryoverHydratedTurn
       ) {
-        currentSlots.surface = null;
-        slotResult.slots.surface = null;
+        const surfaceKnownBeforeObjectIntro = isSlotKnown(
+          sessionContext.slotMeta || {},
+          "surface",
+          mergeSlotsForMetaGate(sessionContext.slots, currentSlots, sessionContext.slotMeta || {})
+        );
+        if (!surfaceKnownBeforeObjectIntro) {
+          currentSlots.surface = null;
+          slotResult.slots.surface = null;
+        }
       }
       currentSlots = inferWheelsSurfaceFromObject(currentSlots);
       slotResult.slots = currentSlots;
@@ -12251,11 +12284,15 @@ async function handleChat(message, clientId, products, sessionId = "default") {
 
       if (!hasRequiredSelectionSlots(currentSlots)) {
         const missing = selectionDecision.missingSlot;
-        const gateSlots = { ...(currentSlots || {}), ...(sessionContext.slots || {}) };
+        const gateSlots = mergeSlotsForMetaGate(
+          sessionContext.slots,
+          currentSlots,
+          sessionContext.slotMeta || {}
+        );
         const slotMetaForGate = sessionContext.slotMeta || {};
         if (missing && isSlotKnown(slotMetaForGate, missing, gateSlots)) {
-          currentSlots = { ...gateSlots, ...currentSlots };
-          sessionContext.slots = currentSlots;
+          currentSlots = { ...gateSlots };
+          sessionContext.slots = { ...(sessionContext.slots || {}), ...currentSlots };
           interactionRef.slots = currentSlots;
         } else {
         sessionContext.slots = currentSlots;
@@ -12299,6 +12336,18 @@ async function handleChat(message, clientId, products, sessionId = "default") {
       }
 
       if (selectionDecision.action === "clarification" && !selectionPreRetrievedCandidates) {
+        const enforcedMissing = selectionDecision.missingSlot;
+        const enforcedGateSlots = mergeSlotsForMetaGate(
+          sessionContext.slots,
+          currentSlots,
+          sessionContext.slotMeta || {}
+        );
+        const enforcedSlotMeta = sessionContext.slotMeta || {};
+        if (enforcedMissing && isSlotKnown(enforcedSlotMeta, enforcedMissing, enforcedGateSlots)) {
+          currentSlots = { ...enforcedGateSlots };
+          sessionContext.slots = { ...(sessionContext.slots || {}), ...currentSlots };
+          interactionRef.slots = currentSlots;
+        } else {
         logInfo("ENFORCED_CLARIFICATION", {
           queryType,
           missingSlot: selectionDecision.missingSlot
@@ -12324,6 +12373,7 @@ async function handleChat(message, clientId, products, sessionId = "default") {
           decision: selectionDecision,
           outputType: "question"
         });
+        }
       }
 
       const mergedSlots = inferWheelsSurfaceFromObject({

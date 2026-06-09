@@ -12,6 +12,21 @@ function isSlotKnown(slotMeta, slot, slots) {
   return value != null && String(value).trim() !== "";
 }
 
+function mergeSlotsForMetaGate(sessionSlots, currentSlots, slotMeta) {
+  const gateSlots = { ...(currentSlots || {}), ...(sessionSlots || {}) };
+  for (const slot of ["context", "object", "surface"]) {
+    const meta = String(slotMeta?.[slot] || "").toLowerCase();
+    if (!KNOWN_SLOT_META.has(meta)) continue;
+    const current = gateSlots[slot];
+    if (current != null && String(current).trim() !== "") continue;
+    const sessionVal = sessionSlots?.[slot];
+    if (sessionVal != null && String(sessionVal).trim() !== "") {
+      gateSlots[slot] = sessionVal;
+    }
+  }
+  return gateSlots;
+}
+
 function isActionKnown(slotMeta, slots) {
   if (isSlotKnown(slotMeta, "action", slots)) return true;
   const action = String(slots?.action || "").toLowerCase();
@@ -30,5 +45,6 @@ module.exports = {
   KNOWN_SLOT_META,
   isSlotKnown,
   isActionKnown,
+  mergeSlotsForMetaGate,
   deriveLeatherCoverageRoleFromAction
 };

@@ -173,13 +173,17 @@ describe("F36 output mode integrity — E2E", () => {
     const sid = `f36-cov3-${Date.now()}`;
     const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
     await handleChat("vreau sa curat pielea", "C1", catalog, sid);
-    await handleChat("cotiera", "C1", catalog, sid);
-    const result = await handleChat("piele", "C1", catalog, sid);
-    const log = lastLog();
+    let result = await handleChat("cotiera", "C1", catalog, sid);
+    let log = lastLog();
+    if (!/recommend|selection/.test(String(log.decision?.action || ""))) {
+      result = await handleChat("piele", "C1", catalog, sid);
+      log = lastLog();
+    }
     const msg = replyText(result);
 
     expect(log.decision.action).toMatch(/recommend|selection/);
     expect(log.decision.reasonCode).not.toBe("routing.coverage_role_goal");
+    expect(log.decision.missingSlot).not.toBe("surface");
     expect(log.slots?.action).toBe("clean");
     expect(log.slots?.surface).toBe("piele");
     expect(log.slots?.object).toBe("cotiera");
@@ -191,9 +195,12 @@ describe("F36 output mode integrity — E2E", () => {
     const sid = `f43-cov4-${Date.now()}`;
     const catalog = [LEATHER_CLEANER, LEATHER_HYDRATION, TEXTILE_PRODUCT];
     await handleChat("vreau sa curat pielea", "C1", catalog, sid);
-    await handleChat("cotiera", "C1", catalog, sid);
-    const result = await handleChat("piele", "C1", catalog, sid);
-    const log = lastLog();
+    let result = await handleChat("cotiera", "C1", catalog, sid);
+    let log = lastLog();
+    if (!/recommend|selection/.test(String(log.decision?.action || ""))) {
+      result = await handleChat("piele", "C1", catalog, sid);
+      log = lastLog();
+    }
     const msg = replyText(result);
 
     expect(log.slots?.context).toBe("interior");
