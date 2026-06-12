@@ -327,6 +327,8 @@ app.get("/api/version", (req, res) => {
   res.json(getDeployVersion());
 });
 
+app.use("/api", require("./routes/expert"));
+
 // SPA fallback: any unmatched GET that doesn't look like a file
 // returns the React app's index.html so client-side routing can handle it
 // (e.g. direct navigation / hard refresh on /blog/<slug>).
