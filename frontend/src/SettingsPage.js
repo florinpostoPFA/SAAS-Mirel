@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  ENGINE_V0_STORAGE_KEY,
   readEngineV0Enabled,
   setEngineV0Enabled,
 } from "./engineToggle";
@@ -28,7 +27,7 @@ export default function SettingsPage() {
   // CTA
   const [cta, setCta] = useState("View Product");
 
-  // posto_engine_v0 — runtime beta switch for V0 /api/expert (reload chat after flip)
+  // posto_engine_v0=false opts into legacy; absent defaults to V0 expert engine
   const [engineV0, setEngineV0] = useState(readEngineV0Enabled);
 
   useEffect(() => {
@@ -208,11 +207,11 @@ export default function SettingsPage() {
             }}
             style={{ ...inputStyle, minWidth: "220px" }}
           >
+            <option value="v0">Expert (V0) — /api/expert</option>
             <option value="legacy">Legacy — /api/chat</option>
-            <option value="v0">V0 — /api/expert (grounded retrieval)</option>
           </select>
           <p style={{ color: "#666", fontSize: "12px", margin: "6px 0 0" }}>
-            Stored in localStorage ({ENGINE_V0_STORAGE_KEY}). Reload chat after changing.
+            Default is Expert (V0). Choose Legacy only if you need the old pipeline. Reload chat after changing.
           </p>
         </div>
       </div>
