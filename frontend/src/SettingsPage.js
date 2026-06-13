@@ -1,4 +1,9 @@
 import React, { useEffect, useState } from "react";
+import {
+  ENGINE_V0_STORAGE_KEY,
+  readEngineV0Enabled,
+  setEngineV0Enabled,
+} from "./engineToggle";
 
 const API_KEY = "your-secret-key";
 
@@ -22,6 +27,9 @@ export default function SettingsPage() {
 
   // CTA
   const [cta, setCta] = useState("View Product");
+
+  // posto_engine_v0 — runtime beta switch for V0 /api/expert (reload chat after flip)
+  const [engineV0, setEngineV0] = useState(readEngineV0Enabled);
 
   useEffect(() => {
     fetch(`${process.env.REACT_APP_API_URL}/settings`, {
@@ -182,6 +190,25 @@ export default function SettingsPage() {
             <option value="soft">Soft</option>
             <option value="aggressive">Aggressive</option>
           </select>
+        </div>
+
+        <div style={fieldStyle}>
+          <label>
+            <input
+              type="checkbox"
+              checked={engineV0}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setEngineV0(enabled);
+                setEngineV0Enabled(enabled);
+              }}
+              style={checkboxStyle}
+            />
+            AI engine — V0 grounded retrieval (beta)
+          </label>
+          <p style={{ color: "#666", fontSize: "12px", margin: "4px 0 0 24px" }}>
+            Toggle key: {ENGINE_V0_STORAGE_KEY}. Reload chat after flipping.
+          </p>
         </div>
       </div>
 
