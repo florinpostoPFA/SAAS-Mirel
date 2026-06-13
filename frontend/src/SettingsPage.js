@@ -1,4 +1,8 @@
 import React, { useEffect, useState } from "react";
+import {
+  readEngineV0Enabled,
+  setEngineV0Enabled,
+} from "./engineToggle";
 
 const API_KEY = "your-secret-key";
 
@@ -22,6 +26,9 @@ export default function SettingsPage() {
 
   // CTA
   const [cta, setCta] = useState("View Product");
+
+  // posto_engine_v0=false opts into legacy; absent defaults to V0 expert engine
+  const [engineV0, setEngineV0] = useState(readEngineV0Enabled);
 
   useEffect(() => {
     fetch(`${process.env.REACT_APP_API_URL}/settings`, {
@@ -84,7 +91,8 @@ export default function SettingsPage() {
     marginBottom: "30px",
     padding: "15px",
     backgroundColor: "#f9f9f9",
-    borderRadius: "4px"
+    borderRadius: "4px",
+    color: "#111"
   };
 
   const fieldStyle = {
@@ -107,11 +115,15 @@ export default function SettingsPage() {
 
   const checkboxStyle = {
     marginRight: "8px",
-    cursor: "pointer"
+    cursor: "pointer",
+    width: "18px",
+    height: "18px",
+    accentColor: "#4f46e5",
+    flexShrink: 0
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "700px" }}>
+    <div style={{ padding: "20px", maxWidth: "700px", color: "#fff" }}>
       <h1>Settings</h1>
 
       {/* Recommendation Settings */}
@@ -131,7 +143,7 @@ export default function SettingsPage() {
         </div>
 
         <div style={fieldStyle}>
-          <label>
+          <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
             <input
               type="checkbox"
               checked={delayRecommendation}
@@ -183,6 +195,25 @@ export default function SettingsPage() {
             <option value="aggressive">Aggressive</option>
           </select>
         </div>
+
+        <div style={fieldStyle}>
+          <label style={labelStyle}>AI engine (beta)</label>
+          <select
+            value={engineV0 ? "v0" : "legacy"}
+            onChange={(e) => {
+              const enabled = e.target.value === "v0";
+              setEngineV0(enabled);
+              setEngineV0Enabled(enabled);
+            }}
+            style={{ ...inputStyle, minWidth: "220px" }}
+          >
+            <option value="v0">Expert (V0) — /api/expert</option>
+            <option value="legacy">Legacy — /api/chat</option>
+          </select>
+          <p style={{ color: "#666", fontSize: "12px", margin: "6px 0 0" }}>
+            Default is Expert (V0). Choose Legacy only if you need the old pipeline. Reload chat after changing.
+          </p>
+        </div>
       </div>
 
       {/* Conversation Rules */}
@@ -190,7 +221,7 @@ export default function SettingsPage() {
         <h2 style={{ marginTop: 0 }}>Conversation Rules</h2>
         
         <div style={fieldStyle}>
-          <label>
+          <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
             <input
               type="checkbox"
               checked={askQuestions}
@@ -214,7 +245,7 @@ export default function SettingsPage() {
         </div>
 
         <div style={fieldStyle}>
-          <label>
+          <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
             <input
               type="checkbox"
               checked={greetingEnabled}

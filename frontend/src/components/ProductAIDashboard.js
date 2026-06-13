@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { isEngineV0Enabled } from "../engineToggle";
 
 const NEGATIVE_FEEDBACK_REASONS = [
   "wrong products",
@@ -37,7 +39,8 @@ function sendFeedback(messageId, feedback) {
  *   showNegativeOptions?: boolean,
  *   selectedReason?: string,
  *   customReason?: string,
- *   role?: "user" | "assistant"
+ *   role?: "user" | "assistant",
+ *   engine?: "legacy" | "v0"
  * }} ChatMessage
  */
 
@@ -158,23 +161,61 @@ export default function ProductAIDashboard() {
   const sendMessage = async () => {
     if (!input.trim()) return;
 
+    const messageText = input.trim();
+    const useV0 = isEngineV0Enabled();
+
     /** @type {ChatMessage} */
     const userMessage = {
       id: createMessageId(),
       role: "user",
-      text: input,
+      text: messageText,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
     try {
+      if (useV0) {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/expert`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            question: messageText,
+            session_id: sessionId,
+          }),
+        });
+
+        const data = await response.json();
+
+        const responseSessionId = data.session_id || data.sessionId;
+        if (responseSessionId && responseSessionId !== sessionId) {
+          try {
+            localStorage.setItem(DASHBOARD_SESSION_STORAGE_KEY, responseSessionId);
+          } catch {
+            /* ignore */
+          }
+          setSessionId(responseSessionId);
+        }
+
+        const assistantMessage = {
+          id: createMessageId(),
+          role: "assistant",
+          text: data.answer || data.error || "Nu am putut genera un raspuns.",
+          engine: "v0",
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+        return;
+      }
+
       const response = await fetch(`${process.env.REACT_APP_API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: input, sessionId }),
+        body: JSON.stringify({ message: messageText, sessionId }),
       });
 
       const data = await response.json();
@@ -192,6 +233,7 @@ export default function ProductAIDashboard() {
         id: createMessageId(),
         role: "assistant",
         text: data.reply || "Nu am putut genera un raspuns.",
+        engine: "legacy",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -240,7 +282,19 @@ export default function ProductAIDashboard() {
                     : "bg-white/10 text-gray-200"
                 }`}
               >
-                {msg.text}
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-invert prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
+                ) : (
+                  msg.text
+                )}
+
+                {msg.role === "assistant" && msg.engine && (
+                  <span className="mt-1 inline-block text-[10px] uppercase tracking-wide text-gray-500">
+                    {msg.engine}
+                  </span>
+                )}
 
                 {msg.role === "assistant" && (
                   <div className="mt-2 text-xs">
