@@ -7,6 +7,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const PRODUCTS_PATH = path.join(ROOT, "data", "products.json");
 const ROLES_PATH = path.join(ROOT, "data", "product_roles.json");
+const INDEX_PATH = path.join(ROOT, "data", "embeddings", "v1", "index.json");
 const FLOWS_DIR = path.join(ROOT, "flows");
 
 let cachedVersions = null;
@@ -39,11 +40,23 @@ function computeFlowsVersion() {
   return shortSha256(manifest);
 }
 
+function computeIndexVersion() {
+  try {
+    if (!fs.existsSync(INDEX_PATH)) {
+      return "unavailable";
+    }
+    return hashFile(INDEX_PATH);
+  } catch {
+    return "unavailable";
+  }
+}
+
 function computeArtifactVersions() {
   return {
     catalogVersion: hashFile(PRODUCTS_PATH),
     rolesVersion: hashFile(ROLES_PATH),
-    flowsVersion: computeFlowsVersion()
+    flowsVersion: computeFlowsVersion(),
+    indexVersion: computeIndexVersion()
   };
 }
 
@@ -58,7 +71,8 @@ function getArtifactVersions() {
     cachedVersions = Object.freeze({
       catalogVersion: "unavailable",
       rolesVersion: "unavailable",
-      flowsVersion: "unavailable"
+      flowsVersion: "unavailable",
+      indexVersion: "unavailable"
     });
   }
 
@@ -66,5 +80,6 @@ function getArtifactVersions() {
 }
 
 module.exports = {
-  getArtifactVersions
+  getArtifactVersions,
+  computeIndexVersion
 };
