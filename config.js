@@ -122,7 +122,9 @@ Recomandă produsele direct cu o explicație a DE CE se potrivesc.
     leather_program_basic: require("./flows/leather_program_basic.json"),
     engine_bay_safety_basic: require("./flows/engine_bay_safety_basic.json"),
     spot_correction_escalation: require("./flows/spot_correction_escalation.json"),
-    leather_ink_removal: require("./flows/leather_ink_removal.json")
+    leather_ink_removal: require("./flows/leather_ink_removal.json"),
+    headliner_safe_clean_basic: require("./flows/headliner_safe_clean_basic.json"),
+    dressing_selection_basic: require("./flows/dressing_selection_basic.json")
   }
 };
 

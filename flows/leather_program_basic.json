@@ -6,25 +6,63 @@
     "surfaces": ["leather"],
     "objects": ["scaun", "bancheta", "volan", "cotiera"]
   },
-  "title": "Program piele: curatare + hidratare",
+  "title": "Program piele moderna: curatare + protectie",
   "steps": [
     {
-      "id": "leather_clean",
-      "title": "Curatare piele",
-      "roles": ["leather_cleaner"],
-      "knowledgeIds": ["leather_cleaning"]
+      "id": "context_and_mistakes",
+      "title": "Context piele moderna si greseli de evitat",
+      "goal": "Intelege zonele cu uzura ridicata si evita soare, accesorii agresive si servetele umede.",
+      "roles": [],
+      "knowledgeIds": [
+        "modern_leather_wear_bmw",
+        "leather_high_wear_zones",
+        "leather_mistake_hot_surface",
+        "leather_mistake_aggressive_tools",
+        "leather_faq_wet_wipes"
+      ]
     },
     {
-      "id": "leather_condition",
-      "title": "Hidratare piele",
-      "roles": ["leather_protectant"],
-      "knowledgeIds": ["leather_conditioner_usage"]
+      "id": "deep_clean",
+      "title": "Curatare completa piele",
+      "goal": "Curata cu Leather Cleaner si agitatie controlata (Scrub Bar); sterge reziduurile.",
+      "roles": ["leather_cleaner", "interior_tool"],
+      "knowledgeIds": [
+        "leather_cleaning",
+        "leather_workflow_complete",
+        "scrub_bar_workflow"
+      ]
     },
     {
-      "id": "leather_protect",
-      "title": "Protectie finala",
+      "id": "quality_check",
+      "title": "Verificare calitate curatare",
+      "goal": "Pielea curata arata mat/satin, fara grasime; verifica cusaturi si cute.",
+      "roles": ["microfiber"],
+      "knowledgeIds": [
+        "leather_clean_quality_check",
+        "leather_mistake_excess_shine"
+      ]
+    },
+    {
+      "id": "protection_first",
+      "title": "Protectie mată (prioritar)",
+      "goal": "Pe pielea OEM moderna, protecția bate hidratarea clasica; aplică strat subtire uniform.",
       "roles": ["leather_protectant"],
-      "knowledgeIds": ["interior_protect"]
+      "knowledgeIds": [
+        "leather_modern_protection_first",
+        "leather_protection_vs_hydration",
+        "protectie_piele_auto"
+      ]
+    },
+    {
+      "id": "maintenance_cadence",
+      "title": "Intretinere si frecventa",
+      "goal": "Mentenanta usoara lunara; curatare completa la 3-6 luni; corecteaza aplicare neuniforma.",
+      "roles": ["leather_protectant"],
+      "knowledgeIds": [
+        "leather_maintenance_frequency",
+        "leather_faq_slippery_after_protect",
+        "leather_conditioner_usage"
+      ]
     }
   ]
 }

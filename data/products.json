@@ -150,7 +150,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:128",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "400:1",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -407,7 +420,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "plastic"
       ],
@@ -845,7 +858,7 @@
       "conditioning"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -1118,7 +1131,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "leather"
       ],
@@ -1254,7 +1267,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -1338,7 +1351,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -3650,7 +3663,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -3742,7 +3755,7 @@
       "concentrate"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -4225,7 +4238,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "natural",
       "material_compatibility": [
         "leather"
       ],
@@ -7372,7 +7385,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -7777,7 +7790,16 @@
         "leather",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:4",
+          "use_case": "interior_general_clean"
+        },
+        {
+          "ratio": "1:20",
+          "use_case": "air_freshener"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "interior_textile_cleaning",
@@ -8029,7 +8051,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -8047,7 +8069,10 @@
         "pot folosi si pe plastic?",
         "dressing pentru exterior sau interior",
         "ce face diferit de apa cu luciu",
-        "sa nu se spalie rapid"
+        "sa nu se spalie rapid",
+        "dressing anvelope wet look durabil",
+        "dressing solvent anvelope exterior",
+        "nu folosi in interior habitaclu"
       ]
     }
   },
@@ -8282,7 +8307,10 @@
         "am pete de cafea pe scaune",
         "ce dai pe mochete",
         "curata textilul inprofund",
-        "lasa parfum foarte placut dupa curatat"
+        "lasa parfum foarte placut dupa curatat",
+        "solutie textile foarte murdare",
+        "curatare alcantara kenotek",
+        "textile grele nu acelasi produs ca piele"
       ]
     }
   },
@@ -9095,7 +9123,16 @@
       "material_compatibility": [
         "metal"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:4",
+          "use_case": "decontaminare usuala"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "decontaminare usuala_variant_2"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "wheels_cleaning",
@@ -9229,7 +9266,7 @@
       "coating_safe"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "satin",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -9257,7 +9294,10 @@
         "vreau un luciu mai puternic",
         "ce face cu cauciucurile decolorate",
         "trim dressing cum se aplica",
-        "plasticele interioare opace ce ma ajuta"
+        "plasticele interioare opace ce ma ajuta",
+        "dressing apa vs solvent diferenta",
+        "dressing interior natural fara luciu",
+        "dressing trim interior nu pe anvelope wet look"
       ]
     }
   },
@@ -9281,7 +9321,7 @@
       "concentrate"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -9772,7 +9812,12 @@
         "leather",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:4",
+          "use_case": "curatat textil"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "interior_textile_cleaning",
@@ -9943,7 +9988,12 @@
         "leather",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:4",
+          "use_case": "curatat textil"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "interior_textile_cleaning",
@@ -10162,7 +10212,16 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1-2%",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "2%",
+          "use_case": "exterior_wash_variant_2"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -12275,7 +12334,20 @@
         "paint",
         "metal"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:2",
+          "use_case": "desicant"
+        },
+        {
+          "ratio": "1:2",
+          "use_case": "decontaminant"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -12846,7 +12918,9 @@
         "laveta care ajunge in colturi mici",
         "vreau ceva puternic pentru textil",
         "trebuie sa fie usata singura?",
-        "ce folosesc la sticlele din masina"
+        "ce folosesc la sticlele din masina",
+        "laveta tehnica stergere plafon dupa curatare",
+        "sterge imediat dupa mitt plafon"
       ]
     }
   },
@@ -12914,7 +12988,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "satin",
       "material_compatibility": [
         "leather"
       ],
@@ -13554,7 +13628,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -15674,7 +15748,12 @@
         "textile",
         "rubber"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:16",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "interior_textile_cleaning",
@@ -18113,7 +18192,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "satin",
       "material_compatibility": [
         "plastic"
       ],
@@ -18912,7 +18991,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -23350,7 +23429,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -26271,7 +26350,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -26800,7 +26879,7 @@
       "concentrate"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -27542,7 +27621,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -27719,7 +27798,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -29302,7 +29381,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:30",
+          "use_case": "prespalare"
+        },
+        {
+          "ratio": "1:50",
+          "use_case": "prespalare"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -30715,7 +30807,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -31049,7 +31141,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -31507,7 +31599,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "satin",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -32040,7 +32132,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "natural",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -36407,7 +36499,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "natural",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -37450,7 +37542,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -39135,7 +39227,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "mat",
       "material_compatibility": [
         "leather"
       ],
@@ -39155,7 +39247,10 @@
         "vreau ceva care sa impiedice transferul de culoare",
         "cat tine protectia aceasta",
         "mai e nevoie de alta treaba inainte de a o da?",
-        "pot sa-l dau singur sau trebuie specialist"
+        "pot sa-l dau singur sau trebuie specialist",
+        "protectie piele bmw modern",
+        "pielea nu trebuie lucioasa",
+        "protectie mat piele oem"
       ]
     }
   },
@@ -39225,7 +39320,20 @@
         "paint",
         "glass"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara, intretinere"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "murdarie persistenta"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -40668,7 +40776,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -40978,7 +41086,11 @@
         "pot da si pe textil?",
         "curatatul nu lasa pete sau grija?",
         "plafonul meu e uscat ce solutie",
-        "vreau sa curat scaunele de la masina"
+        "vreau sa curat scaunele de la masina",
+        "textile sensibile nu pol star universal",
+        "curatare plafon fara dezlipire",
+        "test presiune plafon auto",
+        "nu pulveriza direct pe plafon bonnet pe manusa"
       ]
     }
   },
@@ -42120,7 +42232,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "mat",
       "material_compatibility": [
         "leather"
       ],
@@ -42217,7 +42329,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "mat",
       "material_compatibility": [
         "leather"
       ],
@@ -42407,7 +42519,20 @@
         "glass",
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara, intretinere"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "murdarie persistenta"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -43665,7 +43790,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -43710,7 +43835,20 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:128",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "400:1",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -47648,7 +47786,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -47827,7 +47965,7 @@
       "exterior"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -48072,7 +48210,20 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:128",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "400:1",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -48164,7 +48315,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:128",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "400:1",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -49442,7 +49606,20 @@
         "paint",
         "metal"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:2",
+          "use_case": "desicant"
+        },
+        {
+          "ratio": "1:2",
+          "use_case": "decontaminant"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -49937,7 +50114,9 @@
         "pielea devine rigidă dupa cum dai",
         "curatarea pentru piele auto",
         "murdarie grea de pe piele",
-        "vreau ceva care sa nu lasi senzație lipicioasa"
+        "vreau ceva care sa nu lasi senzație lipicioasa",
+        "curatare piele bmw fara luciu",
+        "piele curata mat satin verificare cusaturi"
       ]
     }
   },
@@ -50894,7 +51073,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "satin",
       "material_compatibility": [
         "rubber"
       ],
@@ -51107,7 +51286,7 @@
       "protection"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "mat",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -51154,7 +51333,12 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "exterior_decontamination"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -52891,7 +53075,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1-2%",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "wheels_cleaning"
+        },
+        {
+          "ratio": "1:9",
+          "use_case": "exterior_decontamination"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -55426,7 +55623,7 @@
       "coating_safe"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -57348,7 +57545,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:30",
+          "use_case": "prespalare"
+        },
+        {
+          "ratio": "1:50",
+          "use_case": "prespalare"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -58800,7 +59010,10 @@
         "cat tine efectul dupa ce dai?",
         "scaune cu pete greoaie cum le scot?",
         "ceva care sa nu las pete",
-        "pielea devine mai plinta dupa"
+        "pielea devine mai plinta dupa",
+        "intretinere piele lunara",
+        "alternativa servetele umede piele",
+        "mentenanta usoara piele dupa curatare"
       ]
     }
   },
@@ -61107,7 +61320,20 @@
         "glass",
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara, intretinere"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "murdarie persistenta"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -61744,7 +61970,12 @@
         "paint",
         "rubber"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "exterior_decontamination"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -61789,7 +62020,12 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "exterior_decontamination"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination",
@@ -62032,7 +62268,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:2",
+          "use_case": "desicant"
+        },
+        {
+          "ratio": "1:2",
+          "use_case": "decontaminant"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -62075,7 +62324,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:2",
+          "use_case": "desicant"
+        },
+        {
+          "ratio": "1:2",
+          "use_case": "decontaminant"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -62118,7 +62380,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:2",
+          "use_case": "desicant"
+        },
+        {
+          "ratio": "1:2",
+          "use_case": "decontaminant"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -62161,7 +62436,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:2",
+          "use_case": "desicant"
+        },
+        {
+          "ratio": "1:2",
+          "use_case": "decontaminant"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -62236,7 +62524,10 @@
         "curata foarte bine compartimentul motor",
         "pot dilua mai putin sau mai mult?",
         "ce face cu cauciucurile",
-        "sa nu las pete pe scaune"
+        "sa nu las pete pe scaune",
+        "apc profesional textile si plastice",
+        "cat timp las apc sa actioneze",
+        "nu clati imediat lasa 3 minute"
       ]
     }
   },
@@ -62440,7 +62731,20 @@
         "glass",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "intretinere"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "pete grele"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -62485,7 +62789,20 @@
         "glass",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "intretinere"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "pete grele"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -62531,7 +62848,20 @@
         "glass",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "intretinere"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "pete grele"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -62577,7 +62907,20 @@
         "glass",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:10",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:10",
+          "use_case": "intretinere"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "pete grele"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -66246,7 +66589,12 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:100",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -66291,7 +66639,12 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:100",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -66336,7 +66689,12 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:100",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -66669,7 +67027,12 @@
         "paint",
         "glass"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:4",
+          "use_case": "decontaminare usuala"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -66715,7 +67078,12 @@
         "paint",
         "glass"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:4",
+          "use_case": "decontaminare usuala"
+        }
+      ],
       "effect": "decontaminant",
       "use_case": [
         "exterior_decontamination"
@@ -67075,7 +67443,12 @@
         "leather",
         "textile"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:50",
+          "use_case": "curatat textil"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "interior_textile_cleaning",
@@ -67121,7 +67494,12 @@
         "leather",
         "textile"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:50",
+          "use_case": "interior_general_clean"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "interior_textile_cleaning",
@@ -71970,7 +72348,7 @@
       "concentrate"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -72020,7 +72398,7 @@
       "concentrate"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -72070,7 +72448,7 @@
       "concentrate"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -75226,7 +75604,9 @@
         "pot spala la masina dupa ce o folosesc?",
         "vreau ceva care sa mearga pe toate materialii",
         "ce face cu cauciucul",
-        "trebuie sa-l folosesc umed sau sec"
+        "trebuie sa-l folosesc umed sau sec",
+        "manusa curatare plafon low moisture",
+        "bonnet pe manusa nu direct pe plafon"
       ]
     }
   },
@@ -76772,7 +77152,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -76821,7 +77201,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:30",
+          "use_case": "prespalare"
+        },
+        {
+          "ratio": "1:50",
+          "use_case": "prespalare"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -76865,7 +77258,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:30",
+          "use_case": "prespalare"
+        },
+        {
+          "ratio": "1:50",
+          "use_case": "prespalare"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash"
@@ -77162,7 +77568,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoare"
+        },
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:15",
+          "use_case": "murdarie medie"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -77311,7 +77730,20 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:30",
+          "use_case": "prespalare"
+        },
+        {
+          "ratio": "1:50",
+          "use_case": "prespalare"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -77355,7 +77787,20 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:30",
+          "use_case": "prespalare"
+        },
+        {
+          "ratio": "1:50",
+          "use_case": "prespalare"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -77399,7 +77844,20 @@
       "material_compatibility": [
         "paint"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:20",
+          "use_case": "murdarie usoara"
+        },
+        {
+          "ratio": "1:30",
+          "use_case": "prespalare"
+        },
+        {
+          "ratio": "1:50",
+          "use_case": "prespalare"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -77935,7 +78393,7 @@
       "concentrate"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "natural",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -78245,7 +78703,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "30-90ml/19L",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "30-90ml/950ml",
+          "use_case": "foam_application"
+        },
+        {
+          "ratio": "6:1",
+          "use_case": "murdarie foarte dificila"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -78606,7 +79077,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber",
         "plastic"
@@ -78653,7 +79124,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "leather",
         "textile",
@@ -78889,7 +79360,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -82407,7 +82878,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "natural",
       "material_compatibility": [
         "plastic",
         "rubber"
@@ -83521,7 +83992,20 @@
         "paint",
         "plastic"
       ],
-      "dilution": null,
+      "dilution": [
+        {
+          "ratio": "1:128",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "400:1",
+          "use_case": "exterior_wash"
+        },
+        {
+          "ratio": "1:5",
+          "use_case": "exterior_wash"
+        }
+      ],
       "effect": "cleaner",
       "use_case": [
         "exterior_wash",
@@ -83790,7 +84274,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "gloss",
       "material_compatibility": [
         "rubber"
       ],
@@ -84425,7 +84909,7 @@
       "ready_to_use"
     ],
     "applicability": {
-      "finish": null,
+      "finish": "satin",
       "material_compatibility": [
         "leather",
         "textile"

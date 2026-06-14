@@ -1,6 +1,7 @@
 const config = require("../config");
 const { executeFlow } = require("../services/flowExecutor");
 const knowledgeFlow = require("../data/knowledge_flow.json");
+const knowledge = require("../data/knowledge.json");
 
 const NEW_FLOW_IDS = [
   "decontamination_basics",
@@ -10,8 +11,20 @@ const NEW_FLOW_IDS = [
   "leather_program_basic",
   "engine_bay_safety_basic",
   "spot_correction_escalation",
-  "leather_ink_removal"
+  "leather_ink_removal",
+  "headliner_safe_clean_basic",
+  "dressing_selection_basic"
 ];
+
+function buildKnownKnowledgeIds() {
+  const knownIds = new Set();
+  for (const entry of [...(Array.isArray(knowledgeFlow) ? knowledgeFlow : []), ...(Array.isArray(knowledge) ? knowledge : [])]) {
+    if (entry?.id) {
+      knownIds.add(String(entry.id));
+    }
+  }
+  return knownIds;
+}
 
 function collectMissingKnowledgeIds(flow, knownIds) {
   const missing = [];
@@ -28,8 +41,8 @@ function collectMissingKnowledgeIds(flow, knownIds) {
 }
 
 describe("Flow knowledge integration", () => {
-  it("all new flows reference only existing knowledge_flow IDs", () => {
-    const knownIds = new Set((Array.isArray(knowledgeFlow) ? knowledgeFlow : []).map((entry) => String(entry?.id || "")));
+  it("all new flows reference only existing knowledge IDs", () => {
+    const knownIds = buildKnownKnowledgeIds();
     const missingByFlow = {};
 
     for (const flowId of NEW_FLOW_IDS) {
@@ -91,5 +104,39 @@ describe("Flow knowledge integration", () => {
         reply.includes("acetonă") ||
         reply.includes("acetone")
     ).toBe(true);
+  });
+
+  it("executes headliner_safe_clean_basic with pressure-test guidance", () => {
+    const flow = config?.flows?.headliner_safe_clean_basic;
+    expect(flow).toBeTruthy();
+
+    const result = executeFlow(
+      flow,
+      [],
+      { context: "interior", surface: "textile", object: "plafon" },
+      { responseLocale: "ro" }
+    );
+
+    expect(result).toBeTruthy();
+    expect(typeof result.reply).toBe("string");
+    expect(result.reply.length).toBeGreaterThan(0);
+    expect(result.reply).toContain("plafon");
+  });
+
+  it("executes dressing_selection_basic with dressing comparison copy", () => {
+    const flow = config?.flows?.dressing_selection_basic;
+    expect(flow).toBeTruthy();
+
+    const result = executeFlow(
+      flow,
+      [],
+      { context: "exterior", surface: "rubber", object: "anvelope" },
+      { responseLocale: "ro" }
+    );
+
+    expect(result).toBeTruthy();
+    expect(typeof result.reply).toBe("string");
+    expect(result.reply.length).toBeGreaterThan(0);
+    expect(result.reply.toLowerCase()).toContain("dressing");
   });
 });

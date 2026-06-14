@@ -72,4 +72,30 @@ describe("Flow resolver gating", () => {
       flowIds.indexOf("interior_clean_basic")
     );
   });
+
+  it("ranks headliner_safe_clean_basic above interior_clean_basic for plafon queries", () => {
+    const candidates = resolveFlowCandidates({
+      intent: "product_guidance",
+      message: "cum curat plafonul fara dezlipire",
+      slots: { context: "interior", surface: "textile", object: "plafon" }
+    });
+
+    const flowIds = candidates.map(flow => flow.flowId);
+    expect(flowIds).toContain("headliner_safe_clean_basic");
+    expect(flowIds).not.toContain("interior_clean_basic");
+    expect(flowIds[0]).toBe("headliner_safe_clean_basic");
+  });
+
+  it("prefers dressing_selection_basic over wheel_tire_deep_clean for dressing comparison queries", () => {
+    const candidates = resolveFlowCandidates({
+      intent: "product_guidance",
+      message: "care e diferenta dressing apa vs solvent pentru anvelope",
+      slots: { context: "exterior", surface: "rubber", object: "anvelope" }
+    });
+
+    const flowIds = candidates.map(flow => flow.flowId);
+    expect(flowIds).toContain("dressing_selection_basic");
+    expect(flowIds).not.toContain("wheel_tire_deep_clean");
+    expect(flowIds[0]).toBe("dressing_selection_basic");
+  });
 });
