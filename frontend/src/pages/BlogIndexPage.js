@@ -4,6 +4,8 @@ import { getAllPosts, getAllCategories } from "../blog/blogData";
 import SeoHead from "../seo/SeoHead";
 
 const ALL_CATEGORIES = "all";
+const BLOG_DESCRIPTION =
+  "Technical and strategic essays — generalizable, no client gossip.";
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -43,16 +45,19 @@ export default function BlogIndexPage() {
   return (
     <div>
       <SeoHead
-        title="Blog — Posto"
-        description="Notes from building Posto — AI assistants for European eCommerce stores."
+        title="Blog — PostoSaaS"
+        description={BLOG_DESCRIPTION}
         path="/blog"
       />
 
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Blog</h1>
-        <p className="mt-2 text-slate-600">
-          Notes from building Posto — AI assistants for European eCommerce stores.
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-indigo-300">
+          Writing
         </p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          Blog
+        </h1>
+        <p className="mt-3 text-lg text-slate-300">{BLOG_DESCRIPTION}</p>
       </header>
 
       {categories.length > 0 && (
@@ -84,23 +89,23 @@ export default function BlogIndexPage() {
             <li key={post.slug}>
               <Link
                 to={`/blog/${post.slug}`}
-                className="block rounded-lg border border-slate-200 p-5 transition hover:border-slate-300 hover:bg-slate-50"
+                className="block rounded-xl border border-white/10 bg-white/5 p-5 transition hover:border-indigo-400/40 hover:bg-white/[0.07]"
               >
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-semibold text-white">
                   {post.title}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {formatDate(post.date)}
                 </p>
                 {post.description && (
-                  <p className="mt-2 text-slate-700">{post.description}</p>
+                  <p className="mt-2 text-slate-300">{post.description}</p>
                 )}
                 {post.categories.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {post.categories.map((category) => (
                       <span
                         key={category}
-                        className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                        className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-medium text-slate-300"
                       >
                         {category}
                       </span>
@@ -125,8 +130,8 @@ function FilterPill({ label, active, onClick }) {
       className={
         "rounded-full border px-3 py-1 text-sm font-medium transition " +
         (active
-          ? "border-slate-900 bg-slate-900 text-white"
-          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100")
+          ? "border-indigo-400 bg-indigo-500 text-white"
+          : "border-white/15 bg-white/5 text-slate-300 hover:bg-white/10")
       }
     >
       {label}

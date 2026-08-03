@@ -73,8 +73,11 @@ export default function BlogPostPage() {
   if (!post) {
     return (
       <div>
-        <p className="text-slate-700">Post not found.</p>
-        <Link to="/blog" className="mt-4 inline-block text-indigo-600 hover:underline">
+        <p className="text-slate-300">Post not found.</p>
+        <Link
+          to="/blog"
+          className="mt-4 inline-block text-indigo-300 hover:text-indigo-200"
+        >
           &larr; Back to blog
         </Link>
       </div>
@@ -84,7 +87,7 @@ export default function BlogPostPage() {
   return (
     <article>
       <SeoHead
-        title={`${post.title} — Posto Blog`}
+        title={`${post.title} — PostoSaaS Blog`}
         description={post.description}
         path={`/blog/${post.slug}`}
         image={post.coverImage}
@@ -93,13 +96,13 @@ export default function BlogPostPage() {
 
       <Link
         to="/blog"
-        className="mb-6 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-700"
+        className="mb-6 inline-block text-sm font-medium text-indigo-300 hover:text-indigo-200"
       >
         &larr; Back to blog
       </Link>
 
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
           {post.title}
         </h1>
         <p className="mt-2 text-sm text-slate-500">{formatDate(post.date)}</p>
@@ -107,7 +110,7 @@ export default function BlogPostPage() {
 
       {post.coverImage && (
         <div
-          className="mb-8 overflow-hidden rounded-2xl bg-slate-100"
+          className="mb-8 overflow-hidden rounded-2xl border border-white/10 bg-white/5"
           style={{ aspectRatio: "16 / 9" }}
         >
           <img
@@ -120,11 +123,11 @@ export default function BlogPostPage() {
       )}
 
       {loading && <p className="text-slate-500">Loading…</p>}
-      {error && <p className="text-red-600">{error}</p>}
+      {error && <p className="text-red-400">{error}</p>}
 
       {!loading && !error && (
         <div
-          className="prose prose-slate mt-8 max-w-none"
+          className="prose prose-invert mt-8 max-w-none prose-headings:text-white prose-a:text-indigo-300 hover:prose-a:text-indigo-200 prose-strong:text-white prose-code:text-indigo-100 prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       )}

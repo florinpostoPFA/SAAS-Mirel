@@ -16,7 +16,7 @@ const BlogLayout = lazy(() => import("./blog/BlogLayout"));
 
 function BlogRouteFallback() {
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-16 text-slate-500">
+    <div className="min-h-screen bg-[#0a0f1c] px-6 py-16 text-slate-400">
       <p className="mx-auto max-w-3xl">Loading…</p>
     </div>
   );
