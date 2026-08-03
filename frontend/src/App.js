@@ -1,9 +1,14 @@
 import React, { Suspense, lazy, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProductAIDashboard from "./components/ProductAIDashboard";
 import SettingsPage from "./SettingsPage";
 import TagSetupPage from "./TagSetupPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import SiteLayout from "./components/SiteLayout";
+import HomePage from "./pages/HomePage";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import PortfolioPage from "./pages/PortfolioPage";
 
 const BlogIndexPage = lazy(() => import("./pages/BlogIndexPage"));
 const BlogPostPage = lazy(() => import("./pages/BlogPostPage"));
@@ -17,100 +22,7 @@ function BlogRouteFallback() {
   );
 }
 
-// 🔹 Landing Page
-function Landing() {
-  return (
-    <div className="min-h-screen bg-black text-white px-6 py-20">
-
-      <div className="max-w-3xl mx-auto text-center">
-        <h1 className="text-5xl font-semibold mb-6 tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-          AI assistants for eCommerce stores
-        </h1>
-
-        <p className="text-lg text-gray-400 mb-8">
-          Each store gets its own assistant—trained on its products, able to guide customers and recommend the right choices.
-        </p>
-
-        <button
-          onClick={() => window.location.href = "/assistant/carhub"}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:opacity-90 transition"
-        >
-          Talk to Turbo
-        </button>
-
-        <p className="mt-3 text-sm text-gray-500">
-          Live assistant: Turbo for Carhub
-        </p>
-
-        <p className="mt-6 text-sm text-gray-400">
-          <Link to="/blog" className="underline underline-offset-4 hover:text-white">
-            Read the blog
-          </Link>
-        </p>
-      </div>
-
-      <div className="max-w-2xl mx-auto mt-16 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 space-y-5 text-sm shadow-2xl">
-
-        <div className="text-indigo-400">
-          <span className="font-semibold">Turbo</span>
-          <p className="text-white mt-1">
-            Salut, sunt Turbo. Te pot ajuta sa explorezi optiuni, sa le compari si sa iei decizii mai bune.
-          </p>
-        </div>
-
-        <div className="text-gray-400">
-          <span className="font-semibold">User</span>
-          <p className="mt-1">
-            Cum curăț mașina la exterior?
-          </p>
-        </div>
-
-        <div className="text-indigo-400">
-          <span className="font-semibold">Turbo</span>
-          <p className="text-white mt-1">
-            Te pot ajuta — am nevoie de câteva detalii. Vrei să cureți vopseaua, geamurile sau toată mașina?
-          </p>
-        </div>
-
-        <div className="text-gray-400">
-          <span className="font-semibold">User</span>
-          <p className="mt-1">
-            Vreau să arate ca nouă
-          </p>
-        </div>
-
-        <div className="text-indigo-400">
-          <span className="font-semibold">Turbo</span>
-          <p className="text-white mt-1">
-            În cazul ăsta, îți recomand un pachet complet de detailing — pot să-ți explic ce include.
-          </p>
-        </div>
-
-      </div>
-
-      <div className="max-w-2xl mx-auto mt-20 text-center">
-        <h2 className="text-2xl font-semibold mb-4">
-          One assistant per store
-        </h2>
-
-        <p className="text-gray-400">
-          Not a generic chatbot. Each assistant is built specifically for a single store—its catalog, tone, and customer needs.
-        </p>
-
-        <p className="text-gray-400 mt-3">
-          We first feed it your business knowledge, so it understands your services, answers correctly, and can recommend the right options to your customers.
-        </p>
-
-        <p className="text-gray-500 mt-4 text-sm">
-          Built for European businesses, with local context and European hosting.
-        </p>
-      </div>
-
-    </div>
-  );
-}
-
-// 🔹 Password Page
+// 🔹 Password Page (Turbo gate — keep live; not linked from public nav)
 function Password() {
   const [password, setPassword] = useState("");
 
@@ -178,7 +90,38 @@ function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route
+            path="/"
+            element={
+              <SiteLayout>
+                <HomePage />
+              </SiteLayout>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <SiteLayout>
+                <AboutPage />
+              </SiteLayout>
+            }
+          />
+          <Route
+            path="/contact"
+            element={
+              <SiteLayout>
+                <ContactPage />
+              </SiteLayout>
+            }
+          />
+          <Route
+            path="/portfolio"
+            element={
+              <SiteLayout>
+                <PortfolioPage />
+              </SiteLayout>
+            }
+          />
           <Route
             path="/blog"
             element={

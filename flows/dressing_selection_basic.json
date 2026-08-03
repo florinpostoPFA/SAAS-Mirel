@@ -1,0 +1,50 @@
+{
+  "flowId": "dressing_selection_basic",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["interior", "exterior"],
+    "surfaces": ["plastic", "rubber"],
+    "objects": ["anvelope", "bord"]
+  },
+  "title": "Alegere dressing: apa vs solvent",
+  "steps": [
+    {
+      "id": "choose_type",
+      "title": "Alege tipul de dressing",
+      "goal": "Apa pentru finisaj natural interior; solvent pentru anvelope si wet look exterior; nu acelasi produs peste tot.",
+      "roles": [],
+      "knowledgeIds": [
+        "dressing_water_vs_solvent_choice",
+        "dressing_water_based_definition",
+        "dressing_solvent_based_definition",
+        "dressing_water_vs_solvent_table",
+        "dressing_selection_strategy",
+        "dressing_faq_water_vs_solvent"
+      ]
+    },
+    {
+      "id": "interior_trim",
+      "title": "Dressing plastice interior",
+      "goal": "Foloseste dressing pe baza de apa pe trim interior; evita solvent in habitaclu.",
+      "roles": ["interior_protection"],
+      "knowledgeIds": [
+        "dressing_plastic_interior",
+        "dressing_faq_solvent_danger"
+      ]
+    },
+    {
+      "id": "exterior_tires",
+      "title": "Dressing anvelope si exterior",
+      "goal": "Curata si degreseaza anvelopele inainte de dressing; exterior prefera solvent pentru durabilitate.",
+      "roles": ["tire_cleaner", "tire_dressing"],
+      "knowledgeIds": [
+        "tire_rubber_cleaner_utilizare",
+        "dressing_anvelope",
+        "dressing_plastic_exterior",
+        "dressing_tire_mistakes",
+        "dressing_faq_water_on_tires",
+        "dressing_faq_solvent_durability"
+      ]
+    }
+  ]
+}

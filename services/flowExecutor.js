@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const productRoles = require("../data/product_roles.json");
 const knowledgeFlow = require("../data/knowledge_flow.json");
+const knowledge = require("../data/knowledge.json");
 const config = require("../config");
 const { logInfo } = require("./logger");
 
@@ -46,7 +47,11 @@ function normalizeWords(value) {
 }
 
 function getKnowledgeEntryById(id) {
-  return knowledgeFlow.find(entry => String(entry?.id) === String(id)) || null;
+  const fromFlow = knowledgeFlow.find(entry => String(entry?.id) === String(id));
+  if (fromFlow) {
+    return fromFlow;
+  }
+  return knowledge.find(entry => String(entry?.id) === String(id)) || null;
 }
 
 function normalizeFlowLocale(locale) {

@@ -73,5 +73,75 @@
     "id": "leather_ink_removal_safe",
     "title": "Cum elimini urmele de pix de pe piele (in siguranta)",
     "content": "Confirma ca este piele auto (finisaj, nu textil). Fa intai un test pe o zona ascunsa. Incepe bland: cleaner dedicat pentru piele + laveta moale din microfibra sau perie foarte fina; treceri scurte, stergi, repeti. Nu freca agresiv; evita sa imbibi pielea. Nu folosi acetona, diluant sau solventi puternici ca prima optiune. Daca dupa cateva treceri blande nu se imbunatateste, opreste-te si consulta un specialist piele / detailing."
+  },
+  {
+    "id": "glass_cleaning",
+    "title": "Cum cureti geamurile auto",
+    "content": "Pulverizeaza moderat solutia pe geam sau pe laveta dedicata. Sterge uniform cu microfibra curata, apoi finiseaza cu partea uscata pentru claritate."
+  },
+  {
+    "id": "dressing_anvelope",
+    "title": "Aplicare dressing anvelope",
+    "content": "Aplica dressing pe anvelope curate si uscate. Exterior: prefera solvent pentru durabilitate; trim interior: dressing pe baza de apa; evita solvent in habitaclu."
+  },
+  {
+    "id": "dressing_water_vs_solvent_choice",
+    "title": "Alegere dressing apa vs solvent",
+    "content": "Alege dupa suprafata: apa pentru finisaj natural interior; solvent pentru anvelope si plastic exterior si wet look."
+  },
+  {
+    "id": "leather_modern_protection_first",
+    "title": "Protectie pe pielea OEM moderna",
+    "content": "Dupa curatare, aplica protectie mata (ex. L1) in strat subtire uniform. Hidratarea clasica este secundara pe pielea moderna."
+  },
+  {
+    "id": "textile_apc_dwell_time",
+    "title": "Timp de actiune APC pe textile",
+    "content": "Pulverizeaza APC uniform, lasa 3-5 minute sa actioneze, apoi agita si sterge sau extrage; nu clati imediat."
+  },
+  {
+    "id": "alcantara_mitt_clean",
+    "title": "Curatare Alcantara cu scrub mitt",
+    "content": "Foloseste spuma fina si scrub mitt cu presiune redusa. Evita perii dure, dressing si hidratare de piele pe Alcantara."
+  },
+  {
+    "id": "headliner_pressure_test",
+    "title": "Test integritate plafon",
+    "content": "Apasa usor cu degetul: daca materialul nu revine, opreste curatarea umeda."
+  },
+  {
+    "id": "headliner_low_moisture_clean",
+    "title": "Curatare plafon low-moisture",
+    "content": "Aplica solutie low-moisture pe scrub mitt, lucreaza zone 40x40 cm, sterge imediat cu laveta tehnica."
+  },
+  {
+    "id": "headliner_no_extractor",
+    "title": "Fara extractor pe plafon",
+    "content": "Nu folosi injector-extractor pe plafon; risc de dezlipire al adezivului."
+  },
+  {
+    "id": "insect_remover_utilizare",
+    "title": "Cum folosesti Insect Remover corect",
+    "content": "Insect Remover elimina insectele de pe suprafetele frontale ale masinii. Se aplica pe suprafata rece si se clateste rapid, fara a fi lasat sa se usuce."
+  },
+  {
+    "id": "arsuri_insecte_corectie",
+    "title": "Ce faci daca raman urme dupa insecte",
+    "content": "Urmele pot fi arsuri in lac cauzate de insecte. Uneori dispar la soare, dar in cazuri grave necesita polish."
+  },
+  {
+    "id": "curatare_jante_indicator_rosu",
+    "title": "Cum functioneaza solutia de jante cu indicator rosu",
+    "content": "Solutia cu indicator rosu dizolva particulele feroase de pe jante. In timpul reactiei, produsul devine rosu, indicand actiunea chimica."
+  },
+  {
+    "id": "solutie_jante_acida",
+    "title": "Cand folosesti solutie acida pentru jante",
+    "content": "Solutiile acide sunt eficiente pentru murdarie persistenta pe jante. Sunt mai agresive si trebuie folosite cu atentie."
+  },
+  {
+    "id": "tire_rubber_cleaner_utilizare",
+    "title": "Cand folosesti Tire and Rubber Cleaner",
+    "content": "Aceasta solutie curata si degreseaza anvelopele in profunzime. Se foloseste inainte de aplicarea dressingului pentru o aderenta mai buna si durata mai lunga."
   }
 ]

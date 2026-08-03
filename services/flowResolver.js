@@ -66,13 +66,89 @@ const LEATHER_INK_FLOW_KEYWORDS = [
   "urme de pix"
 ];
 
+const HEADLINER_FLOW_KEYWORDS = [
+  "plafon",
+  "headliner",
+  "tavan",
+  "dezlipire",
+  "dezlipit",
+  "curatare plafon",
+  "test presiune plafon"
+];
+
+const DRESSING_SELECTION_KEYWORDS = [
+  "dressing",
+  "dressing anvelope",
+  "dressing apa",
+  "dressing solvent",
+  "wet look",
+  "trim",
+  "plastice interior",
+  "ce pun pe anvelope",
+  "diferenta dressing",
+  "dressing periculos",
+  "keno dressing",
+  "tyre dressing"
+];
+
 const flowKeywords = {
   bug_removal_quick: ["insecte", "musca", "gandaci", "buguri", "urme de insecte", "insecte pe parbriz"],
   glass_clean_basic: ["sticla", "geam", "geamuri", "parbriz", "oglinda", "oglinzi", "mirror", "mirrors"],
   wheel_tire_deep_clean: ["jante", "roti", "anvelope"],
   interior_clean_basic: ["scaun", "cotiera", "interior"],
-  leather_ink_removal: LEATHER_INK_FLOW_KEYWORDS
+  leather_ink_removal: LEATHER_INK_FLOW_KEYWORDS,
+  headliner_safe_clean_basic: HEADLINER_FLOW_KEYWORDS,
+  dressing_selection_basic: DRESSING_SELECTION_KEYWORDS,
+  textile_cleaning_basic: [
+    "curatare textil",
+    "curatare tapiterie",
+    "mocheta murdara",
+    "scaune murdare",
+    "injectie extractie",
+    "tapiteria ramane tare",
+    "textile foarte murdare"
+  ],
+  leather_program_basic: [
+    "piele bmw",
+    "piele moderna",
+    "intretinere piele",
+    "protectie piele",
+    "leather guard",
+    "piele mat",
+    "servetele umede piele",
+    "pielea devine lucioasa",
+    "uzura cotiera",
+    "cu ce curat pielea"
+  ]
 };
+
+function hasDressingSelectionIntent(message) {
+  const msg = normalizeValue(message);
+  if (!msg) {
+    return false;
+  }
+  return DRESSING_SELECTION_KEYWORDS.some(kw => msg.includes(kw));
+}
+
+function hasExplicitWheelCleanIntent(message, slots = {}) {
+  const msg = normalizeValue(message);
+  const slotObject = normalizeValue(slots?.object);
+  const cleanVerbs = /\b(curat|curatare|spal|spalat|curata)\b/;
+
+  if (cleanVerbs.test(msg) && /\b(jante|roti|anvelope)\b/.test(msg)) {
+    return true;
+  }
+
+  if ((slotObject === "jante" || slotObject === "roti") && cleanVerbs.test(msg)) {
+    return true;
+  }
+
+  if (slotObject === "anvelope" && cleanVerbs.test(msg) && !hasDressingSelectionIntent(message)) {
+    return true;
+  }
+
+  return false;
+}
 
 function hasLeatherInkIntent(message, slots = {}) {
   const msg = normalizeValue(message);
@@ -277,6 +353,18 @@ function getFlowSpecificityScore(flow, slots, message) {
     score += 20;
   }
 
+  if (flow?.flowId === "headliner_safe_clean_basic" && slotObject === "plafon") {
+    score += 15;
+  }
+
+  if (flow?.flowId === "dressing_selection_basic" && hasDressingSelectionIntent(message)) {
+    score += 12;
+  }
+
+  if (flow?.flowId === "wheel_tire_deep_clean" && hasExplicitWheelCleanIntent(message, slots)) {
+    score += 10;
+  }
+
   if (triggerObjects.length > 0 && slotObject && matchesObjectTrigger(triggerObjects, slotObject)) {
     score += 10;
   }
@@ -461,6 +549,27 @@ function findMatchingFlows(request, allowPartial = false) {
       logInfo("FLOW_EXCLUDED", {
         flowId,
         reason: "leather_ink_requires_ink_and_leather_signal"
+      });
+      continue;
+    }
+
+    if (flowId === "interior_clean_basic" && slotObject === "plafon") {
+      logInfo("FLOW_EXCLUDED", {
+        flowId,
+        reason: "plafon_routed_to_headliner_flow",
+        slotObject
+      });
+      continue;
+    }
+
+    if (
+      flowId === "wheel_tire_deep_clean" &&
+      hasDressingSelectionIntent(request?.message) &&
+      !hasExplicitWheelCleanIntent(request?.message, request?.slots || {})
+    ) {
+      logInfo("FLOW_EXCLUDED", {
+        flowId,
+        reason: "dressing_selection_without_wheel_clean_intent"
       });
       continue;
     }

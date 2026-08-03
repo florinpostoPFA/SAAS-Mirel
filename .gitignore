@@ -1,3 +1,7 @@
+# Local embedding/runtime models
+data/models/
+/reports
+data/embeddings/
 node_modules/
 eval/results/
 logs/

@@ -25,7 +25,9 @@
     "logs:daily": "bash scripts/daily-log-rotation.sh",
     "demo:op": "node scripts/op-demo.js --all",
     "demo:op:one": "node scripts/op-demo.js --topic matte_paint_summer_maintenance",
-    "eval:replay": "node eval/runReplay.js && node eval/report.js"
+    "eval:replay": "node eval/runReplay.js && node eval/report.js",
+    "artifacts:process": "node artifact-engine/index.js",
+    "artifacts:analyze": "node analyze-artifacts.js"
   },
   "keywords": [],
   "author": "",

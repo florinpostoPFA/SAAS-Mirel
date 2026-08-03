@@ -4,7 +4,7 @@
   "triggers": {
     "contexts": ["interior"],
     "surfaces": ["textile", "leather", "plastic"],
-    "objects": ["scaun", "cotiera", "mocheta", "plafon"]
+    "objects": ["scaun", "cotiera", "mocheta"]
   },
   "title": "Curatare interior masina (ghid rapid)",
   "steps": [

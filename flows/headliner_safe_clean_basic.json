@@ -1,0 +1,55 @@
+{
+  "flowId": "headliner_safe_clean_basic",
+  "type": "micro",
+  "triggers": {
+    "contexts": ["interior"],
+    "surfaces": ["textile", "alcantara"],
+    "objects": ["plafon"]
+  },
+  "title": "Curatare plafon auto (sigur, low-moisture)",
+  "steps": [
+    {
+      "id": "integrity_check",
+      "title": "Verificare integritate plafon",
+      "goal": "Confirma ca materialul revine dupa apasare usoara; opreste curatarea umeda daca spuma de suport este compromisa.",
+      "roles": [],
+      "knowledgeIds": [
+        "headliner_pressure_test",
+        "headliner_sensitive_vehicles",
+        "headliner_delamination_causes"
+      ]
+    },
+    {
+      "id": "anti_extractor",
+      "title": "Reguli de siguranta inainte de curatare",
+      "goal": "Nu folosi injector-extractor sau metode cu saturatie de apa pe plafon.",
+      "roles": [],
+      "knowledgeIds": [
+        "headliner_no_extractor",
+        "headliner_avoid_extractor",
+        "headliner_common_mistakes"
+      ]
+    },
+    {
+      "id": "low_moisture_clean",
+      "title": "Curatare low-moisture pe zone mici",
+      "goal": "Aplica solutia pe scrub mitt, lucreaza zone 40x40 cm, sterge imediat cu laveta tehnica.",
+      "roles": ["textile_cleaner", "interior_tool"],
+      "knowledgeIds": [
+        "headliner_low_moisture_clean",
+        "headliner_bonnet_mitt_method"
+      ]
+    },
+    {
+      "id": "moisture_and_finish",
+      "title": "Control umiditate si finisare",
+      "goal": "Mentine suprafata usor umeda, clateste mitt-ul corect si finiseaza fibra intr-un singur sens.",
+      "roles": ["microfiber"],
+      "knowledgeIds": [
+        "headliner_moisture_control",
+        "headliner_finishing_fiber_direction",
+        "headliner_common_mistakes"
+      ]
+    }
+  ]
+}

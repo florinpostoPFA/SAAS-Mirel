@@ -16,7 +16,13 @@ const sitemapPath = path.join(rootDir, "public", "sitemap.xml");
 const posts = JSON.parse(fs.readFileSync(postsPath, "utf8"));
 const sitemap = fs.readFileSync(sitemapPath, "utf8");
 
-const required = [`${base}/`, `${base}/blog`];
+const required = [
+  `${base}/`,
+  `${base}/about`,
+  `${base}/blog`,
+  `${base}/portfolio`,
+  `${base}/contact`,
+];
 for (const url of required) {
   if (!sitemap.includes(`>${url}<`)) {
     console.error(`check-sitemap-posts: missing sitemap entry for ${url}`);

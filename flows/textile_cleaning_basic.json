@@ -6,13 +6,62 @@
     "surfaces": ["textile"],
     "objects": ["scaun", "bancheta", "mocheta"]
   },
-  "title": "Curatare textile (de baza)",
+  "title": "Curatare textile in profunzime",
   "steps": [
     {
-      "id": "textile_cleaning",
-      "title": "Curatare textil",
+      "id": "prep_vacuum",
+      "title": "Pregatire si aspirare",
+      "goal": "Aspirare, aer comprimat si re-aspirare inainte de curatare umeda; aspiratul singur nu scoate murdaria din fibra.",
+      "roles": ["interior_tool"],
+      "knowledgeIds": [
+        "interior_vacuum",
+        "textile_prep_before_clean",
+        "why_vacuum_not_enough"
+      ]
+    },
+    {
+      "id": "apply_dwell",
+      "title": "Aplicare solutie si timp de actiune",
+      "goal": "Pulverizeaza uniform si lasa 3-5 minute sa actioneze; nu clati imediat.",
       "roles": ["textile_cleaner"],
-      "knowledgeIds": ["textile_cleaning"]
+      "knowledgeIds": [
+        "textile_apc_dwell_time",
+        "textile_solution_application",
+        "apc_dwell_time_importance"
+      ]
+    },
+    {
+      "id": "agitate",
+      "title": "Agitatie controlata",
+      "goal": "Lucreaza cu presiune medie pe zone mici; metoda cu sau fara extractor.",
+      "roles": ["textile_cleaner", "interior_tool"],
+      "knowledgeIds": [
+        "textile_cleaning",
+        "textile_cleaning_without_extractor",
+        "textile_agitation_method"
+      ]
+    },
+    {
+      "id": "extract_wipe",
+      "title": "Extractie sau stergere completa",
+      "goal": "Indeparteaza murdaria si solutia; evita prea multa apa si presiune mare la extractor.",
+      "roles": ["textile_cleaner", "microfiber"],
+      "knowledgeIds": [
+        "textile_extraction_step",
+        "common_textile_cleaning_mistake",
+        "extractor_misuse_interior"
+      ]
+    },
+    {
+      "id": "finish_escalate",
+      "title": "Verificare rezultat si escaladare",
+      "goal": "Confirma ca nu au ramas reziduuri; stii cand e cazul de atelier profesional.",
+      "roles": [],
+      "knowledgeIds": [
+        "upholstery_faq_stiff_after_clean",
+        "when_to_clean_textiles",
+        "diy_vs_professional_upholstery"
+      ]
     }
   ]
 }
